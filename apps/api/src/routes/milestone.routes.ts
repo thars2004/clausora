@@ -182,19 +182,37 @@ router.post('/milestones/:milestoneId/submit', authMiddleware, async (req: AuthR
   }
 });
 
-// POST /api/milestones/:milestoneId/approve - Client approves for payment
-router.post('/milestones/:milestoneId/approve', authMiddleware, requireRole(['client', 'admin']), (req: AuthRequest, res: Response, next) => {
+// POST /api/milestones/:milestoneId/approve - Client or task owner approves for payment
+router.post('/milestones/:milestoneId/approve', authMiddleware, async (req: AuthRequest, res: Response, next) => {
   try {
     const { milestoneId } = req.params;
-    const milestone = transitionMilestone(milestoneId, 'APPROVED_FOR_PAYMENT', req.user!);
-    milestone.approvedBy = req.user!.id;
-    milestone.approvedAt = new Date().toISOString();
-    dbStore.milestones.set(milestoneId, milestone);
+    const milestone = dbStore.milestones.get(milestoneId);
+    if (!milestone) {
+      return res.status(404).json({ success: false, message: 'Milestone not found' });
+    }
+
+    const project = dbStore.projects.get(milestone.projectId);
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
+
+    // Client, admin, project/task owner, or creator can approve milestone
+    const isOwner = project && (project.ownerId === userId || project.createdBy === userId);
+    if (userRole !== 'client' && userRole !== 'admin' && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden: Only the client owner or platform admin can approve milestones for payment.',
+      });
+    }
+
+    const updatedMilestone = transitionMilestone(milestoneId, 'APPROVED_FOR_PAYMENT', req.user!);
+    updatedMilestone.approvedBy = req.user!.id;
+    updatedMilestone.approvedAt = new Date().toISOString();
+    dbStore.milestones.set(milestoneId, updatedMilestone);
 
     return res.json({
       success: true,
-      data: { milestone },
-      message: 'Milestone approved by client. Ready for PayPal sandbox payment release.',
+      data: { milestone: updatedMilestone },
+      message: 'Milestone approved! Ready for PayPal sandbox payment release.',
     });
   } catch (err) {
     next(err);

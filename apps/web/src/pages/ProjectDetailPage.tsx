@@ -136,6 +136,71 @@ export const ProjectDetailPage: React.FC = () => {
   // Accept Project State
   const [acceptingProject, setAcceptingProject] = useState(false);
 
+  // Payment Details Modal State
+  const [isPaymentDetailsModalOpen, setIsPaymentDetailsModalOpen] = useState(false);
+  const [payerEmail, setPayerEmail] = useState('');
+  const [paypalMerchantId, setPaypalMerchantId] = useState('');
+  const [billingName, setBillingName] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [billingAddress, setBillingAddress] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'paypal_sandbox' | 'credit_card' | 'bank_wire'>('paypal_sandbox');
+  const [escrowTerms, setEscrowTerms] = useState('');
+  const [payoutNotes, setPayoutNotes] = useState('');
+  const [savingPaymentDetails, setSavingPaymentDetails] = useState(false);
+
+  const openPaymentDetailsModal = () => {
+    if (!project) return;
+    const details = project.paymentDetails || {};
+    setPayerEmail(details.payerEmail || user?.email || '');
+    setPaypalMerchantId(details.paypalMerchantId || 'SANDBOX_MERCHANT_CLAU_2026');
+    setBillingName(details.billingName || user?.name || '');
+    setTaxId(details.taxId || '');
+    setBillingAddress(details.billingAddress || '');
+    setPaymentMethod(details.paymentMethod || 'paypal_sandbox');
+    setEscrowTerms(details.escrowTerms || 'Funds released upon client verification of milestone acceptance criteria.');
+    setPayoutNotes(details.payoutNotes || '');
+    setIsPaymentDetailsModalOpen(true);
+  };
+
+  const handleSavePaymentDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!project) return;
+    setSavingPaymentDetails(true);
+    try {
+      const payload = {
+        paymentDetails: {
+          payerEmail: payerEmail.trim(),
+          paypalMerchantId: paypalMerchantId.trim(),
+          billingName: billingName.trim(),
+          taxId: taxId.trim(),
+          billingAddress: billingAddress.trim(),
+          paymentMethod,
+          escrowTerms: escrowTerms.trim(),
+          payoutNotes: payoutNotes.trim(),
+          updatedAt: new Date().toISOString(),
+        },
+      };
+      const res = await api.put(`/projects/${project.id}`, payload);
+      toast.success(res.data.message || 'Payment and escrow details saved to live MongoDB Atlas.', 'Payment Details');
+      setIsPaymentDetailsModalOpen(false);
+      await fetchProjectData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to save payment details.', 'Payment Error');
+    } finally {
+      setSavingPaymentDetails(false);
+    }
+  };
+
+  const handleDirectMilestoneApprove = async (milestoneId: string) => {
+    try {
+      const res = await api.post(`/milestones/${milestoneId}/approve`);
+      toast.success(res.data.message || 'Milestone approved! Authorized for PayPal release.', 'Milestone Approved');
+      await fetchProjectData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to approve milestone.', 'Approval Error');
+    }
+  };
+
   // Scroll pagination for Audit timeline events
   const auditPagination = useScrollPagination(auditEvents, { pageSize: 6 });
 
@@ -492,16 +557,11 @@ export const ProjectDetailPage: React.FC = () => {
   const isPendingAcceptance = project.status === 'awaiting_approval' || project.status === 'draft';
   const isClientCreator = project.creatorRole === 'client' || (!project.creatorRole && project.ownerId === project.createdBy);
   const isProviderCreator = project.creatorRole === 'provider';
+  const isOwner = project.ownerId === user?.id;
+  const isCreator = project.createdBy === user?.id || isOwner;
+  const isAssignedProvider = project.providerIds?.includes(user?.id || '') || (user?.role === 'provider');
+  const canAcceptProject = isPendingAcceptance && (user?.role === 'admin' || isOwner || isCreator || isAssignedProvider || user?.role === 'client');
 
-  // If Client created, assigned Provider (or admin) can accept
-  // If Provider created, Client owner (or admin) can accept
-  const canAcceptProject = isPendingAcceptance && (
-    user?.role === 'admin' ||
-    (isClientCreator && user?.role === 'provider' && (project.providerIds?.includes(user?.id || '') || project.providerIds?.length === 0)) ||
-    (isProviderCreator && user?.role === 'client' && project.ownerId === user?.id)
-  );
-
-  const isCreator = user?.id === project.createdBy || user?.id === project.ownerId;
   const canEditOrDelete = isCreator || user?.role === 'admin';
 
   return (
@@ -610,6 +670,27 @@ export const ProjectDetailPage: React.FC = () => {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {isPendingAcceptance && canAcceptProject && (
+              <button
+                onClick={handleAcceptProject}
+                disabled={acceptingProject}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/30 disabled:opacity-50"
+                title="Approve and activate this project"
+              >
+                {acceptingProject ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ThumbsUp className="w-3.5 h-3.5" />}
+                <span>Approve & Activate</span>
+              </button>
+            )}
+
+            <button
+              onClick={openPaymentDetailsModal}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition"
+              title="Configure escrow and PayPal sandbox payment details"
+            >
+              <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Payment Details</span>
+            </button>
+
             <button
               onClick={handleManualSync}
               disabled={syncing}
@@ -624,7 +705,7 @@ export const ProjectDetailPage: React.FC = () => {
               <>
                 <button
                   onClick={openEditModal}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
                   title="Edit project details"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -655,7 +736,9 @@ export const ProjectDetailPage: React.FC = () => {
                     <h4 className="text-sm font-bold text-white">Project Proposal Awaiting Your Acceptance</h4>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
-                    {isClientCreator
+                    {isOwner
+                      ? 'You are the project owner. Review the proposed deliverables and blueprint below. Click to approve and activate the project.'
+                      : isClientCreator
                       ? 'The Client created this project and proposed the deliverables. Review the scope and click below to accept and activate the project.'
                       : 'The Provider submitted this project proposal. Accept the proposal to authorize deliverables and enable PayPal milestone releases.'}
                   </p>
@@ -944,12 +1027,24 @@ export const ProjectDetailPage: React.FC = () => {
                           )}
 
                           {isAwaiting && (
-                            <button
-                              onClick={() => setSelectedMilestone(ms)}
-                              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition animate-pulse"
-                            >
-                              Review Evidence
-                            </button>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button
+                                onClick={() => setSelectedMilestone(ms)}
+                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition"
+                              >
+                                Review Evidence
+                              </button>
+                              {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+                                <button
+                                  onClick={() => handleDirectMilestoneApprove(ms.id)}
+                                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-md shadow-emerald-600/30 flex items-center gap-1"
+                                  title="Approve deliverable and authorize PayPal release"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Approve</span>
+                                </button>
+                              )}
+                            </div>
                           )}
 
                           {isApproved && (
@@ -988,6 +1083,70 @@ export const ProjectDetailPage: React.FC = () => {
                 >
                   View Work DNA Pipeline →
                 </button>
+              </div>
+            )}
+          </div>
+
+          {/* Payment & Escrow Specifications Hub Card */}
+          <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  <h4 className="text-sm font-bold text-white">Payment & Escrow Specifications</h4>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50">
+                    Live Atlas Synced
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Escrow terms, PayPal Sandbox payer configuration, and billing credentials registered for this project.
+                </p>
+              </div>
+
+              <button
+                onClick={openPaymentDetailsModal}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition shrink-0"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>{project.paymentDetails?.payerEmail ? 'Edit Payment Details' : 'Configure Payment Details'}</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Authorized Payer</span>
+                <p className="text-xs font-mono font-medium text-slate-200 truncate" title={project.paymentDetails?.payerEmail || 'Not configured'}>
+                  {project.paymentDetails?.payerEmail || 'Not configured'}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">PayPal Merchant ID</span>
+                <p className="text-xs font-mono font-medium text-slate-200 truncate">
+                  {project.paymentDetails?.paypalMerchantId || 'SANDBOX_MERCHANT_CLAU_2026'}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Legal Billing Entity</span>
+                <p className="text-xs font-medium text-slate-200 truncate">
+                  {project.paymentDetails?.billingName || 'Not specified'}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Payment Channel</span>
+                <p className="text-xs font-medium text-emerald-300 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="capitalize">{project.paymentDetails?.paymentMethod?.replace('_', ' ') || 'PayPal Sandbox'}</span>
+                </p>
+              </div>
+            </div>
+
+            {project.paymentDetails?.escrowTerms && (
+              <div className="p-3 bg-slate-950/40 border border-slate-800/60 rounded-xl space-y-1 text-xs">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Escrow Release Policy:</span>
+                <p className="text-slate-300 leading-relaxed">{project.paymentDetails.escrowTerms}</p>
               </div>
             )}
           </div>
@@ -1037,7 +1196,7 @@ export const ProjectDetailPage: React.FC = () => {
                 aiReview={aiReview}
                 onApprove={handleApproveMilestone}
                 onRequestRevision={handleRequestRevision}
-                canApprove={user?.role === 'client' || user?.role === 'admin'}
+                canApprove={user?.role === 'client' || user?.role === 'admin' || isOwner}
               />
 
               {/* Attach new proof form (for provider) */}
@@ -1472,6 +1631,150 @@ export const ProjectDetailPage: React.FC = () => {
               </button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {/* Payment Details Modal */}
+      {project && (
+        <Modal
+          isOpen={isPaymentDetailsModalOpen}
+          onClose={() => setIsPaymentDetailsModalOpen(false)}
+          title="Payment & Escrow Specifications"
+          subtitle="Configure PayPal sandbox billing and milestone escrow policies stored directly in MongoDB Atlas."
+          maxWidth="lg"
+        >
+          <form onSubmit={handleSavePaymentDetails} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Authorized Payer Email (PayPal Sandbox) *
+                </label>
+                <input
+                  type="email"
+                  value={payerEmail}
+                  onChange={(e) => setPayerEmail(e.target.value)}
+                  placeholder="payer-sandbox@clausora.dev"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  PayPal Merchant ID / Facilitator Account
+                </label>
+                <input
+                  type="text"
+                  value={paypalMerchantId}
+                  onChange={(e) => setPaypalMerchantId(e.target.value)}
+                  placeholder="SANDBOX_MERCHANT_CLAU_2026"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Legal Billing Name / Entity
+                </label>
+                <input
+                  type="text"
+                  value={billingName}
+                  onChange={(e) => setBillingName(e.target.value)}
+                  placeholder="Acme Technologies Inc."
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Tax Identification / VAT Number
+                </label>
+                <input
+                  type="text"
+                  value={taxId}
+                  onChange={(e) => setTaxId(e.target.value)}
+                  placeholder="e.g. US-82-4910284"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Payment Method
+                </label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="paypal_sandbox">PayPal Sandbox Orders v2 (Escrow Verified)</option>
+                  <option value="credit_card">Credit / Debit Card (via PayPal Gateway)</option>
+                  <option value="bank_wire">Direct Wire Transfer (Manual Reconciliation)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Registered Billing Address
+                </label>
+                <input
+                  type="text"
+                  value={billingAddress}
+                  onChange={(e) => setBillingAddress(e.target.value)}
+                  placeholder="100 Innovation Way, Suite 500, Austin, TX"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Escrow Release Terms & Criteria
+              </label>
+              <textarea
+                rows={3}
+                value={escrowTerms}
+                onChange={(e) => setEscrowTerms(e.target.value)}
+                placeholder="e.g. Funds are securely captured into escrow and only released when the Client verifies and approves deliverable test runs."
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Payout Notes / Special Instructions
+              </label>
+              <input
+                type="text"
+                value={payoutNotes}
+                onChange={(e) => setPayoutNotes(e.target.value)}
+                placeholder="e.g. Include invoice number in payment memo."
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsPaymentDetailsModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingPaymentDetails}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50 shadow-lg shadow-emerald-600/30"
+              >
+                {savingPaymentDetails && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Save Payment Specifications</span>
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

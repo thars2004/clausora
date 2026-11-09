@@ -40,6 +40,7 @@ const ProjectSchema = new Schema(
     deadline: { type: String },
     totalAmountMinor: { type: Number },
     currency: { type: String, default: 'USD' },
+    paymentDetails: { type: Schema.Types.Mixed, default: {} },
     workflowDiagram: { type: String },
     isDeleted: { type: Boolean, default: false, index: true },
     deletedAt: { type: String },

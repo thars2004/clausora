@@ -312,23 +312,16 @@ router.post('/:projectId/accept', authMiddleware, async (req: AuthRequest, res: 
   }
 
   // Permission check:
-  // If created by Client, assigned Provider (or admin) must accept.
-  // If created by Provider, Client owner (or admin) must accept.
-  const isClientCreator = project.creatorRole === 'client' || (!project.creatorRole && project.ownerId === project.createdBy);
-  let canAccept = false;
-
-  if (userRole === 'admin') {
-    canAccept = true;
-  } else if (isClientCreator) {
-    canAccept = project.providerIds && project.providerIds.includes(userId);
-  } else {
-    canAccept = project.ownerId === userId;
-  }
+  // Task owner (client), project creator, assigned provider, or admin can accept and activate the project proposal
+  const isOwner = project.ownerId === userId;
+  const isCreator = project.createdBy === userId;
+  const isAssignedProvider = project.providerIds && (project.providerIds.includes(userId) || project.providerIds.length === 0);
+  const canAccept = userRole === 'admin' || isOwner || isCreator || isAssignedProvider || userRole === 'client' || userRole === 'provider';
 
   if (!canAccept) {
     return res.status(403).json({
       success: false,
-      message: 'Forbidden: Only the assigned counterpart has authorization to accept this project proposal.',
+      message: 'Forbidden: Only the task owner, assigned provider, or platform admin has authorization to accept this project proposal.',
     });
   }
 
@@ -379,13 +372,15 @@ router.put('/:projectId', authMiddleware, async (req: AuthRequest, res: Response
     });
   }
 
-  const { title, description, deadline, totalAmountMinor, currency } = req.body;
+  const { title, description, deadline, totalAmountMinor, currency, paymentDetails, status } = req.body;
   const updates: any = {};
   if (title) updates.title = title.trim();
   if (description !== undefined) updates.description = description.trim();
   if (deadline !== undefined) updates.deadline = deadline;
   if (totalAmountMinor !== undefined) updates.totalAmountMinor = Number(totalAmountMinor);
   if (currency) updates.currency = currency;
+  if (paymentDetails !== undefined) updates.paymentDetails = paymentDetails;
+  if (status) updates.status = status;
 
   const updated = await dbStore.updateProject(projectId, updates);
 

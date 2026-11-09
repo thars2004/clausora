@@ -17,6 +17,18 @@ export type ProjectStatus =
   | 'paused'
   | 'disputed';
 
+export interface ProjectPaymentDetails {
+  payerEmail?: string;
+  paypalMerchantId?: string;
+  billingName?: string;
+  taxId?: string;
+  billingAddress?: string;
+  paymentMethod?: 'paypal_sandbox' | 'credit_card' | 'bank_wire';
+  escrowTerms?: string;
+  payoutNotes?: string;
+  updatedAt?: string;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -33,6 +45,7 @@ export interface Project {
   deadline?: string;
   totalAmountMinor?: number;
   currency?: string;
+  paymentDetails?: ProjectPaymentDetails;
   workflowDiagram?: string;
   isDeleted?: boolean;
   deletedAt?: string;
