@@ -22,21 +22,35 @@ router.post('/import-report', authMiddleware, async (req: AuthRequest, res: Resp
 
     const projectId = 'proj_rea_' + Math.random().toString(36).substring(2, 8);
     const userId = req.user!.id;
+    const userRole = req.user!.role;
+
+    let finalOwnerId = userId;
+    let finalProviderIds: string[] = [];
+    if (userRole === 'client') {
+      finalOwnerId = userId;
+      if (req.body.providerId) finalProviderIds.push(req.body.providerId);
+    } else if (userRole === 'provider') {
+      finalOwnerId = req.body.clientId || userId;
+      finalProviderIds.push(userId);
+    } else {
+      finalOwnerId = req.body.clientId || userId;
+      if (req.body.providerId) finalProviderIds.push(req.body.providerId);
+    }
 
     // Create project
     const project: Project = {
       id: projectId,
       title: `${parsed.targetName} (REA Reconstructed)`,
       description: parsed.overview,
-      ownerId: userId,
-      providerIds: [],
+      ownerId: finalOwnerId,
+      providerIds: finalProviderIds,
       status: 'analysing',
       sourceAssets: [],
       currentAgreementId: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    dbStore.projects.set(projectId, project);
+    await dbStore.saveProject(project);
 
     // Save REA report as source asset
     const assetId = 'asset_rea_' + Math.random().toString(36).substring(2, 8);
@@ -57,10 +71,10 @@ router.post('/import-report', authMiddleware, async (req: AuthRequest, res: Resp
     // Transform REA report into Work Blueprint
     const blueprint = await reaService.transformReaReportToBlueprint(parsed);
     blueprint.projectId = projectId;
-    dbStore.blueprints.set(blueprint.id, blueprint);
+    await dbStore.saveBlueprint(blueprint);
 
     project.status = 'awaiting_approval';
-    dbStore.projects.set(projectId, project);
+    await dbStore.saveProject(project);
 
     dbStore.addAuditEvent({
       projectId,

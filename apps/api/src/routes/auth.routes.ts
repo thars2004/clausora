@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { env } from '../config/env';
 import { dbStore } from '../database/store';
 import { RegisterInputSchema, LoginInputSchema, DEMO_USERS } from '@clausora/shared';
@@ -8,8 +9,17 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
+// Brute-force protection: strict limit on authentication attempts
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { success: false, message: 'Too many authentication attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // POST /api/auth/register
-router.post('/register', async (req, res, next) => {
+router.post('/register', authRateLimiter, async (req, res, next) => {
   try {
     const input = RegisterInputSchema.parse(req.body);
     const normalizedEmail = input.email.toLowerCase().trim();
@@ -24,7 +34,7 @@ router.post('/register', async (req, res, next) => {
       }
     }
 
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(input.password, salt);
     const userId = 'usr_' + Math.random().toString(36).substring(2, 10);
 
@@ -37,19 +47,20 @@ router.post('/register', async (req, res, next) => {
       createdAt: new Date().toISOString(),
     };
 
-    dbStore.users.set(userId, newUser);
+    await dbStore.saveUser(newUser);
 
+    // Secure token strictly valid for 1 day (24 hours)
     const token = jwt.sign(
       { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role },
       env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '1d' }
     );
 
     res.cookie('clausora_token', token, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
     return res.status(201).json({
@@ -66,7 +77,7 @@ router.post('/register', async (req, res, next) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res, next) => {
+router.post('/login', authRateLimiter, async (req, res, next) => {
   try {
     const input = LoginInputSchema.parse(req.body);
     const normalizedEmail = input.email.toLowerCase().trim();
@@ -94,17 +105,18 @@ router.post('/login', async (req, res, next) => {
       });
     }
 
+    // Token strictly expires in 1 day
     const token = jwt.sign(
       { id: foundUser.id, name: foundUser.name, email: foundUser.email, role: foundUser.role },
       env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '1d' }
     );
 
     res.cookie('clausora_token', token, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
     return res.json({
@@ -120,14 +132,12 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
-// POST /api/auth/demo-switch
-// Helper for judges to seamlessly switch between Client, Provider, and Judge personas
+// POST /api/auth/demo-switch - Client, Provider, or Admin switch
 router.post('/demo-switch', async (req, res, next) => {
   try {
     const { persona } = req.body;
-    let target: { email: string; password: string; name: string; role: any } = DEMO_USERS.CLIENT;
+    let target: any = DEMO_USERS.CLIENT;
     if (persona === 'provider') target = DEMO_USERS.PROVIDER;
-    if (persona === 'judge') target = DEMO_USERS.JUDGE;
     if (persona === 'admin') target = DEMO_USERS.ADMIN;
 
     // Check if user exists in store, or seed them
@@ -140,29 +150,30 @@ router.post('/demo-switch', async (req, res, next) => {
     }
 
     if (!user) {
-      const passwordHash = await bcrypt.hash(target.password, 10);
+      const passwordHash = await bcrypt.hash(target.password, 12);
       user = {
-        id: 'usr_' + (persona || 'demo') + '_' + Math.random().toString(36).substring(2, 6),
+        id: 'usr_' + persona + '_' + Math.random().toString(36).substring(2, 6),
         name: target.name,
         email: target.email,
         role: target.role,
         passwordHash,
         createdAt: new Date().toISOString(),
       };
-      dbStore.users.set(user.id, user);
+      await dbStore.saveUser(user);
     }
 
+    // Token set for 1 day
     const token = jwt.sign(
       { id: user.id, name: user.name, email: user.email, role: user.role },
       env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '1d' }
     );
 
     res.cookie('clausora_token', token, {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 24 * 60 * 60 * 1000,
     });
 
     return res.json({
@@ -186,7 +197,7 @@ router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
   });
 });
 
-// GET /api/auth/clients - list available clients for assignment
+// GET /api/auth/clients - list available clients
 router.get('/clients', (req, res) => {
   const clients = Array.from(dbStore.users.values())
     .filter((u) => u.role === 'client')
@@ -195,6 +206,18 @@ router.get('/clients', (req, res) => {
   return res.json({
     success: true,
     data: { clients },
+  });
+});
+
+// GET /api/auth/providers - list available providers for project/task assignment
+router.get('/providers', (req, res) => {
+  const providers = Array.from(dbStore.users.values())
+    .filter((u) => u.role === 'provider')
+    .map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+
+  return res.json({
+    success: true,
+    data: { providers },
   });
 });
 

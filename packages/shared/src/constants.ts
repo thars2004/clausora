@@ -39,12 +39,6 @@ export const DEMO_USERS = {
     name: 'Alex Rivera (Fullstack Studio)',
     role: 'provider' as const,
   },
-  JUDGE: {
-    email: 'judge@paypalhackathon.com',
-    password: 'JudgeDemo2026!',
-    name: 'PayPal Hackathon Evaluator',
-    role: 'client' as const,
-  },
   ADMIN: {
     email: 'admin@clausora.dev',
     password: 'ClausoraAdmin2026!',

@@ -62,7 +62,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [newEvidenceDesc, setNewEvidenceDesc] = useState('');
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
 
-  const fetchProjectData = async () => {
+  const fetchProjectData = async (isBackground = false) => {
     try {
       const pId = projectId || 'proj_hackathon_demo';
       const res = await api.get(`/projects/${pId}`);
@@ -72,15 +72,27 @@ export const ProjectDetailPage: React.FC = () => {
       setMilestones(mData);
       setAgreements(aData);
 
-      // Select active milestone (prefer milestone awaiting decision or first)
-      const targetMs = mData.find((m: Milestone) => m.status === 'AWAITING_CLIENT_DECISION') || mData[0];
-      if (targetMs) {
-        setSelectedMilestone(targetMs);
-        // Fetch evidence and review for target milestone
+      // Select or refresh active milestone
+      let activeMs: Milestone | null = null;
+      setSelectedMilestone((prev) => {
+        if (prev) {
+          const match = mData.find((m: Milestone) => m.id === prev.id);
+          if (match) {
+            activeMs = match;
+            return match;
+          }
+        }
+        const target = mData.find((m: Milestone) => m.status === 'AWAITING_CLIENT_DECISION') || mData[0] || null;
+        activeMs = target;
+        return target;
+      });
+
+      const msToInspect = activeMs || mData[0];
+      if (msToInspect) {
         try {
-          const eviRes = await api.get(`/milestones/${targetMs.id}/evidence`);
+          const eviRes = await api.get(`/milestones/${msToInspect.id}/evidence`);
           setEvidenceItems(eviRes.data.data?.evidence || []);
-          const revRes = await api.get(`/milestones/${targetMs.id}/review`);
+          const revRes = await api.get(`/milestones/${msToInspect.id}/review`);
           setAiReview(revRes.data.data?.review || null);
         } catch {
           // ignore
@@ -105,12 +117,16 @@ export const ProjectDetailPage: React.FC = () => {
     } catch (err) {
       console.error('Failed to load project details:', err);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProjectData();
+    fetchProjectData(false);
+    const interval = setInterval(() => {
+      fetchProjectData(true);
+    }, 6000);
+    return () => clearInterval(interval);
   }, [projectId]);
 
   const setTab = (tab: string) => {
@@ -209,9 +225,13 @@ export const ProjectDetailPage: React.FC = () => {
       {/* Project Header Banner */}
       <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-extrabold text-white">{project.title}</h1>
             <Badge variant="primary">{project.status}</Badge>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-700/40 text-[10px] text-emerald-300 font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Live Atlas DB</span>
+            </div>
           </div>
           <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
             {project.description}

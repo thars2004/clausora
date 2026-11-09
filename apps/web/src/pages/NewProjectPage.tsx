@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { Badge } from '../components/common/Badge';
 import { WorkBlueprint } from '@clausora/shared';
 import {
@@ -14,35 +15,46 @@ import {
   AlertCircle,
   ArrowRight,
   ShieldAlert,
+  Users,
 } from 'lucide-react';
 
 export const NewProjectPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [sourceType, setSourceType] = useState<'text' | 'file' | 'url' | 'rea'>('text');
   const [sourceContent, setSourceContent] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const [clients, setClients] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [providers, setProviders] = useState<Array<{ id: string; name: string; email: string }>>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedProviderId, setSelectedProviderId] = useState<string>('');
 
   const [loading, setLoading] = useState(false);
   const [blueprint, setBlueprint] = useState<WorkBlueprint | null>(null);
   const [projectId, setProjectId] = useState<string>('');
   const [error, setError] = useState<string>('');
 
-  React.useEffect(() => {
-    async function fetchClients() {
+  useEffect(() => {
+    async function fetchUsers() {
       try {
-        const res = await api.get('/auth/clients');
-        const list = res.data.data?.clients || [];
-        setClients(list);
-        if (list.length > 0) setSelectedClientId(list[0].id);
+        const [cRes, pRes] = await Promise.all([
+          api.get('/auth/clients').catch(() => ({ data: { data: { clients: [] } } })),
+          api.get('/auth/providers').catch(() => ({ data: { data: { providers: [] } } })),
+        ]);
+        const clientList = cRes.data.data?.clients || [];
+        const providerList = pRes.data.data?.providers || [];
+        setClients(clientList);
+        setProviders(providerList);
+        if (clientList.length > 0) setSelectedClientId(clientList[0].id);
+        if (providerList.length > 0) setSelectedProviderId(providerList[0].id);
       } catch {
         // ignore
       }
     }
-    fetchClients();
+    fetchUsers();
   }, []);
 
   const handleLoadSampleBrief = () => {
@@ -80,6 +92,9 @@ export const NewProjectPage: React.FC = () => {
     setError('');
 
     try {
+      const resolvedClientId = user?.role === 'client' ? user.id : (selectedClientId || 'usr_client_demo');
+      const resolvedProviderId = user?.role === 'provider' ? user.id : (selectedProviderId || 'usr_provider_demo');
+
       if (sourceType === 'rea') {
         let parsedReport;
         try {
@@ -88,7 +103,11 @@ export const NewProjectPage: React.FC = () => {
           throw new Error('Invalid JSON format in REA report input.');
         }
 
-        const res = await api.post('/rea/import-report', parsedReport);
+        const res = await api.post('/rea/import-report', {
+          ...parsedReport,
+          clientId: resolvedClientId,
+          providerId: resolvedProviderId,
+        });
         setProjectId(res.data.data.project.id);
         setBlueprint(res.data.data.blueprint);
       } else {
@@ -97,8 +116,11 @@ export const NewProjectPage: React.FC = () => {
         formData.append('description', description);
         formData.append('sourceType', sourceType);
         formData.append('sourceContent', sourceContent);
-        if (selectedClientId) {
-          formData.append('clientId', selectedClientId);
+        if (resolvedClientId) {
+          formData.append('clientId', resolvedClientId);
+        }
+        if (resolvedProviderId) {
+          formData.append('providerId', resolvedProviderId);
         }
         if (selectedFile) {
           formData.append('file', selectedFile);
@@ -172,25 +194,57 @@ export const NewProjectPage: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Assign Project / Workstream Tasks to Client
-                </label>
-                <select
-                  value={selectedClientId}
-                  onChange={(e) => setSelectedClientId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
-                >
-                  {clients.length === 0 ? (
-                    <option value="usr_client_demo">Sarah Chen (Acme Ventures) — client@clausora.dev</option>
-                  ) : (
-                    clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({c.email})
-                      </option>
-                    ))
-                  )}
-                </select>
+              {/* Dynamic Role Assignments: Client creates -> selects Provider; Provider creates -> selects Client; Admin -> selects both */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(user?.role === 'provider' || user?.role === 'admin' || !user?.role) && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Select Client / Payer</span>
+                    </label>
+                    <select
+                      value={selectedClientId}
+                      onChange={(e) => setSelectedClientId(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
+                    >
+                      {clients.length === 0 ? (
+                        <option value="usr_client_demo">Sarah Chen (Acme Ventures) — client@clausora.dev</option>
+                      ) : (
+                        clients.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} ({c.email})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <p className="text-[11px] text-slate-500 mt-1">This client will hold exclusive approval & PayPal release rights.</p>
+                  </div>
+                )}
+
+                {(user?.role === 'client' || user?.role === 'admin' || !user?.role) && (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Select Assigned Provider / Developer</span>
+                    </label>
+                    <select
+                      value={selectedProviderId}
+                      onChange={(e) => setSelectedProviderId(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-purple-500"
+                    >
+                      {providers.length === 0 ? (
+                        <option value="usr_provider_demo">Alex Rivera (Nexus Labs) — provider@clausora.dev</option>
+                      ) : (
+                        providers.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.email})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <p className="text-[11px] text-slate-500 mt-1">This provider will have access to submit deliverable proofs.</p>
+                  </div>
+                )}
               </div>
 
               <div>

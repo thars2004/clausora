@@ -1,13 +1,19 @@
 import app from './app';
 import { env } from './config/env';
 import { connectDatabase } from './database/connection';
+import { dbStore } from './database/store';
 import { seedDemoData } from './seed';
 
 async function bootstrap() {
   console.log('🚀 Starting Clausora API Server...');
-  await connectDatabase();
+  const connected = await connectDatabase();
 
-  if (env.ENABLE_DEMO_SEED) {
+  if (connected) {
+    await dbStore.syncFromLiveDatabase();
+  }
+
+  // If no users exist yet in database or in memory, seed demo accounts
+  if (dbStore.users.size === 0 && env.ENABLE_DEMO_SEED) {
     await seedDemoData();
   }
 

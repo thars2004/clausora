@@ -93,7 +93,7 @@ function transitionMilestone(
   const previous = milestone.status;
   milestone.status = targetStatus;
   milestone.updatedAt = new Date().toISOString();
-  dbStore.milestones.set(milestoneId, milestone);
+  dbStore.saveMilestone(milestone);
 
   dbStore.addAuditEvent({
     projectId: milestone.projectId,

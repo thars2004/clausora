@@ -19,27 +19,45 @@ export const DashboardPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastSynced, setLastSynced] = useState<Date>(new Date());
 
   useEffect(() => {
-    async function fetchData() {
+    let isMounted = true;
+
+    async function fetchData(isBackground = false) {
       try {
+        if (!isBackground) setLoading(true);
         const res = await api.get('/projects');
+        if (!isMounted) return;
         setProjects(res.data.data?.projects || []);
 
-        // Fetch demo project activity for timeline
         try {
           const actRes = await api.get('/projects/proj_hackathon_demo/activity');
-          setAuditEvents(actRes.data.data?.events || []);
+          if (isMounted) {
+            setAuditEvents(actRes.data.data?.events || []);
+          }
         } catch {
           // fallback
         }
+        setLastSynced(new Date());
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
       } finally {
-        setLoading(false);
+        if (isMounted && !isBackground) setLoading(false);
       }
     }
+
     fetchData();
+
+    // 6-second live polling interval for real-time live database synchronization
+    const timer = setInterval(() => {
+      fetchData(true);
+    }, 6000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
   }, []);
 
   return (
@@ -47,7 +65,13 @@ export const DashboardPage: React.FC = () => {
       {/* Header & Quick Action */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Work Intelligence Dashboard</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Work Intelligence Dashboard</h1>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-700/40 text-[11px] text-emerald-300 font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Live Atlas DB Sync</span>
+            </div>
+          </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
             Track agreements, deliverable readiness, scope changes, and PayPal Sandbox payouts.
           </p>

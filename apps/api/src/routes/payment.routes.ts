@@ -21,6 +21,14 @@ router.post(
         return res.status(404).json({ success: false, message: 'Milestone not found' });
       }
 
+      const project = dbStore.projects.get(milestone.projectId);
+      if (req.user!.role !== 'admin' && project && project.ownerId !== req.user!.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Forbidden: Only the client owner of this project can initiate PayPal checkout.',
+        });
+      }
+
       // Ensure milestone is approved for payment
       if (milestone.status !== 'APPROVED_FOR_PAYMENT') {
         return res.status(409).json({
@@ -68,13 +76,13 @@ router.post(
         updatedAt: new Date().toISOString(),
       };
 
-      dbStore.payments.set(paymentId, paymentRecord);
+      await dbStore.savePayment(paymentRecord);
 
       // Transition milestone state to PAYPAL_ORDER_CREATED
       milestone.status = 'PAYPAL_ORDER_CREATED';
       milestone.paypalOrderId = order.id;
       milestone.updatedAt = new Date().toISOString();
-      dbStore.milestones.set(milestoneId, milestone);
+      await dbStore.saveMilestone(milestone);
 
       dbStore.addAuditEvent({
         projectId: milestone.projectId,
@@ -140,13 +148,13 @@ router.post(
         payment.status = 'captured';
         payment.paypalCaptureId = captureId;
         payment.updatedAt = new Date().toISOString();
-        dbStore.payments.set(paymentId, payment);
+        await dbStore.savePayment(payment);
 
         // Transition milestone to PAID
         milestone.status = 'PAID';
         milestone.paypalCaptureId = captureId;
         milestone.updatedAt = new Date().toISOString();
-        dbStore.milestones.set(milestone.id, milestone);
+        await dbStore.saveMilestone(milestone);
 
         dbStore.addAuditEvent({
           projectId: milestone.projectId,

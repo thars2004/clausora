@@ -12,9 +12,22 @@ import {
   AuditEvent,
   InAppNotification,
 } from '@clausora/shared';
+import { isDbConnected } from './connection';
+import {
+  UserModel,
+  ProjectModel,
+  MilestoneModel,
+  AgreementModel,
+  WorkBlueprintModel,
+  EvidenceModel,
+  AiReviewModel,
+  ScopeChangeRequestModel,
+  PaymentModel,
+  AuditEventModel,
+  NotificationModel,
+} from './models';
 
-// High-speed resilient in-memory collections (backed by MongoDB if configured)
-class ClausoraStore {
+class ClausoraLiveStore {
   users: Map<string, User & { passwordHash: string }> = new Map();
   projects: Map<string, Project & { ownerId: string; providerIds: string[]; sourceAssets: string[] }> = new Map();
   sourceAssets: Map<string, SourceAsset> = new Map();
@@ -28,7 +41,150 @@ class ClausoraStore {
   auditEvents: AuditEvent[] = [];
   notifications: InAppNotification[] = [];
 
-  // Audit logger helper
+  /**
+   * Initializes store by loading all live data from MongoDB Atlas
+   */
+  async syncFromLiveDatabase(): Promise<void> {
+    if (!isDbConnected()) return;
+
+    try {
+      console.log('🔄 Syncing live collections from MongoDB Atlas...');
+
+      const [
+        liveUsers,
+        liveProjects,
+        liveMilestones,
+        liveAgreements,
+        liveBlueprints,
+        liveEvidence,
+        liveReviews,
+        liveScope,
+        livePayments,
+        liveAudit,
+        liveNotifs,
+      ] = await Promise.all([
+        UserModel.find().lean(),
+        ProjectModel.find().lean(),
+        MilestoneModel.find().lean(),
+        AgreementModel.find().lean(),
+        WorkBlueprintModel.find().lean(),
+        EvidenceModel.find().lean(),
+        AiReviewModel.find().lean(),
+        ScopeChangeRequestModel.find().lean(),
+        PaymentModel.find().lean(),
+        AuditEventModel.find().sort({ createdAt: -1 }).limit(100).lean(),
+        NotificationModel.find().sort({ createdAt: -1 }).limit(50).lean(),
+      ]);
+
+      liveUsers.forEach((u: any) => this.users.set(u.id, u));
+      liveProjects.forEach((p: any) => this.projects.set(p.id, p));
+      liveMilestones.forEach((m: any) => this.milestones.set(m.id, m));
+      liveAgreements.forEach((a: any) => this.agreements.set(a.id, a));
+      liveBlueprints.forEach((b: any) => this.blueprints.set(b.id, b));
+      liveEvidence.forEach((e: any) => this.evidence.set(e.id, e));
+      liveReviews.forEach((r: any) => this.aiReviews.set(r.id, r));
+      liveScope.forEach((s: any) => this.scopeChangeRequests.set(s.id, s));
+      livePayments.forEach((p: any) => this.payments.set(p.id, p));
+      this.auditEvents = liveAudit as any[];
+      this.notifications = liveNotifs as any[];
+
+      console.log(`✅ Synced with MongoDB Atlas: ${this.users.size} users, ${this.projects.size} projects, ${this.milestones.size} milestones.`);
+    } catch (err: any) {
+      console.warn('⚠️ Error during initial Atlas sync:', err.message);
+    }
+  }
+
+  // --- Users Persistence ---
+  async saveUser(user: User & { passwordHash: string }): Promise<void> {
+    this.users.set(user.id, user);
+    if (isDbConnected()) {
+      UserModel.findOneAndUpdate({ id: user.id }, user, { upsert: true }).catch((err) =>
+        console.warn('Atlas UserModel save error:', err.message)
+      );
+    }
+  }
+
+  // --- Projects Persistence ---
+  async saveProject(project: Project & { ownerId: string; providerIds: string[]; sourceAssets: string[] }): Promise<void> {
+    this.projects.set(project.id, project);
+    if (isDbConnected()) {
+      ProjectModel.findOneAndUpdate({ id: project.id }, project, { upsert: true }).catch((err) =>
+        console.warn('Atlas ProjectModel save error:', err.message)
+      );
+    }
+  }
+
+  // --- Milestones Persistence ---
+  async saveMilestone(milestone: Milestone): Promise<void> {
+    this.milestones.set(milestone.id, milestone);
+    if (isDbConnected()) {
+      MilestoneModel.findOneAndUpdate({ id: milestone.id }, milestone, { upsert: true }).catch((err) =>
+        console.warn('Atlas MilestoneModel save error:', err.message)
+      );
+    }
+  }
+
+  // --- Agreements Persistence ---
+  async saveAgreement(agreement: Agreement): Promise<void> {
+    this.agreements.set(agreement.id, agreement);
+    if (isDbConnected()) {
+      AgreementModel.findOneAndUpdate({ id: agreement.id }, agreement, { upsert: true }).catch((err) =>
+        console.warn('Atlas AgreementModel save error:', err.message)
+      );
+    }
+  }
+
+  // --- Blueprints Persistence ---
+  async saveBlueprint(blueprint: WorkBlueprint): Promise<void> {
+    this.blueprints.set(blueprint.id, blueprint);
+    if (isDbConnected()) {
+      WorkBlueprintModel.findOneAndUpdate({ id: blueprint.id }, blueprint, { upsert: true }).catch((err) =>
+        console.warn('Atlas WorkBlueprintModel save error:', err.message)
+      );
+    }
+  }
+
+  // --- Evidence Persistence ---
+  async saveEvidence(evidence: EvidenceItem): Promise<void> {
+    this.evidence.set(evidence.id, evidence);
+    if (isDbConnected()) {
+      EvidenceModel.findOneAndUpdate({ id: evidence.id }, evidence, { upsert: true }).catch((err) =>
+        console.warn('Atlas EvidenceModel save error:', err.message)
+      );
+    }
+  }
+
+  // --- AI Reviews Persistence ---
+  async saveAiReview(review: AiReview): Promise<void> {
+    this.aiReviews.set(review.id, review);
+    if (isDbConnected()) {
+      AiReviewModel.findOneAndUpdate({ id: review.id }, review, { upsert: true }).catch((err) =>
+        console.warn('Atlas AiReviewModel save error:', err.message)
+      );
+    }
+  }
+
+  // --- Scope Changes Persistence ---
+  async saveScopeChange(req: ScopeChangeRequest): Promise<void> {
+    this.scopeChangeRequests.set(req.id, req);
+    if (isDbConnected()) {
+      ScopeChangeRequestModel.findOneAndUpdate({ id: req.id }, req, { upsert: true }).catch((err) =>
+        console.warn('Atlas ScopeChangeRequestModel save error:', err.message)
+      );
+    }
+  }
+
+  // --- Payments Persistence ---
+  async savePayment(payment: PaymentRecord): Promise<void> {
+    this.payments.set(payment.id, payment);
+    if (isDbConnected()) {
+      PaymentModel.findOneAndUpdate({ id: payment.id }, payment, { upsert: true }).catch((err) =>
+        console.warn('Atlas PaymentModel save error:', err.message)
+      );
+    }
+  }
+
+  // --- Audit Events ---
   addAuditEvent(event: Omit<AuditEvent, 'id' | 'createdAt'>): AuditEvent {
     const fullEvent: AuditEvent = {
       ...event,
@@ -36,10 +192,15 @@ class ClausoraStore {
       createdAt: new Date().toISOString(),
     };
     this.auditEvents.unshift(fullEvent);
+    if (isDbConnected()) {
+      AuditEventModel.create(fullEvent).catch((err) =>
+        console.warn('Atlas AuditEventModel save error:', err.message)
+      );
+    }
     return fullEvent;
   }
 
-  // Notification helper
+  // --- Notifications ---
   addNotification(notif: Omit<InAppNotification, 'id' | 'createdAt' | 'read'>): InAppNotification {
     const fullNotification: InAppNotification = {
       ...notif,
@@ -48,6 +209,11 @@ class ClausoraStore {
       createdAt: new Date().toISOString(),
     };
     this.notifications.unshift(fullNotification);
+    if (isDbConnected()) {
+      NotificationModel.create(fullNotification).catch((err) =>
+        console.warn('Atlas NotificationModel save error:', err.message)
+      );
+    }
     return fullNotification;
   }
 
@@ -67,5 +233,4 @@ class ClausoraStore {
   }
 }
 
-export const dbStore = new ClausoraStore();
-
+export const dbStore = new ClausoraLiveStore();

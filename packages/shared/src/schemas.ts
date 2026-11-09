@@ -94,6 +94,8 @@ export const ReaReportSchema = z.object({
       details: z.string(),
     })
   ).default([]),
+  clientId: z.string().optional(),
+  providerId: z.string().optional(),
   generatedAt: z.string().default(() => new Date().toISOString()),
 });
 

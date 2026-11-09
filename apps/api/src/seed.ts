@@ -3,13 +3,12 @@ import { dbStore } from './database/store';
 import { DEMO_USERS, computeSha256, canonicalStringify } from '@clausora/shared';
 
 export async function seedDemoData() {
-  console.log('🌱 Seeding demo accounts and hackathon walkthrough project...');
+  console.log('🌱 Seeding demo accounts and master data into live database...');
 
-  // 1. Seed Users
-  const clientPassHash = await bcrypt.hash(DEMO_USERS.CLIENT.password, 10);
-  const providerPassHash = await bcrypt.hash(DEMO_USERS.PROVIDER.password, 10);
-  const judgePassHash = await bcrypt.hash(DEMO_USERS.JUDGE.password, 10);
-  const adminPassHash = await bcrypt.hash(DEMO_USERS.ADMIN.password, 10);
+  // 1. Seed Users (Client, Provider, Admin)
+  const clientPassHash = await bcrypt.hash(DEMO_USERS.CLIENT.password, 12);
+  const providerPassHash = await bcrypt.hash(DEMO_USERS.PROVIDER.password, 12);
+  const adminPassHash = await bcrypt.hash(DEMO_USERS.ADMIN.password, 12);
 
   const clientUser = {
     id: 'usr_client_demo',
@@ -29,15 +28,6 @@ export async function seedDemoData() {
     createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
   };
 
-  const judgeUser = {
-    id: 'usr_judge_demo',
-    name: DEMO_USERS.JUDGE.name,
-    email: DEMO_USERS.JUDGE.email,
-    role: DEMO_USERS.JUDGE.role,
-    passwordHash: judgePassHash,
-    createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
-  };
-
   const adminUser = {
     id: 'usr_admin_demo',
     name: DEMO_USERS.ADMIN.name,
@@ -47,10 +37,9 @@ export async function seedDemoData() {
     createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
   };
 
-  dbStore.users.set(clientUser.id, clientUser);
-  dbStore.users.set(providerUser.id, providerUser);
-  dbStore.users.set(judgeUser.id, judgeUser);
-  dbStore.users.set(adminUser.id, adminUser);
+  await dbStore.saveUser(clientUser);
+  await dbStore.saveUser(providerUser);
+  await dbStore.saveUser(adminUser);
 
   // 2. Seed Project
   const projectId = 'proj_hackathon_demo';
@@ -66,7 +55,7 @@ export async function seedDemoData() {
     createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  dbStore.projects.set(projectId, project);
+  await dbStore.saveProject(project);
 
   // 3. Seed Source Asset
   dbStore.sourceAssets.set('asset_demo_brief', {
@@ -111,6 +100,8 @@ export async function seedDemoData() {
             recommendedEvidence: ['screenshot' as const, 'repository_link' as const],
             confidence: 0.95,
             status: 'done' as const,
+            assignedClientId: clientUser.id,
+            assignedProviderId: providerUser.id,
           },
         ],
       },
@@ -134,6 +125,8 @@ export async function seedDemoData() {
             recommendedEvidence: ['screenshot' as const, 'rea_trace' as const],
             confidence: 0.96,
             status: 'in_progress' as const,
+            assignedClientId: clientUser.id,
+            assignedProviderId: providerUser.id,
           },
         ],
       },
@@ -168,7 +161,7 @@ export async function seedDemoData() {
     aiModel: 'Qwen/Qwen2.5-VL-7B-Instruct',
     createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
   };
-  dbStore.blueprints.set(blueprint.id, blueprint);
+  await dbStore.saveBlueprint(blueprint);
 
   // 5. Seed Agreement & SHA-256 Fingerprint
   const snapshot = {
@@ -212,7 +205,7 @@ export async function seedDemoData() {
     createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
     approvedAt: new Date(Date.now() - 6 * 86400000).toISOString(),
   };
-  dbStore.agreements.set(agreement.id, agreement);
+  await dbStore.saveAgreement(agreement);
 
   // 6. Seed Milestone 1 (Completed & Paid via PayPal Sandbox)
   const ms1 = {
@@ -241,7 +234,7 @@ export async function seedDemoData() {
     createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
   };
-  dbStore.milestones.set(ms1.id, ms1);
+  await dbStore.saveMilestone(ms1);
 
   // 7. Seed Milestone 2 (Ready for Review & PayPal Checkout Demonstration!)
   const ms2 = {
@@ -272,7 +265,7 @@ export async function seedDemoData() {
     createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  dbStore.milestones.set(ms2.id, ms2);
+  await dbStore.saveMilestone(ms2);
 
   // 8. Seed Evidence for Milestone 2
   const evi1 = {
@@ -288,10 +281,10 @@ export async function seedDemoData() {
     sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
     createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
   };
-  dbStore.evidence.set(evi1.id, evi1);
+  await dbStore.saveEvidence(evi1);
 
   // 9. Seed AI Review for Milestone 2
-  dbStore.aiReviews.set('rev_demo_2', {
+  await dbStore.saveAiReview({
     id: 'rev_demo_2',
     projectId,
     milestoneId: ms2.id,
@@ -344,7 +337,7 @@ export async function seedDemoData() {
   });
 
   // 10. Seed Scope Drift Request
-  dbStore.scopeChangeRequests.set('scr_demo_1', {
+  await dbStore.saveScopeChange({
     id: 'scr_demo_1',
     projectId,
     baseAgreementId: agreement.id,
@@ -424,6 +417,5 @@ export async function seedDemoData() {
 
   events.forEach((ev) => dbStore.addAuditEvent({ ...ev, projectId }));
 
-  console.log('✅ Demo data successfully seeded! Ready for judges and test runs.');
+  console.log('✅ Demo data successfully persisted to live MongoDB Atlas database!');
 }
-

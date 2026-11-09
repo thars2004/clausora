@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { dbStore } from '../database/store';
-import { CreateProjectInputSchema, Project, AuditEvent } from '@clausora/shared';
+import { CreateProjectInputSchema, Project } from '@clausora/shared';
 import { hfClient } from '../services/ai/huggingface.client';
 import { storageService } from '../services/storage/storage.service';
 import multer from 'multer';
@@ -9,12 +9,22 @@ import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const router = Router();
 
-// GET /api/projects - list projects for current user
+// GET /api/projects - role-isolated project listing
 router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
   const userId = req.user!.id;
-  const userProjects = Array.from(dbStore.projects.values()).filter(
-    (p) => p.ownerId === userId || p.providerIds.includes(userId)
-  );
+  const userRole = req.user!.role;
+
+  let userProjects: any[] = [];
+  if (userRole === 'admin') {
+    // Admin sees all projects
+    userProjects = Array.from(dbStore.projects.values());
+  } else if (userRole === 'client') {
+    // Client strictly sees their own projects
+    userProjects = Array.from(dbStore.projects.values()).filter((p) => p.ownerId === userId);
+  } else {
+    // Provider strictly sees projects where they are assigned as provider
+    userProjects = Array.from(dbStore.projects.values()).filter((p) => p.providerIds.includes(userId));
+  }
 
   return res.json({
     success: true,
@@ -22,16 +32,20 @@ router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
   });
 });
 
-// POST /api/projects - create new project with Work DNA generation
+// POST /api/projects - create new project with client & provider assignment
 router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest, res: Response, next) => {
   try {
     const userId = req.user!.id;
+    const userRole = req.user!.role;
     const body = req.body;
+
     const parsed = CreateProjectInputSchema.parse({
       title: body.title,
       description: body.description || '',
       sourceType: body.sourceType || 'text',
       sourceContent: body.sourceContent || '',
+      clientId: body.clientId,
+      providerId: body.providerId,
     });
 
     const projectId = 'proj_' + Math.random().toString(36).substring(2, 10);
@@ -58,12 +72,29 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
       extractedText = extractedText + '\n' + saved.extractedText;
     }
 
+    // Role-based client & provider assignment
+    let finalOwnerId = userId;
+    let finalProviderIds: string[] = [];
+
+    if (userRole === 'client') {
+      finalOwnerId = userId;
+      if (parsed.providerId) finalProviderIds.push(parsed.providerId);
+    } else if (userRole === 'provider') {
+      // Provider creates project by selecting client
+      finalOwnerId = parsed.clientId || userId;
+      finalProviderIds.push(userId);
+    } else {
+      // Admin creating
+      finalOwnerId = parsed.clientId || userId;
+      if (parsed.providerId) finalProviderIds.push(parsed.providerId);
+    }
+
     const project: Project & { ownerId: string; providerIds: string[]; sourceAssets: string[] } = {
       id: projectId,
       title: parsed.title,
       description: parsed.description,
-      ownerId: userId,
-      providerIds: [],
+      ownerId: finalOwnerId,
+      providerIds: finalProviderIds,
       status: 'analysing',
       sourceAssets: assetId ? [assetId] : [],
       currentAgreementId: '',
@@ -71,7 +102,7 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
       updatedAt: new Date().toISOString(),
     };
 
-    dbStore.projects.set(projectId, project);
+    await dbStore.saveProject(project);
 
     dbStore.addAuditEvent({
       projectId,
@@ -81,7 +112,7 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
       eventType: 'PROJECT_CREATED',
       entityType: 'project',
       entityId: projectId,
-      summary: `Created project "${project.title}". Initiating AI Work DNA analysis.`,
+      summary: `Created project "${project.title}" (Assigned Client: ${finalOwnerId}, Assigned Provider: ${finalProviderIds.join(', ') || 'Unassigned'}).`,
     });
 
     // Generate Work Blueprint using Hugging Face Inference
@@ -91,10 +122,19 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
       sourceText: extractedText,
     });
     blueprint.projectId = projectId;
-    dbStore.blueprints.set(blueprint.id, blueprint);
+
+    // Tag tasks with assigned client and provider
+    blueprint.workstreams.forEach((ws) => {
+      ws.tasks.forEach((t) => {
+        t.assignedClientId = finalOwnerId;
+        if (finalProviderIds.length > 0) t.assignedProviderId = finalProviderIds[0];
+      });
+    });
+
+    await dbStore.saveBlueprint(blueprint);
 
     project.status = 'awaiting_approval';
-    dbStore.projects.set(projectId, project);
+    await dbStore.saveProject(project);
 
     dbStore.addAuditEvent({
       projectId,
@@ -113,20 +153,31 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
         project,
         blueprint,
       },
-      message: 'Project created and Work Blueprint synthesized.',
+      message: 'Project created and Work Blueprint synthesized with assigned roles.',
     });
   } catch (err) {
     next(err);
   }
 });
 
-// GET /api/projects/:projectId
+// GET /api/projects/:projectId - secure tenant check
 router.get('/:projectId', authMiddleware, (req: AuthRequest, res: Response) => {
   const { projectId } = req.params;
   const project = dbStore.projects.get(projectId);
 
   if (!project) {
     return res.status(404).json({ success: false, message: 'Project not found' });
+  }
+
+  const userId = req.user!.id;
+  const userRole = req.user!.role;
+
+  // Security check: Only Admin, the Client owner, or the Assigned Provider can view this project
+  if (userRole !== 'admin' && project.ownerId !== userId && !project.providerIds.includes(userId)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden: You do not have permission to access this project.',
+    });
   }
 
   // Find latest blueprint
@@ -153,6 +204,18 @@ router.get('/:projectId', authMiddleware, (req: AuthRequest, res: Response) => {
 // GET /api/projects/:projectId/activity (Audit Events)
 router.get('/:projectId/activity', authMiddleware, (req: AuthRequest, res: Response) => {
   const { projectId } = req.params;
+  const project = dbStore.projects.get(projectId);
+  if (!project) {
+    return res.status(404).json({ success: false, message: 'Project not found' });
+  }
+
+  const userId = req.user!.id;
+  const userRole = req.user!.role;
+
+  if (userRole !== 'admin' && project.ownerId !== userId && !project.providerIds.includes(userId)) {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
   const events = dbStore.auditEvents.filter((e) => e.projectId === projectId);
 
   return res.json({
@@ -162,4 +225,3 @@ router.get('/:projectId/activity', authMiddleware, (req: AuthRequest, res: Respo
 });
 
 export default router;
-

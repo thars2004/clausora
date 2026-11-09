@@ -8,7 +8,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 
 const router = Router();
 
 // POST /api/milestones/:milestoneId/evidence - submit proof
-router.post('/milestones/:milestoneId/evidence', authMiddleware, upload.single('file'), (req: AuthRequest, res: Response, next) => {
+router.post('/milestones/:milestoneId/evidence', authMiddleware, upload.single('file'), async (req: AuthRequest, res: Response, next) => {
   try {
     const { milestoneId } = req.params;
     const milestone = dbStore.milestones.get(milestoneId);
@@ -40,7 +40,7 @@ router.post('/milestones/:milestoneId/evidence', authMiddleware, upload.single('
       createdAt: new Date().toISOString(),
     };
 
-    dbStore.evidence.set(evidenceId, item);
+    await dbStore.saveEvidence(item);
 
     dbStore.addAuditEvent({
       projectId: milestone.projectId,

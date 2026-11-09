@@ -19,9 +19,13 @@ export const LandingPage: React.FC = () => {
   const { user, switchPersona } = useAuth();
   const navigate = useNavigate();
 
-  const handleLaunchDemo = async (role: 'client' | 'provider' | 'judge') => {
+  const handleLaunchDemo = async (role: 'client' | 'provider' | 'admin') => {
     await switchPersona(role);
-    navigate('/projects/proj_hackathon_demo');
+    if (role === 'admin') {
+      navigate('/admin');
+    } else {
+      navigate('/projects/proj_hackathon_demo');
+    }
   };
 
   return (
@@ -68,27 +72,27 @@ export const LandingPage: React.FC = () => {
           </Link>
         </div>
 
-        {/* Judge Fast-Test Pill */}
-        <div className="mt-8 p-3 max-w-md mx-auto bg-slate-900/80 border border-slate-800 rounded-xl text-xs flex items-center justify-between gap-3">
-          <span className="text-slate-400 font-medium">Judge Quick Switch:</span>
+        {/* Role Fast-Test Switcher */}
+        <div className="mt-8 p-3 max-w-lg mx-auto bg-slate-900/80 border border-slate-800 rounded-xl text-xs flex items-center justify-between gap-3">
+          <span className="text-slate-400 font-medium">Quick Role Switch:</span>
           <div className="flex gap-2">
             <button
               onClick={() => handleLaunchDemo('client')}
-              className="px-2.5 py-1 bg-indigo-950/80 text-indigo-300 rounded border border-indigo-700/50 hover:bg-indigo-900 transition"
+              className="px-2.5 py-1 bg-indigo-950/80 text-indigo-300 rounded border border-indigo-700/50 hover:bg-indigo-900 transition font-medium"
             >
               Client (Sarah)
             </button>
             <button
               onClick={() => handleLaunchDemo('provider')}
-              className="px-2.5 py-1 bg-purple-950/80 text-purple-300 rounded border border-purple-700/50 hover:bg-purple-900 transition"
+              className="px-2.5 py-1 bg-purple-950/80 text-purple-300 rounded border border-purple-700/50 hover:bg-purple-900 transition font-medium"
             >
               Provider (Alex)
             </button>
             <button
-              onClick={() => handleLaunchDemo('judge')}
-              className="px-2.5 py-1 bg-amber-950/80 text-amber-300 rounded border border-amber-700/50 hover:bg-amber-900 transition"
+              onClick={() => handleLaunchDemo('admin')}
+              className="px-2.5 py-1 bg-amber-950/80 text-amber-300 rounded border border-amber-700/50 hover:bg-amber-900 transition font-medium"
             >
-              Evaluator Mode
+              Admin Portal
             </button>
           </div>
         </div>

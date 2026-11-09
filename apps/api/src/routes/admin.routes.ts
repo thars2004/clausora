@@ -176,3 +176,4 @@ router.get('/analytics', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 export default router;
+
