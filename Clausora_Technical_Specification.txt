@@ -1,0 +1,1473 @@
+CLAUSORA TECHNICAL PRODUCT SPECIFICATION & ANTIGRAVITY BUILD BLUEPRINT
+Version: 1.0 Prepared: 09 November 2026 Project category: AI + FinTech +
+Agentic Workflow + PayPal Primary stack: React.js, Tailwind CSS,
+Node.js, Express, MongoDB AI provider: Hugging Face Inference Providers
+Primary model: Qwen/Qwen2.5-VL-7B-Instruct Payments: PayPal Developer
+Sandbox / Orders v2 Optional developer research tool: REA (morluto/rea)
+
+====================================================================== 1.
+PRODUCT IDENTITY
+======================================================================
+
+Brand: CLAUSORA Product name: Clausora Category: AI-powered work
+intelligence and milestone payment platform
+
+Suggested tagline: “Understand the work. Verify the outcome. Release the
+payment.”
+
+One-line description: Clausora turns any project brief, task, workflow,
+document, screenshot or approved work artifact into a structured
+execution plan with verifiable deliverables, evidence-based reviews,
+scope-change detection and human-approved PayPal milestone payments.
+
+Core promise: A client should not have to manually translate a vague
+request into a contract, chase updates, decide whether work meets the
+agreement, and then separately manage payment. Clausora connects those
+steps in one transparent workflow.
+
+IMPORTANT PRODUCT POSITIONING: Clausora is not an escrow provider, bank,
+legal-contract authority, autonomous judge or payment processor. It is a
+project understanding, agreement, evidence and payment-orchestration
+layer. PayPal processes sandbox checkout and payment capture. A real
+production launch would require separate legal, regulatory, payment,
+privacy and PayPal approval reviews.
+
+======================================================================
+2. THE ORIGINAL PRODUCT IDEA
+======================================================================
+
+The central innovation is the “Work DNA Engine”.
+
+A user can provide a project in multiple forms: - Plain-language project
+description. - Client brief or statement of work (PDF, DOCX, TXT). -
+Screenshots of a website, application, dashboard or design. - Public
+URLs supplied by the user. - GitHub repository URL or selected code /
+commit links. - Task lists, workflow notes, acceptance criteria and
+milestones. - Evidence submitted by the service provider.
+
+Clausora analyses the material and creates a structured “Work
+Blueprint”: - What is the actual goal? - What are the workstreams? -
+What tasks and dependencies are implied? - What deliverables should
+exist? - What evidence can demonstrate each deliverable? - What are the
+acceptance criteria? - What is ambiguous or missing? - What are the
+risks, assumptions and exclusions? - What milestones and payment amounts
+have the parties approved?
+
+The system should not simply invent a contract. It should show the AI’s
+proposed interpretation, identify missing information and ask clarifying
+questions before the client and provider approve it.
+
+The platform then maintains a live relationship between: ORIGINAL BRIEF
+-> WORK BLUEPRINT -> APPROVED AGREEMENT -> MILESTONES -> SUBMITTED
+EVIDENCE -> REVIEW -> HUMAN APPROVAL -> PAYPAL PAYMENT -> AUDIT TIMELINE
+
+Distinctive feature: “Work DNA / Scope Drift” When new requests,
+evidence, messages or task changes appear, Clausora compares them with
+the approved Work Blueprint. It classifies each new item as: 1. Already
+included in the approved scope. 2. A clarification of an existing
+requirement. 3. A likely new deliverable. 4. A deadline or dependency
+change. 5. A potentially conflicting instruction. 6. Not enough
+information to classify.
+
+If the request appears outside the approved scope, Clausora proposes a
+change request with a description, impact, estimated effort (clearly
+labelled as an estimate), proposed due-date change and optional new
+milestone. It does not silently change the agreement or payment amount.
+
+A second distinctive feature is the “Evidence Graph”: Each acceptance
+criterion is linked to evidence items, AI observations, reviewer
+decisions and a payment milestone. Users can see exactly why a milestone
+is marked ready, needs revision or is awaiting human review.
+
+======================================================================
+3. TARGET USERS AND PROBLEM
+======================================================================
+
+Primary users: - Freelancers and independent developers. - Small
+software agencies. - Startup founders hiring contractors. - Designers,
+developers, video editors and digital service providers. - Clients who
+need transparent progress and deliverable acceptance.
+
+Problems: - Client requests are often vague or scattered across messages
+and files. - Providers and clients may understand the same task
+differently. - Deliverables and acceptance criteria are not clearly
+defined. - Work evidence is disconnected from the original
+requirement. - New requests are added without updating scope or
+payment. - Payment approval becomes a manual, confusing final step. -
+There is no shared, auditable history of what was agreed and delivered.
+
+Clausora’s value: - Turn unstructured requests into clear work. - Reduce
+avoidable misunderstandings. - Make progress measurable. - Connect proof
+to acceptance criteria. - Make scope changes visible. - Make payment
+conditional on explicit approval and PayPal checkout. - Preserve a
+transparent activity timeline.
+
+Do not claim that Clausora eliminates disputes or guarantees work
+quality. It improves clarity and traceability.
+
+======================================================================
+4. HACKATHON RULES - VERIFIED REQUIREMENTS
+======================================================================
+
+Official rules: https://paypalaihackathon.devpost.com/rules
+
+Hackathon page: https://paypalaihackathon.devpost.com/
+
+Deadline shown on official rules: Thursday, November 12, 2026 at 12:00
+PM Pacific Time. For India, this is Friday, November 13, 2026 at
+approximately 1:30 AM IST. Submit before the deadline; do not wait until
+the final minutes.
+
+The project must: - Be newly created during the submission period, or be
+an existing project significantly updated during that period. -
+Integrate the PayPal developer platform using the free sandbox
+environment. - Meaningfully integrate an AI tool, model or platform. -
+Run consistently and function as represented in the demo. - Be the
+entrant’s original work and comply with third-party licences.
+
+Submission must include: 1. Project title and text description. 2. Clear
+explanation of features and functionality. 3. Tools used, including the
+AI model and how it is used. 4. Functional demo URL OR complete setup
+and run instructions. 5. Public GitHub, GitLab or Bitbucket repository.
+6. All source code, assets and setup instructions in the repository. 7.
+An open-source licence file visible at the top level of the repository.
+8. Public YouTube demo video shorter than 3 minutes. 9. Video must show
+the actual application working on its intended device. 10. No
+copyrighted music or third-party trademarks/material in the video unless
+permission is held. 11. If login is required, include working judge/test
+credentials and instructions. 12. Make the app available free of charge
+for judging and testing through the judging period.
+
+Judging criteria (equally weighted): - Technological Implementation:
+real, non-trivial PayPal and AI implementation. - Design: complete,
+coherent product experience. - Potential Impact: credible problem,
+audience and demonstrated solution. - Innovation/Idea: originality and
+differentiation. - Presentation: understandable pitch and working
+end-to-end demo.
+
+Prize categories shown in the rules include Grand Prizes and special
+awards such as Most Creative, Most Impactful, Best Demo Delivery, Best
+Use of PayPal + AI and Best Use of Agentic Commerce. Sponsor-specific
+prizes have additional conditions. Check the current Devpost prize
+section before claiming eligibility for any sponsor prize.
+
+Rules and strategy: - PayPal must be central, not a decorative checkout
+button. - AI must materially interpret work, build structured plans and
+evaluate evidence. - The demo must complete a real sandbox order flow. -
+Never show a fake payment success screen as if it were a real PayPal
+transaction. - Be honest about any feature that is a prototype or
+simulated. - Do not use real customer payment data. - Include an
+explanation of what was built during the hackathon. - If REA or other
+open-source code is used, comply with its licence and document
+modifications and attribution.
+
+Official PayPal getting-started guide:
+https://github.com/paypaldev/getting-started-with-paypal-sandbox
+
+PayPal Developer dashboard: https://developer.paypal.com/
+
+PayPal Orders API:
+https://developer.paypal.com/api/rest/integration/orders-api
+
+PayPal Orders v2: https://developer.paypal.com/api/orders/v2/
+
+PayPal Webhooks: https://developer.paypal.com/api/rest/webhooks/
+
+======================================================================
+5. AI MODEL - HUGGING FACE
+======================================================================
+
+RECOMMENDED PRIMARY MODEL: Qwen/Qwen2.5-VL-7B-Instruct
+
+Hugging Face model: https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct
+
+Why this model: - Vision-language model: accepts image and text
+inputs. - Can interpret screenshots, UI layouts, charts, documents and
+visual evidence. - Supports document and form understanding and
+structured output workflows. - Can help compare visual evidence with a
+written acceptance criterion. - Apache-2.0 model licence is shown on the
+official model card; still review the exact model card and licence
+before distribution. - Suitable for a product where work may be
+represented by screenshots, documents, designs and text.
+
+Important deployment note: A model being listed on Hugging Face does not
+guarantee that it is currently served by every shared Inference
+Provider. Open the model page, check the available Inference Providers,
+supported task and pricing/limits. Test the exact model with a small
+request before building the whole application around it. If shared
+inference is unavailable or too slow, create a dedicated Hugging Face
+Inference Endpoint or use a supported provider. Do not assume free,
+unlimited inference.
+
+Hugging Face account and token: https://huggingface.co/settings/tokens
+
+Hugging Face Inference Providers:
+https://huggingface.co/docs/inference-providers/index
+
+Hugging Face Inference documentation:
+https://huggingface.co/docs/inference-providers/tasks/chat-completion
+
+Node SDK: https://github.com/huggingface/huggingface.js
+
+Suggested package: @huggingface/inference
+
+Environment variable: HF_TOKEN=your_hugging_face_token
+HF_MODEL=Qwen/Qwen2.5-VL-7B-Instruct
+
+Never put HF_TOKEN in React/Vite environment variables or browser code.
+Store it only on the Node backend.
+
+AI implementation strategy: Use the main vision-language model for: A.
+Brief understanding. B. Workstream and task extraction. C. Acceptance
+criteria drafting. D. Screenshot and document understanding. E.
+Evidence-to-criterion comparison. F. Scope drift classification. G.
+Clarifying question generation. H. Plain-language explanation of AI
+findings.
+
+For text-only work, the same model can be used. Optionally evaluate
+Qwen/Qwen2.5-7B-Instruct as a lower-complexity text-only model:
+https://huggingface.co/Qwen/Qwen2.5-7B-Instruct It has strong
+instruction-following and structured JSON capabilities. Do not add a
+second model unless it improves tested quality or performance.
+
+AI response rules: - Ask the model for JSON with a strict schema. -
+Validate every response using Zod. - Reject malformed JSON and retry
+once with a repair prompt. - Do not trust the model to calculate money,
+set final payment amounts, approve a milestone, change a deadline or
+trigger a payment. - AI may recommend; deterministic backend rules and
+human approval decide. - Every AI finding should include a short
+explanation and references to the evidence item(s) used. - Show
+uncertainty and missing evidence. - Do not let an AI score alone approve
+or reject work. - Do not treat a screenshot as proof that a feature
+works at runtime. - Do not claim that AI verifies source code unless the
+code was actually fetched and analysed. - Do not send secrets, private
+credentials or unnecessary personal information to the model.
+
+Suggested AI output schema for Work Blueprint:
+
+{ “projectTitle”: “string”, “projectSummary”: “string”,
+“detectedProjectType”: “web_app | mobile_app | design | content |
+other”, “workstreams”: [ { “name”: “string”, “description”: “string”,
+“tasks”: [ { “title”: “string”, “description”: “string”, “priority”:
+“low | medium | high”, “dependencies”: [“task id or title”],
+“deliverable”: “string”, “acceptanceCriteria”: [“observable criterion”],
+“recommendedEvidence”: [“screenshot”, “url”, “document”,
+“repository_link”, “video”], “confidence”: 0.0 } ] } ], “assumptions”:
+[“string”], “missingInformation”: [“string”], “risks”: [“string”],
+“clarifyingQuestions”: [“string”], “suggestedMilestones”: [ { “name”:
+“string”, “includedTaskTitles”: [“string”], “suggestedAmount”: null,
+“amountNeedsHumanInput”: true } ] }
+
+Do not let AI invent currency amounts. If a suggested milestone amount
+is needed, ask the user to enter it or distribute a user-provided total
+using a transparent, editable rule. All money values must be validated
+server-side.
+
+Suggested evidence-analysis schema:
+
+{ “criterionId”: “string”, “status”: “supported | partially_supported |
+not_supported | insufficient_evidence”, “observations”: [“specific
+observation”], “evidenceReferences”: [“evidence id”], “limitations”:
+[“what this evidence cannot prove”], “questionsForReviewer”:
+[“question”], “confidence”: 0.0, “recommendation”:
+“ready_for_human_review | request_more_evidence | revision_suggested” }
+
+Suggested scope-drift schema:
+
+{ “classification”: “in_scope | clarification | likely_scope_change |
+deadline_change | conflict | uncertain”, “reason”: “string”,
+“relatedCriterionIds”: [“string”], “impactAreas”: [“cost”, “time”,
+“deliverables”, “dependencies”], “suggestedChangeRequest”: {
+“description”: “string”, “proposedDueDate”: null, “additionalAmount”:
+null }, “requiresHumanDecision”: true }
+
+======================================================================
+6. PRODUCT EXPERIENCE / USER JOURNEYS
+======================================================================
+
+Roles: - CLIENT: creates project, reviews blueprint, approves agreement,
+funds checkout, reviews submitted work. - PROVIDER: accepts agreement,
+updates tasks, uploads evidence, requests milestone review. -
+ADMIN/DEMO: optional platform-level test role for hackathon
+demonstration.
+
+Main journey:
+
+STEP 1 - Create a project Client enters a project name and description,
+or uploads a brief/document/screenshots. The app shows supported file
+types, upload progress and privacy notice.
+
+STEP 2 - AI Work DNA analysis Backend sends extracted text and supported
+image inputs to Hugging Face. AI identifies project type, workstreams,
+tasks, deliverables, dependencies, acceptance criteria, risks and
+missing information. UI displays a visual Work Blueprint with editable
+cards. User can ask follow-up questions and regenerate a section.
+
+STEP 3 - Clarification and agreement Client and provider review the
+blueprint. Both sides can request edits. The final approved version is
+frozen as an agreement snapshot. Store a SHA-256 hash, version,
+timestamp and approving user IDs. A new change must create a new
+version; never overwrite the historical approved version.
+
+STEP 4 - Milestone setup User enters milestone names, amounts, currency
+and due dates. Server validates total amounts and currency. The project
+shows a milestone timeline and payment summary. Only mutually approved
+milestones become active.
+
+STEP 5 - Provider performs work Provider updates task statuses and
+submits evidence. Evidence can include image, document, public URL,
+GitHub commit/PR URL or explanatory note. Store metadata and a
+cryptographic hash of the uploaded file where practical. Use private
+object storage; do not expose raw storage credentials.
+
+STEP 6 - AI evidence review AI maps each evidence item to one or more
+acceptance criteria. It returns supported, partially supported, not
+supported or insufficient evidence. It explains limitations. The client
+sees an Evidence Graph: criterion -> evidence -> AI observations ->
+human decision.
+
+STEP 7 - Human approval Client reviews the evidence and AI
+recommendation. Client chooses: - Approve milestone. - Request
+revision. - Request more evidence. - Raise a dispute / pause the
+milestone.
+
+Only an authenticated client with permission for that agreement may
+approve. AI must never call the PayPal payment endpoint or approve a
+milestone by itself.
+
+STEP 8 - PayPal sandbox checkout After explicit client approval, backend
+creates a PayPal order for the approved milestone. Frontend displays
+PayPal checkout / approval action. After payer approval, backend
+captures the order. Backend verifies capture response and webhook
+events. Only confirmed server-side payment state changes the milestone
+to PAID.
+
+STEP 9 - Closeout Show complete audit timeline, agreement version,
+evidence, reviewer decision, PayPal order/capture references and paid
+status. Allow download of a project completion summary (optional).
+
+======================================================================
+7. UNIQUE FEATURES THAT MAKE CLAUSORA STAND OUT
+======================================================================
+
+1.  WORK DNA ENGINE Understands the goal and structure of work from
+    mixed input types, rather than only generating a contract from a
+    prompt.
+
+2.  EVIDENCE GRAPH Links every acceptance criterion to submitted proof,
+    AI observations, limitations and human approval.
+
+3.  SCOPE DRIFT RADAR Detects new tasks or changed expectations compared
+    with the approved scope. Suggests a formal amendment instead of
+    silently changing the project.
+
+4.  DELIVERABLE READINESS MAP Shows which criteria are supported,
+    partially supported, missing or waiting for review. Use clear status
+    labels, not a misleading single “AI quality score”.
+
+5.  AGREEMENT VERSION FINGERPRINT Creates a SHA-256 hash of the
+    canonical approved agreement JSON. Any amendment creates a new
+    version and hash. This is tamper-evident recordkeeping, not a
+    blockchain or legal signature.
+
+6.  PAYMENT CONDITION ENGINE Deterministic backend rules ensure a
+    milestone is eligible for checkout only after the correct human
+    approval and permission checks.
+
+7.  AUDIT TRAIL Append-only event records for key actions: agreement
+    created, version approved, evidence uploaded, AI review completed,
+    revision requested, milestone approved, PayPal order created,
+    capture verified.
+
+8.  AI EXPLANATION PANEL For every AI suggestion, show:
+
+-   What was detected.
+-   Which source material was used.
+-   What evidence supports the suggestion.
+-   What is uncertain.
+-   What a human must decide.
+
+======================================================================
+8. FRONTEND TECHNICAL SPECIFICATION
+======================================================================
+
+Stack: - React.js (Vite) - JavaScript or TypeScript (TypeScript
+recommended for reliability) - Tailwind CSS - React Router - TanStack
+Query for API state - React Hook Form + Zod for forms - Recharts or a
+simple SVG/CSS visualization for project progress - Lucide React for
+icons - Optional: Framer Motion for subtle animations - Optional: AG
+Grid only if there is enough time and the sponsor prize eligibility is
+verified. Do not add it just for decoration.
+
+Visual direction: A premium, modern SaaS workspace. Avoid generic
+template appearance. Brand mood: precision, clarity, trust,
+intelligence. Suggested palette: - Deep midnight/navy background for
+sidebar and hero surfaces. - Warm off-white main canvas. - Electric
+violet or indigo for AI intelligence. - Teal/emerald for verified/paid
+states. - Amber for attention and pending review. - Red only for
+failures or high-risk warnings. Use accessible contrast and consistent
+spacing.
+
+Core pages: 1. Landing page: - Hero: “Turn any project into a clear path
+from brief to payment.” - Short workflow animation or real product
+preview. - CTA: Create a project / Explore demo. - Feature sections:
+Work DNA, Evidence Graph, Scope Drift, PayPal milestones. 2.
+Authentication: - Register, login, logout. - Role selection or
+invitation-based project role. 3. Dashboard: - Active projects, pending
+reviews, milestones due, payments completed. - Recent activity. 4. New
+Project: - Prompt input, file upload, link input. - Analysis progress
+and privacy notice. 5. Work Blueprint: - Project overview, workstreams,
+tasks, criteria, assumptions, questions. - Edit, approve, regenerate
+selected section. 6. Agreement: - Version history, party approvals, hash
+fingerprint, change history. 7. Project Workspace: - Task board,
+milestones, progress, timeline. 8. Evidence Review: - Criteria/evidence
+mapping, AI observations, limitations, human decision buttons. 9. Scope
+Drift: - New request comparison, impact analysis, create amendment
+action. 10. Payment: - Milestone summary, PayPal checkout action, order
+state and receipts. 11. Audit Timeline: - Chronological events, actor,
+timestamp and related object. 12. Settings: - Profile, notifications,
+connected services, demo mode indicator.
+
+Important UX details: - Use skeleton loaders and clear empty states. -
+Show errors with a retry action. - Confirm destructive actions. - Show
+currency and amounts consistently. - Never use fake “paid” badges. -
+Distinguish AI recommendation from human approval. - Make mobile layout
+usable, even if desktop is the primary demo. - Add sample demo project
+data so judges can explore quickly, but label seeded data as demo data.
+
+======================================================================
+9. BACKEND TECHNICAL SPECIFICATION
+======================================================================
+
+Stack: - Node.js LTS - Express.js - TypeScript recommended - MongoDB
+Atlas + Mongoose - Zod for validation - JWT access token in secure
+HttpOnly cookie OR secure session strategy. - bcrypt for password
+hashing. - Multer for upload handling, with strict limits and
+validation. - Private S3-compatible object storage or Cloudinary
+configured for private assets. - @huggingface/inference for AI calls. -
+@paypal/checkout-server-sdk if compatible with the selected current
+PayPal integration, otherwise use direct REST calls with OAuth2. - Pino
+or Winston for structured logs. - Helmet, CORS allowlist,
+express-rate-limit. - Nodemailer or a transactional email provider for
+notifications.
+
+Suggested monorepo structure:
+
+clausora/ apps/ web/ src/ app/ components/ features/ auth/ dashboard/
+projects/ blueprint/ agreements/ milestones/ evidence/ scope-drift/
+payments/ timeline/ hooks/ lib/ routes/ styles/ api/ src/ config/
+middleware/ modules/ auth/ users/ projects/ ai/ agreements/ tasks/
+milestones/ evidence/ reviews/ scope-drift/ payments/ webhooks/
+notifications/ audit/ services/ huggingface/ paypal/ email/ storage/
+utils/ app.ts server.ts packages/ shared/ schemas/ types/ docs/
+architecture.md api.md demo-script.md .env.example README.md LICENSE
+SECURITY.md
+
+Backend principles: - Controllers handle HTTP only. - Services contain
+business logic. - Repositories/data-access layer handle database
+operations. - Middleware handles authentication, role permissions and
+validation. - AI adapter isolates Hugging Face provider details. -
+PayPal adapter isolates OAuth, Orders API and webhook verification. -
+All money values are stored as integer minor units (e.g. paise/cents)
+plus ISO currency code. Never use JavaScript floating-point arithmetic
+for money. - Store timestamps in UTC. - Use idempotency keys for payment
+operations. - Add database indexes for user, project, agreement,
+milestone, PayPal order and event IDs.
+
+======================================================================
+10. DATABASE DESIGN
+======================================================================
+
+users: - _id - name - email (unique, normalized) - passwordHash - role /
+memberships - emailVerifiedAt - createdAt - updatedAt
+
+projects: - _id - title - description - ownerId - providerIds[] -
+status: draft | analysing | awaiting_approval | active | completed |
+paused | disputed - sourceAssets[] - currentAgreementId - createdAt -
+updatedAt
+
+sourceAssets: - _id - projectId - uploadedBy - type: pdf | docx | image
+| text | url | repository_link - storageKey or normalized URL -
+mimeType - size - sha256 - extractedText (where permitted) -
+processingStatus - createdAt
+
+workBlueprints: - _id - projectId - sourceAssetIds[] - version -
+projectType - summary - workstreams[] - assumptions[] -
+missingInformation[] - risks[] - clarifyingQuestions[] - aiModel -
+promptVersion - createdAt
+
+agreements: - _id - projectId - version - canonicalSnapshot -
+snapshotHash - currency - totalAmountMinor - dueDate - status: draft |
+awaiting_approval | approved | superseded | disputed - createdBy -
+createdAt - approvedAt
+
+agreementApprovals: - _id - agreementId - userId - decision: approved |
+requested_changes - snapshotHashSeen - createdAt
+
+milestones: - _id - projectId - agreementId - title - description -
+amountMinor - currency - dueDate - acceptanceCriteriaIds[] - status -
+approvedBy - approvedAt - createdAt - updatedAt
+
+tasks: - _id - projectId - workstreamId - milestoneId - title -
+description - dependencies[] - status: todo | in_progress | submitted |
+needs_revision | done - acceptanceCriteria[] - createdAt - updatedAt
+
+evidence: - _id - projectId - milestoneId - taskId - uploadedBy - type:
+image | document | url | repository | note | video - storageKey /
+normalized URL - originalFilename - mimeType - sha256 - description -
+createdAt
+
+aiReviews: - _id - projectId - milestoneId - evidenceIds[] -
+criterionResults[] - overallRecommendation - limitations[] - modelId -
+promptVersion - rawResponseHash - createdAt
+
+scopeChangeRequests: - _id - projectId - baseAgreementId - description -
+classification - impactAreas[] - proposedAmountMinor (nullable; requires
+human entry) - proposedDueDate - status: proposed | accepted | rejected
+| superseded - createdBy - createdAt
+
+payments: - _id - projectId - milestoneId - payerId - amountMinor -
+currency - paypalOrderId - paypalCaptureId - status: not_started |
+order_created | payer_approved | captured | failed | refunded -
+idempotencyKey - createdAt - updatedAt
+
+auditEvents: - _id - projectId - actorId - eventType - entityType -
+entityId - metadata - createdAt - requestId
+
+notifications: - _id - userId - projectId - type - title - body -
+channel: in_app | email - status: pending | sent | failed - readAt -
+createdAt
+
+disputes: - _id - projectId - milestoneId - openedBy - reason -
+evidenceIds[] - status: open | under_review | resolved | closed -
+resolutionNote - createdAt - updatedAt
+
+Do not store card numbers, CVV, PayPal passwords or raw payment
+credentials.
+
+======================================================================
+11. MILESTONE STATE MACHINE
+======================================================================
+
+Allowed lifecycle:
+
+CREATED -> IN_PROGRESS -> SUBMITTED -> AI_REVIEWED ->
+AWAITING_CLIENT_DECISION
+
+From AWAITING_CLIENT_DECISION: -> REVISION_REQUESTED ->
+MORE_EVIDENCE_REQUIRED -> APPROVED_FOR_PAYMENT -> DISPUTED
+
+From REVISION_REQUESTED: -> SUBMITTED
+
+From MORE_EVIDENCE_REQUIRED: -> SUBMITTED
+
+From APPROVED_FOR_PAYMENT: -> PAYPAL_ORDER_CREATED -> PAYER_APPROVED ->
+PAYMENT_CAPTURED
+
+Failure paths: -> PAYMENT_FAILED -> DISPUTED
+
+Terminal/closing states: -> PAID -> CANCELLED -> DISPUTED / RESOLVED
+
+Enforce transitions in a backend service. Reject invalid state
+transitions with HTTP 409. Never accept a status update from the
+frontend without checking the current database state and actor
+permissions.
+
+======================================================================
+12. AI SERVICE IMPLEMENTATION
+======================================================================
+
+Create: api/src/services/huggingface/huggingface.client.ts
+api/src/modules/ai/ai.service.ts api/src/modules/ai/ai.controller.ts
+api/src/modules/ai/ai.schemas.ts
+
+Use @huggingface/inference SDK and the model ID:
+Qwen/Qwen2.5-VL-7B-Instruct
+
+Implementation outline: - Create one Hugging Face client using
+process.env.HF_TOKEN. - Use the SDK chat-completion interface supported
+by the selected provider. - Send a system instruction and user
+content. - For images, use the SDK’s documented multimodal message
+format and a validated image URL or base64 input. - For PDFs and DOCX,
+extract text on the backend before sending relevant content; for page
+images, use the vision model where supported. - Limit file size, page
+count, image dimensions and prompt length. - Keep model ID and provider
+configuration in environment variables. - Set timeout and retry
+policy. - Validate the returned JSON using Zod. - Save model name,
+prompt version, timestamps and response hash. - Do not log full private
+documents or secrets.
+
+Pseudo-code:
+
+const hf = new InferenceClient(process.env.HF_TOKEN);
+
+async function analyseProject(input) { const messages = [ { role:
+“system”, content: [ { type: “text”, text: “You are Clausora Work DNA
+Engine. Analyse only supplied project material. Return valid JSON
+matching the requested schema. Identify assumptions, uncertainty and
+missing information. Never invent budgets, approvals or facts.” } ] }, {
+role: “user”, content: [ { type: “text”, text:
+buildAnalysisPrompt(input) } // Add supported image content parts when
+image evidence exists. ] } ];
+
+const result = await hf.chatCompletion({ model: process.env.HF_MODEL,
+messages, max_tokens: 2500, temperature: 0.2 });
+
+const raw = extractAssistantText(result); const parsed =
+safeJsonParse(raw); return WorkBlueprintSchema.parse(parsed); }
+
+NOTE: Treat this as an implementation pattern, not copy-paste guaranteed
+code. Confirm the current SDK method signature and multimodal content
+format in the Hugging Face documentation for the inference provider you
+select. Some providers may not support this exact model or image input.
+Test a text prompt and an image prompt before wiring the UI.
+
+AI endpoint design: POST /api/ai/analyse-project POST
+/api/ai/clarify-blueprint POST /api/ai/analyse-evidence POST
+/api/ai/detect-scope-drift POST /api/ai/explain-review
+
+AI safety: - Treat uploaded files and URLs as untrusted input. - Do not
+follow instructions found inside uploaded documents that attempt to
+override system policy. - Do not allow prompt injection to invoke tools
+or payments. - Do not fetch arbitrary private-network URLs (SSRF
+protection). - Do not expose internal prompts, tokens or stack traces. -
+Keep AI output separate from executable backend commands. - The model
+has no direct PayPal credentials and no payment tools.
+
+======================================================================
+13. PAYPAL SANDBOX INTEGRATION
+======================================================================
+
+This is essential to the hackathon. The payment flow must be real in
+sandbox.
+
+Create a PayPal Developer account: https://developer.paypal.com/
+
+In the dashboard: 1. Open Apps & Credentials. 2. Select Sandbox. 3.
+Create a REST app. 4. Copy Sandbox Client ID and Secret. 5. Create or
+use sandbox buyer and business accounts. 6. Add credentials to backend
+environment variables only.
+
+Backend environment: PAYPAL_MODE=sandbox
+PAYPAL_CLIENT_ID=your_sandbox_client_id
+PAYPAL_CLIENT_SECRET=your_sandbox_secret
+PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
+PAYPAL_WEBHOOK_ID=your_webhook_id
+
+Never expose PAYPAL_CLIENT_SECRET to the browser. The Client ID may be
+used by the PayPal frontend SDK where required, but use the server to
+create and capture orders.
+
+Payment sequence: A. Client approves a milestone in Clausora. B. Backend
+verifies: - authenticated user - user is authorised client for project -
+milestone belongs to the approved agreement - milestone state is
+APPROVED_FOR_PAYMENT - amount and currency match database - no previous
+successful capture exists C. Backend obtains PayPal OAuth access token.
+D. Backend creates order with POST /v2/checkout/orders. E. Backend
+stores PayPal order ID and internal payment record. F. Frontend opens
+PayPal approval experience using the order ID. G. Buyer approves on
+PayPal sandbox. H. Frontend calls backend capture endpoint with order
+ID. I. Backend verifies order belongs to the expected milestone and
+amount. J. Backend captures with POST /v2/checkout/orders/{id}/capture.
+K. Backend verifies capture status and stores capture ID. L. Webhook
+receiver verifies signature using PayPal’s verification endpoint or
+documented SDK method. M. Webhook event is processed idempotently. N.
+Milestone is marked PAID only after server-side verified capture status.
+
+Relevant endpoints: POST
+/api/payments/milestones/:milestoneId/create-order POST
+/api/payments/:paymentId/capture POST /api/webhooks/paypal GET
+/api/payments/:paymentId/status
+
+PayPal API endpoints: POST
+https://api-m.sandbox.paypal.com/v1/oauth2/token POST
+https://api-m.sandbox.paypal.com/v2/checkout/orders POST
+https://api-m.sandbox.paypal.com/v2/checkout/orders/{id}/capture
+
+Use the current PayPal Orders API documentation for exact request and
+response fields.
+
+Critical payment security: - Do not trust a frontend “success”
+callback. - Do not mark a milestone paid just because the browser
+returned to the success URL. - Verify capture on the server. - Verify
+webhook signatures. - Process duplicate webhook events safely. - Store
+PayPal event IDs and prevent duplicate processing. - Use an idempotency
+mechanism for create/capture requests. - Compare the PayPal order
+amount/currency with the stored approved milestone amount. - Never let
+the browser submit an arbitrary amount to charge. - Use sandbox only for
+the hackathon. - Clearly label all transactions “PayPal Sandbox - Test
+Payment”. - Do not describe this as escrow. The app does not hold funds
+or provide escrow services. - Do not represent sandbox payments as real
+money transfers.
+
+======================================================================
+14. EMAIL AND IN-APP NOTIFICATION REQUIREMENTS
+======================================================================
+
+Email notifications improve the complete product experience.
+
+Use a transactional email service such as Resend, Brevo or SendGrid,
+subject to account availability and terms. For local development, use a
+test SMTP inbox such as Mailtrap. Do not rely on personal Gmail
+passwords.
+
+Environment: EMAIL_PROVIDER= EMAIL_FROM=Clausora
+notifications@your-verified-domain EMAIL_API_KEY= APP_BASE_URL=
+
+Required email events: 1. Account verification. 2. Password reset. 3.
+Project invitation. 4. Work Blueprint ready for review. 5. Agreement
+awaiting approval. 6. Agreement approved by the other party. 7.
+Milestone due soon. 8. Provider submitted evidence. 9. AI review
+completed and awaiting client decision. 10. Revision requested. 11.
+Scope change proposed. 12. Scope change accepted/rejected. 13. Milestone
+approved for payment. 14. PayPal sandbox payment captured. 15. Dispute
+opened or updated. 16. Project completed.
+
+Email requirements: - Use clear subject lines. - Include project name
+and relevant milestone. - Include a secure link back to the app. - Never
+include passwords, access tokens, payment secrets or private evidence
+attachments. - Avoid including sensitive document content in email. -
+Use expiring, single-use verification/reset tokens. - Store email
+delivery status and retry failures safely. - Add unsubscribe/preferences
+for non-essential product updates if required by the chosen provider and
+applicable law. - Keep critical transactional messages separate from
+marketing emails. - Do not send an email for every tiny task update; use
+notification preferences and sensible batching.
+
+Example subject lines: “Clausora: A project invitation is waiting for
+you” “Clausora: Your Work Blueprint is ready to review” “Clausora:
+Evidence submitted for Website UI milestone” “Clausora: A scope change
+needs your decision” “Clausora: Milestone approved - continue to PayPal
+Sandbox” “Clausora: PayPal Sandbox payment confirmed”
+
+In-app notifications should be the source of truth for the app UI; email
+is an additional notification channel.
+
+======================================================================
+15. REA REVERSE-ENGINEERING TOOL - HOW TO USE IT SAFELY
+======================================================================
+
+Repository supplied: https://github.com/morluto/rea
+
+Repository description: REA means “Reverse Engineer Anything”. Its
+README describes an agent/MCP-based toolkit for inspecting applications,
+JavaScript/Electron apps, native binaries and runtime behaviour, with
+analysis performed locally and evidence/limitations reported.
+
+The repository currently shows an MIT licence. Read the current LICENSE,
+third-party notices, dependencies and security instructions before
+incorporating or redistributing any part of it.
+
+Official repo: https://github.com/morluto/rea
+
+REA quick-start shown in its README: npx rea-agents setup
+
+Important integration recommendation: Do NOT copy the entire REA
+repository into the Clausora production backend and do NOT make Clausora
+depend on its full toolchain just to run the web application.
+
+Use REA as an OPTIONAL LOCAL DEVELOPER/INSPECTION WORKFLOW: - Run REA
+locally through a supported agent/MCP setup. - Inspect software or
+workflows only when you own them or have explicit authorisation. - Ask
+the agent to inspect a user-authorised application flow, feature or
+codebase. - Export a report containing observations, steps, screenshots
+or evidence references and limitations. - Let the user import the report
+into Clausora as an evidence/source artifact. - Clausora then uses its
+own Work DNA and evidence analysis to map that report to project
+criteria.
+
+Possible future feature: “Clausora Workflow Inspector” - User provides a
+project workflow or authorised application. - A local REA agent inspects
+how the workflow behaves. - REA returns a report of observed steps and
+limitations. - Clausora maps observations to tasks and acceptance
+criteria. - The client/provider review the resulting blueprint.
+
+Do not claim that the REA MCP server runs inside a hosted Clausora web
+service unless you actually implement and secure that architecture. It
+is a local agent tool, not a ready-made hosted Clausora API.
+
+Antigravity compatibility: REA documentation lists several agent
+integrations and setup workflows. Verify whether the current Antigravity
+version supports the required MCP configuration. If direct setup is not
+supported, run REA through a supported agent such as Gemini CLI or
+another supported client and import the exported report into Clausora.
+Do not assume the tool works in Antigravity without testing.
+
+Do not use REA to copy another product’s proprietary code, bypass access
+controls, extract secrets or inspect software without permission. Use it
+for authorised analysis and interoperability research only.
+
+For the hackathon MVP, REA is optional. Prioritise the complete Clausora
+workflow and PayPal sandbox integration first.
+
+======================================================================
+16. API ROUTE PLAN
+======================================================================
+
+AUTH POST /api/auth/register POST /api/auth/login POST /api/auth/logout
+POST /api/auth/verify-email POST /api/auth/forgot-password POST
+/api/auth/reset-password GET /api/auth/me
+
+PROJECTS POST /api/projects GET /api/projects GET
+/api/projects/:projectId PATCH /api/projects/:projectId POST
+/api/projects/:projectId/invite GET /api/projects/:projectId/activity
+
+ASSETS POST /api/projects/:projectId/assets GET
+/api/projects/:projectId/assets DELETE /api/assets/:assetId
+
+AI POST /api/ai/analyse-project POST /api/ai/clarify-blueprint POST
+/api/ai/analyse-evidence POST /api/ai/detect-scope-drift POST
+/api/ai/explain-review
+
+BLUEPRINT GET /api/projects/:projectId/blueprint PATCH
+/api/projects/:projectId/blueprint POST
+/api/projects/:projectId/blueprint/regenerate
+
+AGREEMENTS POST /api/projects/:projectId/agreements GET
+/api/projects/:projectId/agreements GET /api/agreements/:agreementId
+POST /api/agreements/:agreementId/approve POST
+/api/agreements/:agreementId/request-changes GET
+/api/agreements/:agreementId/versions
+
+TASKS AND MILESTONES POST /api/projects/:projectId/tasks PATCH
+/api/tasks/:taskId POST /api/projects/:projectId/milestones GET
+/api/projects/:projectId/milestones PATCH /api/milestones/:milestoneId
+
+EVIDENCE AND REVIEW POST /api/milestones/:milestoneId/evidence GET
+/api/milestones/:milestoneId/evidence POST
+/api/milestones/:milestoneId/submit GET
+/api/milestones/:milestoneId/review POST
+/api/milestones/:milestoneId/request-revision POST
+/api/milestones/:milestoneId/approve
+
+SCOPE DRIFT POST /api/projects/:projectId/change-requests GET
+/api/projects/:projectId/change-requests POST
+/api/change-requests/:changeRequestId/accept POST
+/api/change-requests/:changeRequestId/reject
+
+PAYMENTS POST /api/payments/milestones/:milestoneId/create-order POST
+/api/payments/:paymentId/capture GET /api/payments/:paymentId/status
+POST /api/webhooks/paypal
+
+NOTIFICATIONS GET /api/notifications PATCH
+/api/notifications/:notificationId/read PATCH
+/api/notifications/preferences
+
+Use consistent JSON responses: { “success”: true, “data”: {}, “message”:
+“Optional human-readable message”, “requestId”: “trace-id” }
+
+Use correct HTTP status codes: 200 success, 201 created, 400 validation
+error, 401 unauthenticated, 403 forbidden, 404 not found, 409 invalid
+state/conflict, 429 rate limit, 500 internal error, 503 upstream
+AI/payment provider unavailable.
+
+======================================================================
+17. SECURITY, PRIVACY AND RELIABILITY
+======================================================================
+
+Authentication: - Hash passwords with bcrypt or Argon2. - Use secure
+HttpOnly cookies for browser sessions where possible. - Configure Secure
+and SameSite cookie attributes for production. - Protect state-changing
+routes against CSRF when cookie auth is used. - Apply role-based access
+checks on every project, agreement, evidence and payment resource.
+
+Uploads: - Allow only required MIME types. - Validate file signatures,
+not only filename extensions. - Set file size and page-count limits. -
+Generate random storage keys. - Store files privately. - Scan files
+where feasible. - Do not execute uploaded files. - Protect against path
+traversal and malicious documents. - Avoid public links for private
+client evidence.
+
+API: - Helmet security headers. - Strict CORS allowlist. - Rate limit
+login and AI endpoints. - Validate all inputs with Zod. - Use
+parameterised database operations. - Do not return stack traces to
+users. - Redact secrets from logs. - Add request IDs. - Add timeouts for
+AI and PayPal calls.
+
+AI: - Prompt injection protection. - SSRF protection for URL inputs. -
+Restrict URL fetching to public HTTP/HTTPS destinations. - Do not fetch
+localhost, private IP ranges, cloud metadata endpoints or internal
+services. - Limit content length. - Store prompt version and model
+version. - Keep AI outputs advisory.
+
+Payments: - Server-side order creation and capture. - Webhook signature
+verification. - Idempotent webhook processing. - Amount/currency
+reconciliation. - Permission and state checks. - No card data stored by
+Clausora. - Sandbox-only for hackathon.
+
+Privacy: - Explain what data is uploaded and sent to Hugging Face. - Ask
+for permission before processing sensitive documents. - Provide
+delete/export controls where feasible. - Retain only what is needed for
+the demo. - Do not use private user files for model training. - Provide
+a demo dataset that contains no real personal or financial data.
+
+======================================================================
+18. DEPLOYMENT AND ENVIRONMENT
+======================================================================
+
+Suggested deployment: Frontend: Vercel Backend: Render Database: MongoDB
+Atlas File storage: private Cloudinary or S3-compatible bucket AI:
+Hugging Face Inference Providers or dedicated endpoint Payments: PayPal
+Sandbox
+
+Frontend environment: VITE_API_BASE_URL=https://your-api-domain.example
+
+Backend .env.example: NODE_ENV=development PORT=5000
+APP_BASE_URL=http://localhost:5173 FRONTEND_URL=http://localhost:5173
+MONGODB_URI= JWT_SECRET= COOKIE_SECRET= HF_TOKEN=
+HF_MODEL=Qwen/Qwen2.5-VL-7B-Instruct PAYPAL_MODE=sandbox
+PAYPAL_CLIENT_ID= PAYPAL_CLIENT_SECRET=
+PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com PAYPAL_WEBHOOK_ID=
+EMAIL_PROVIDER= EMAIL_FROM= EMAIL_API_KEY= STORAGE_PROVIDER=
+STORAGE_BUCKET= STORAGE_ACCESS_KEY= STORAGE_SECRET_KEY= STORAGE_REGION=
+
+Do not commit .env files. Commit .env.example with placeholder values
+only. Configure production environment variables in the hosting
+dashboard. Use separate sandbox credentials for development and hosted
+demo. Add health endpoint: GET /api/health
+
+Deployment checklist: - Production frontend can reach backend. - Backend
+CORS allows only frontend domain. - MongoDB network access is restricted
+appropriately. - AI token is configured only on backend. - PayPal
+sandbox credentials work on hosted backend. - Webhook URL is publicly
+reachable and registered in PayPal sandbox. - Email test is
+successful. - File uploads work and are private. - Test login and seeded
+judge account. - Test all major routes after deployment. - Check logs
+for secrets or private document content.
+
+======================================================================
+19. TEST PLAN - MUST PASS BEFORE SUBMISSION
+======================================================================
+
+Functional tests: 1. Register a client and provider. 2. Verify email or
+use documented demo accounts. 3. Create a project from a
+natural-language brief. 4. Upload one supported screenshot and one
+document. 5. Generate a Work Blueprint. 6. Confirm the AI identifies
+tasks, deliverables and missing details. 7. Edit the blueprint and
+approve an agreement. 8. Confirm agreement hash and version are saved.
+9. Create two milestones with explicit amounts. 10. Submit evidence for
+a milestone. 11. Run AI evidence analysis. 12. Confirm limitations are
+shown. 13. Request a revision and resubmit evidence. 14. Approve the
+milestone manually as client. 15. Create PayPal sandbox order. 16.
+Complete sandbox buyer approval. 17. Capture payment on the backend. 18.
+Verify the payment state from the backend. 19. Verify webhook signature
+and duplicate event handling. 20. Confirm audit timeline shows the full
+flow. 21. Submit a new task outside scope and verify scope drift
+warning. 22. Confirm AI cannot change payment amount or approve the
+milestone.
+
+Security tests: - Provider cannot approve own milestone as client. -
+Unauthenticated user cannot access project data. - User A cannot read
+User B’s evidence. - Frontend cannot force a milestone to PAID. -
+Browser cannot change the PayPal amount. - Duplicate capture request
+does not double capture. - Duplicate webhook event does not duplicate
+state transition. - Invalid file type is rejected. - Huge upload is
+rejected. - Prompt injection inside an uploaded file cannot trigger
+tools or payments. - AI provider failure shows a useful error and
+preserves project data.
+
+Demo reliability: - Keep a pre-seeded demo project. - Keep a backup
+short brief and screenshots. - Test sandbox buyer credentials before
+recording. - Have a backup screen recording in case of network failure,
+but the submitted video must show actual functioning application
+footage. - Never expose secret keys in the video.
+
+======================================================================
+20. BUILD ORDER FOR ANTIGRAVITY
+======================================================================
+
+Use Antigravity as the coding agent, but build in controlled phases. Do
+not ask it to generate the entire product in one giant prompt and accept
+untested code.
+
+PHASE 0 - PROJECT FOUNDATION - Create React + Vite + Tailwind
+frontend. - Create Node + Express + TypeScript backend. - Configure
+shared types and Zod schemas. - Add linting, formatting and environment
+validation. - Add README and .env.example. - Add a polished responsive
+shell and routing.
+
+PHASE 1 - AUTH AND PROJECTS - Register/login/logout. - Client/provider
+roles. - Project CRUD. - Project invitations. - Seed demo accounts and
+project. - Verify permissions.
+
+PHASE 2 - WORK DNA ENGINE - File upload and text extraction. - Hugging
+Face client. - Work Blueprint generation. - Zod validation. - Clarifying
+questions. - Editable workstreams/tasks/criteria. - Save blueprint
+versions.
+
+PHASE 3 - AGREEMENT AND MILESTONES - Create immutable agreement
+snapshot. - Calculate SHA-256 fingerprint. - Capture both parties’
+approvals. - Create milestone records. - Enforce state machine.
+
+PHASE 4 - EVIDENCE GRAPH - Evidence upload and secure storage. - Map
+evidence to criteria. - AI evidence analysis. - Show limitations and
+confidence. - Human approval and revision workflow.
+
+PHASE 5 - SCOPE DRIFT - Compare new request with approved agreement. -
+Show classification and reason. - Generate proposed change request. -
+Require both parties to approve amendments. - New agreement version and
+optional new milestone.
+
+PHASE 6 - PAYPAL SANDBOX - OAuth token service. - Create order. -
+Frontend PayPal approval experience. - Server-side capture. - Webhook
+signature verification. - Idempotency and reconciliation. - Update audit
+trail only after verified payment.
+
+PHASE 7 - NOTIFICATIONS AND POLISH - In-app notifications. -
+Transactional email. - Dashboard metrics. - Loading/error/empty
+states. - Responsive design and accessibility.
+
+PHASE 8 - TEST, DEPLOY AND SUBMIT - Test every critical journey. -
+Deploy frontend and backend. - Configure sandbox webhook. - Publish
+public Git repository with MIT or another suitable open-source
+licence. - Write setup instructions and architecture docs. - Record
+public YouTube demo under 3 minutes. - Complete Devpost submission and
+list every tool used.
+
+If time is limited, reduce optional features before compromising the
+core: WORK BRIEF -> AI BLUEPRINT -> APPROVED AGREEMENT -> EVIDENCE
+REVIEW -> HUMAN APPROVAL -> PAYPAL SANDBOX CAPTURE -> AUDIT TIMELINE.
+
+======================================================================
+21. ANTIGRAVITY MASTER BUILD PROMPT
+======================================================================
+
+Copy the following prompt into Antigravity as the project-level
+instruction. Ask it to implement one phase at a time and run tests after
+each phase.
+
+PROMPT START
+
+You are the lead product architect, senior React engineer, senior
+Node.js engineer, AI integration engineer and PayPal sandbox integration
+engineer for a hackathon product called CLAUSORA.
+
+PRODUCT: Clausora is an AI-powered work intelligence and milestone
+payment platform. It transforms project briefs, documents, screenshots,
+URLs and task workflows into a structured Work Blueprint. It links
+deliverables to acceptance criteria and submitted evidence, detects
+scope drift against an approved agreement, and orchestrates PayPal
+sandbox payments only after explicit human approval.
+
+TAGLINE: “Understand the work. Verify the outcome. Release the payment.”
+
+TECH STACK: - React.js + Vite + Tailwind CSS. - TypeScript preferred. -
+Node.js + Express backend. - MongoDB Atlas + Mongoose. - Zod
+validation. - Hugging Face Inference using
+Qwen/Qwen2.5-VL-7B-Instruct. - PayPal Orders v2 Sandbox. - Private file
+storage. - Transactional email and in-app notifications. - Frontend
+deployable to Vercel and backend deployable to Render.
+
+NON-NEGOTIABLE ARCHITECTURE: 1. Frontend never stores Hugging Face token
+or PayPal secret. 2. All AI calls go through Node backend. 3. AI outputs
+are advisory and validated using Zod. 4. AI cannot approve work, set
+final prices, change agreement versions or trigger payments. 5. Only an
+authorised human client can approve a milestone. 6. Backend validates
+milestone state, user role, amount and currency before creating a PayPal
+order. 7. Backend captures the PayPal order and verifies the response.
+8. Webhook signatures must be verified and duplicate events handled
+idempotently. 9. Never mark payment as successful based only on a
+frontend callback. 10. Use sandbox only and label all test payments. 11.
+Do not claim escrow, legal protection or guaranteed quality. 12. Keep
+audit records of all important actions. 13. Never invent missing project
+facts, budgets or deadlines. 14. Keep private evidence private. 15. Do
+not implement fake buttons or placeholder actions in the final demo.
+
+AI MODEL: Use Hugging Face model Qwen/Qwen2.5-VL-7B-Instruct. Model
+link: https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct Use
+@huggingface/inference on the backend. First verify that the selected
+Hugging Face Inference Provider supports this model and the required
+text/image input format. If not, document and configure a supported
+Inference Endpoint. Keep model ID configurable using HF_MODEL. Do not
+expose HF_TOKEN to frontend.
+
+PRODUCT MODULES: - Authentication and roles. - Project workspace. -
+Multi-format project source upload. - Work DNA Engine. - Editable Work
+Blueprint. - Clarifying questions. - Agreement versioning and SHA-256
+fingerprint. - Milestone/task management. - Evidence upload and Evidence
+Graph. - AI evidence analysis with limitations. - Scope Drift Radar and
+change requests. - Human milestone approval. - PayPal sandbox
+order/capture/webhooks. - Audit timeline. - Email and in-app
+notifications. - Demo seed data.
+
+DESIGN: Create a distinctive premium SaaS UI, not a generic admin
+template. Use a deep navy/charcoal navigation surface, warm light main
+canvas, indigo/violet AI accents, teal success states and amber pending
+states. Use consistent typography, spacing, cards, clear hierarchy,
+subtle motion and responsive layout. Make the Work Blueprint and
+Evidence Graph visually impressive and easy to understand. Ensure
+accessible contrast and keyboard interaction.
+
+DEVELOPMENT RULES: - Inspect existing files before changing them. -
+Create a clear folder structure. - Implement one phase at a time. -
+Before writing code, provide a short implementation plan for the current
+phase. - Do not rewrite unrelated working code. - Use reusable
+components and service layers. - Validate all inputs. - Add loading,
+empty, error and success states. - Add tests for business rules and
+payment transitions. - Run build and tests after each phase. - Fix
+errors rather than hiding them. - Never hardcode secrets or fake
+successful API responses. - If an external API is unavailable, show a
+clear error and keep the feature disabled rather than simulating a real
+payment. - Document every required environment variable in
+.env.example. - Keep README updated.
+
+START WITH PHASE 0 ONLY: Inspect the workspace. Create the monorepo
+foundation with React/Vite/Tailwind frontend and Express/TypeScript
+backend, shared Zod schemas, environment validation, health endpoint,
+polished responsive app shell and README. Do not implement all features
+yet. After Phase 0, run builds and report exact commands and results.
+Wait for the next phase instruction.
+
+PROMPT END
+
+======================================================================
+22. DEMO SCENARIO - UNDER THREE MINUTES
+======================================================================
+
+Use one realistic software project example: “Build a responsive booking
+website with customer login, service listing, booking flow, admin
+dashboard and payment confirmation.”
+
+Suggested demo timeline:
+
+0:00 - 0:15 Problem: “Project work starts with scattered requests.
+Deliverables are unclear, evidence is disconnected and payment approval
+becomes a separate manual process.”
+
+0:15 - 0:45 Work DNA: Paste the project brief and upload a UI
+screenshot. Show Clausora detecting workstreams, tasks, deliverables,
+acceptance criteria and missing information. Show a user editing one
+generated criterion.
+
+0:45 - 1:10 Agreement: Show client/provider approval, version number and
+agreement fingerprint. Create two milestones with explicit amounts.
+
+1:10 - 1:40 Evidence Graph: Submit a screenshot and a repository/commit
+link. Show the AI mapping evidence to acceptance criteria and explaining
+what the evidence does not prove. Show the client requesting one
+revision or approving after review.
+
+1:40 - 2:15 Scope Drift: Add a new request such as “Also add
+multi-language support.” Show Clausora identifying it as a likely scope
+change and proposing an amendment rather than silently changing the
+original agreement.
+
+2:15 - 2:45 PayPal: Client approves the milestone. Show the PayPal
+sandbox checkout. Complete buyer approval and show server-verified
+capture. Show the milestone as paid only after the backend confirms it.
+
+2:45 - 2:58 Close: Show the audit timeline. “Clausora connects the
+promise, the proof and the payment.”
+
+Video must be less than 3 minutes. Use English narration or English
+subtitles. Do not include copyrighted music or unlicensed third-party
+logos.
+
+======================================================================
+23. DEVPOST SUBMISSION DRAFT
+======================================================================
+
+Title: Clausora - AI Work Intelligence, Evidence Verification & PayPal
+Milestone Payments
+
+Short description: Clausora turns project briefs, documents and
+screenshots into structured deliverables, connects evidence to
+acceptance criteria, detects scope changes and enables human-approved
+PayPal milestone payments.
+
+Problem: Freelance and agency projects often begin with vague requests
+and scattered information. Clients and providers may disagree about what
+was promised, what counts as completion and when payment should happen.
+
+Solution: Clausora’s Work DNA Engine interprets project material and
+generates an editable Work Blueprint containing workstreams, tasks,
+deliverables, acceptance criteria, assumptions and missing questions.
+Its Evidence Graph maps submitted proof to each criterion. Scope Drift
+Radar compares new requests with the approved agreement and proposes
+formal amendments. Once the client explicitly approves a milestone,
+Clausora creates and captures a PayPal sandbox order through the backend
+and records the verified result in an audit timeline.
+
+AI usage: Hugging Face Qwen2.5-VL-7B-Instruct analyses text, screenshots
+and document-derived content. It generates structured work plans, maps
+evidence to acceptance criteria, identifies missing information and
+classifies scope changes. Outputs are validated and remain advisory; a
+human approves work and deterministic backend logic controls payment.
+
+PayPal usage: PayPal Orders v2 Sandbox is used to create and capture
+milestone payments after explicit client approval. The backend verifies
+the payment result and webhook events before marking a milestone paid.
+
+Innovation: Clausora does not stop at generating an agreement. It
+connects the original project intent to tasks, evidence, scope changes,
+human decisions and payment events through one traceable workflow.
+
+Tools: React, Vite, Tailwind CSS, Node.js, Express, TypeScript, MongoDB,
+Hugging Face Inference, Qwen2.5-VL-7B-Instruct, PayPal Orders API v2
+Sandbox, and optional REA local developer inspection workflow.
+
+Before submission, replace any statement that is not actually
+implemented with an accurate description. Do not claim completed
+integrations until tested.
+
+======================================================================
+24. PUBLIC REPOSITORY AND README CHECKLIST
+======================================================================
+
+Recommended repository: clausora-ai-work-intelligence
+
+Repository must include: - README.md - LICENSE - .gitignore -
+.env.example - SECURITY.md - frontend source - backend source - shared
+schemas - API documentation - architecture diagram (can be Mermaid in
+README) - setup instructions - test instructions - demo account
+instructions - PayPal sandbox setup instructions - Hugging Face setup
+instructions - deployment instructions - known limitations - third-party
+notices / attribution where applicable
+
+README should explain: 1. What Clausora does. 2. Who it is for. 3.
+Architecture and data flow. 4. How AI is used. 5. How PayPal is used. 6.
+Exact local setup commands. 7. Required environment variables. 8. How to
+create sandbox credentials. 9. How to configure webhook. 10. How to run
+tests. 11. Demo credentials and sample data. 12. Hosted demo URL. 13.
+Demo video URL. 14. Open-source licence. 15. Known limitations and
+security notes.
+
+Do not commit .env, tokens, private evidence, user data or PayPal
+credentials.
+
+======================================================================
+25. FINAL PRIORITY LIST
+======================================================================
+
+MUST BUILD: 1. Beautiful landing page and working dashboard. 2. Project
+brief input and at least one upload type. 3. Hugging Face Work DNA
+generation. 4. Editable tasks and acceptance criteria. 5. Agreement
+version and approval. 6. Milestone creation. 7. Evidence submission. 8.
+AI evidence analysis. 9. Client human approval. 10. Real PayPal sandbox
+order and capture. 11. Payment state verification. 12. Audit timeline.
+13. Public repository, licence and complete README. 14. Working demo
+video under 3 minutes.
+
+HIGH-VALUE IF TIME ALLOWS: 15. Scope Drift Radar. 16. Email
+notifications. 17. Evidence Graph visualisation. 18. Agreement change
+requests. 19. REA report import. 20. Advanced dashboard analytics.
+
+DO NOT WASTE TIME ON: - Building a blockchain. - Claiming to provide
+escrow. - Training a new foundation model. - Building a complex
+microservice architecture. - Supporting every possible file format
+before the main flow works. - Adding many sponsor SDKs without a real
+product purpose. - Making AI autonomously approve work or payments. -
+Fake payment success. - Decorative AI chat that does not affect the
+workflow.
+
+FINAL PRODUCT QUALITY RULE: A small end-to-end product that genuinely
+works is stronger than a huge interface full of non-functional features.
+Make the complete path reliable: understand work -> agree scope ->
+submit evidence -> review -> approve -> PayPal sandbox payment -> audit.
+
+======================================================================
+26. REFERENCE LINKS
+======================================================================
+
+PayPal AI Hackathon Official Rules:
+https://paypalaihackathon.devpost.com/rules
+
+PayPal AI Hackathon: https://paypalaihackathon.devpost.com/
+
+PayPal Sandbox Getting Started:
+https://github.com/paypaldev/getting-started-with-paypal-sandbox
+
+PayPal Developer Dashboard: https://developer.paypal.com/
+
+PayPal Orders API Integration:
+https://developer.paypal.com/api/rest/integration/orders-api
+
+PayPal Orders v2: https://developer.paypal.com/api/orders/v2/
+
+PayPal Webhooks: https://developer.paypal.com/api/rest/webhooks/
+
+Hugging Face Qwen2.5-VL-7B-Instruct:
+https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct
+
+Hugging Face Qwen2.5-7B-Instruct (optional text-only alternative):
+https://huggingface.co/Qwen/Qwen2.5-7B-Instruct
+
+Hugging Face Inference Providers:
+https://huggingface.co/docs/inference-providers/index
+
+Hugging Face JavaScript SDK:
+https://github.com/huggingface/huggingface.js
+
+REA reverse-engineering toolkit: https://github.com/morluto/rea
+
+React: https://react.dev/
+
+Vite: https://vite.dev/
+
+Tailwind CSS: https://tailwindcss.com/docs
+
+Express: https://expressjs.com/
+
+MongoDB Atlas: https://www.mongodb.com/atlas
+
+Antigravity: Use the current official Antigravity documentation and its
+MCP/agent configuration instructions. Confirm the current supported
+workflow before assuming a third-party MCP tool is compatible.
+
+END OF CLAUSORA TECHNICAL SPECIFICATION
+
+================================================================================
+ADDENDUM: VERCEL + MONGODB ATLAS DEPLOYMENT
+================================================================================
+
+YES — Vercel can work with an online MongoDB database. The recommended setup
+for Clausora is:
+
+- Frontend: React + Vite + Tailwind CSS deployed on Vercel.
+- Backend: Node.js + Express + TypeScript deployed on Render (or another
+  persistent Node.js hosting provider).
+- Database: MongoDB Atlas cloud database.
+- AI: Hugging Face Inference Provider / configured model endpoint.
+- Payments: PayPal Developer Sandbox.
+
+IMPORTANT: Vercel is primarily a serverless deployment platform. It can host
+serverless backend functions, but a conventional Express server that expects
+to stay running continuously should not simply be deployed as if Vercel were
+an always-on Node server. For the current Clausora Express architecture,
+deploy the backend separately (for example, on Render) and keep the React
+frontend on Vercel. Alternatively, deliberately adapt the backend routes to
+Vercel Functions.
+
+OPTION A — CREATE MONGODB ATLAS SEPARATELY (RECOMMENDED FOR CONTROL)
+
+1. Open https://www.mongodb.com/atlas
+2. Sign in or create a MongoDB Atlas account.
+3. Create a project for Clausora.
+4. Create a database deployment/cluster. Select a suitable region close to
+   the backend hosting region where possible.
+5. Create a database user with a strong password. Do not use your Atlas
+   account login password as the application database password.
+6. Configure network access. For a hosted backend with changing outbound IPs,
+   follow the hosting provider's current networking guidance. Avoid opening
+   database access to the entire internet unless it is genuinely required;
+   if a broad allowlist is temporarily used, use strong credentials and
+   restrictive database permissions, and revisit it before production.
+7. In Atlas, choose Connect -> Drivers and copy the Node.js connection string.
+8. Replace the placeholder username, password and database name safely.
+   URL-encode special characters in the password when required.
+9. Add the connection string to the backend hosting provider's environment
+   variables as MONGODB_URI.
+10. Restart/redeploy the backend and test the database connection.
+
+Example backend environment variable (placeholder only):
+
+MONGODB_URI=mongodb+srv://<db-user>:<db-password>@<cluster-host>/<database-name>?retryWrites=true&w=majority
+
+Do not commit a real connection string to GitHub.
+
+OPTION B — USE THE VERCEL MARKETPLACE MONGODB ATLAS INTEGRATION
+
+1. Open the Vercel project.
+2. Open the Vercel Marketplace / Integrations area.
+3. Find the MongoDB Atlas integration.
+4. Follow the integration flow to connect or provision an Atlas database.
+5. Review the selected plan, billing arrangement, permissions and database
+   access settings before confirming.
+6. Check which environment variables the integration creates and which
+   deployment environments receive them.
+7. Ensure the variable is available to the server-side runtime that connects
+   to MongoDB.
+8. Redeploy after environment-variable changes.
+
+The Marketplace integration can simplify provisioning and environment-variable
+configuration. Review the current integration terms and pricing: available
+cluster types, free-tier eligibility, billing and permissions can change.
+
+ENVIRONMENT VARIABLES — WHERE TO PUT THEM
+
+For the recommended split deployment:
+
+Vercel frontend:
+- VITE_API_BASE_URL=https://<your-backend-domain>
+- Only public values that are safe to expose in the browser belong in VITE_*
+  variables.
+
+Backend hosting provider:
+- MONGODB_URI=<your MongoDB Atlas connection string>
+- PAYPAL_CLIENT_ID=<sandbox client ID>
+- PAYPAL_CLIENT_SECRET=<sandbox secret>
+- PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
+- HF_TOKEN=<Hugging Face token>
+- JWT_SECRET=<strong random secret>
+- FRONTEND_ORIGIN=https://<your-vercel-domain>
+- Other server-side configuration required by the application.
+
+SECURITY RULES
+
+- Never put MONGODB_URI, PAYPAL_CLIENT_SECRET, HF_TOKEN or JWT_SECRET in
+  frontend VITE_* variables.
+- Never expose server secrets in React code, browser bundles, source maps,
+  client-side network requests or public GitHub repositories.
+- Keep MongoDB credentials in server-side environment variables only.
+- Use a database user with only the permissions the application needs.
+- Restrict database network access according to the backend host's supported
+  networking model.
+- Use HTTPS for deployed frontend and backend communication.
+- Configure CORS to allow only the actual frontend origin(s).
+- Do not trust a frontend response as proof that a PayPal payment was captured.
+- Keep PayPal order creation, capture, verification and webhook handling on
+  the backend.
+
+MONGODB CONNECTION HANDLING
+
+- Reuse MongoDB connections where possible; do not create a new connection
+  for every request without considering connection pooling.
+- For serverless functions, use the current MongoDB/Vercel guidance for
+  connection reuse and pooling. Vercel functions may scale into multiple
+  instances, so set sensible pool limits.
+- For a persistent Express backend, initialize and reuse the database
+  connection during application startup and handle connection failures.
+- Do not assume serverless functions share in-memory state between requests.
+- Store durable application state in MongoDB, not process memory.
+
+CLAUSORA DEPLOYMENT RECOMMENDATION
+
+For the first working hackathon deployment:
+
+1. Deploy the React + Vite frontend to Vercel.
+2. Deploy the Express + TypeScript API to Render.
+3. Create MongoDB Atlas separately and connect it to the backend using
+   MONGODB_URI.
+4. Configure the frontend's VITE_API_BASE_URL to point to the deployed API.
+5. Configure backend CORS to allow the Vercel frontend domain.
+6. Add PayPal Sandbox and Hugging Face secrets only to the backend.
+7. Test registration/login, project creation, blueprint generation,
+   agreement approval, evidence submission, client approval, sandbox payment
+   capture and webhook processing on the deployed environment.
+8. Confirm the public demo works without relying on localhost or local files.
+
+This split keeps the frontend deployment simple and gives the Node.js API a
+more conventional runtime for Express, AI requests, PayPal webhooks and
+database operations.
+
+OFFICIAL DOCUMENTATION
+
+MongoDB Atlas:
+https://www.mongodb.com/atlas
+
+MongoDB Atlas + Vercel integration:
+https://vercel.com/marketplace/mongodbatlas
+
+Vercel Environment Variables:
+https://vercel.com/docs/projects/environment-variables
+
+Vercel Functions:
+https://vercel.com/docs/functions
+
+MongoDB Node.js driver:
+https://www.mongodb.com/docs/drivers/node/current/
+
+MongoDB connection pooling:
+https://www.mongodb.com/docs/drivers/node/current/connect/connection-options/connection-pools/
+
+END OF VERCEL + MONGODB ATLAS ADDENDUM

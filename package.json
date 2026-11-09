@@ -1,0 +1,25 @@
+{
+  "name": "clausora-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Clausora: AI Work Intelligence, Evidence Verification & PayPal Milestone Payments",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"API,WEB\" -c \"blue,green\" \"npm run dev -w @clausora/api\" \"npm run dev -w @clausora/web\"",
+    "build": "npm run build -w @clausora/shared && npm run build -w @clausora/api && npm run build -w @clausora/web",
+    "build:api": "npm run build -w @clausora/shared && npm run build -w @clausora/api",
+    "build:web": "npm run build -w @clausora/shared && npm run build -w @clausora/web",
+    "start:api": "npm run start -w @clausora/api",
+    "test": "npm run test -w @clausora/api",
+    "seed": "npm run seed -w @clausora/api"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
