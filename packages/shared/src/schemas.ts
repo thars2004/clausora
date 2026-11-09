@@ -115,6 +115,8 @@ export const CreateProjectInputSchema = z.object({
   description: z.string().default(''),
   sourceType: z.enum(['text', 'file', 'url', 'github', 'rea']).default('text'),
   sourceContent: z.string().optional(),
+  clientId: z.string().optional(),
+  providerId: z.string().optional(),
 });
 
 export const CreateMilestoneInputSchema = z.object({
@@ -123,6 +125,7 @@ export const CreateMilestoneInputSchema = z.object({
   amountMinor: z.number().int().positive('Amount must be positive in minor currency units (cents)'),
   currency: z.string().length(3).default('USD'),
   dueDate: z.string(),
+  clientId: z.string().optional(),
   acceptanceCriteria: z.array(
     z.object({
       criterion: z.string().min(1),
@@ -139,3 +142,4 @@ export const CapturePaymentInputSchema = z.object({
   orderId: z.string().min(1),
   paymentId: z.string().optional(),
 });
+

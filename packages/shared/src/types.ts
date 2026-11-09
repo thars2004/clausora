@@ -55,6 +55,8 @@ export interface TaskItem {
   recommendedEvidence: Array<'screenshot' | 'url' | 'document' | 'repository_link' | 'video' | 'rea_trace'>;
   confidence: number;
   status: 'todo' | 'in_progress' | 'submitted' | 'needs_revision' | 'done';
+  assignedClientId?: string;
+  assignedProviderId?: string;
 }
 
 export interface Workstream {
@@ -296,4 +298,42 @@ export interface ReaInspectionReport {
     details: string;
   }>;
   generatedAt: string;
+}
+
+export interface AdminOverviewStats {
+  totalUsers: number;
+  totalClients: number;
+  totalProviders: number;
+  totalProjects: number;
+  totalMilestones: number;
+  totalVolumeMinor: number;
+  settledVolumeMinor: number;
+  pendingVolumeMinor: number;
+  activeScopeDriftAlerts: number;
+  aiAnalysesPerformed: number;
+}
+
+export interface AnalyticsData {
+  milestoneDistribution: {
+    paid: number;
+    approvedForPayment: number;
+    awaitingDecision: number;
+    inProgress: number;
+    created: number;
+  };
+  financialSummary: {
+    settledCents: number;
+    pendingCents: number;
+    currency: string;
+  };
+  scopeDriftSummary: {
+    likelyScopeChanges: number;
+    clarifications: number;
+    inScope: number;
+  };
+  aiReviewMetrics: {
+    avgConfidence: number;
+    reviewsGenerated: number;
+    limitationsCount: number;
+  };
 }

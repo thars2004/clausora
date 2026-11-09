@@ -28,3 +28,4 @@ Clausora is built according to strict security and fintech boundaries:
 5. **Sandbox & Legal Notice**:
    - Clausora is a milestone orchestration and verification platform; it is not a bank, escrow service, or legal court.
    - All hackathon testing uses PayPal Sandbox accounts; no live cardholder data or real currencies are handled.
+

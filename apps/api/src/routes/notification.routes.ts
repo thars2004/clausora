@@ -28,3 +28,4 @@ router.patch('/:notificationId/read', authMiddleware, (req: AuthRequest, res: Re
 });
 
 export default router;
+

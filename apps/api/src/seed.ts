@@ -9,6 +9,7 @@ export async function seedDemoData() {
   const clientPassHash = await bcrypt.hash(DEMO_USERS.CLIENT.password, 10);
   const providerPassHash = await bcrypt.hash(DEMO_USERS.PROVIDER.password, 10);
   const judgePassHash = await bcrypt.hash(DEMO_USERS.JUDGE.password, 10);
+  const adminPassHash = await bcrypt.hash(DEMO_USERS.ADMIN.password, 10);
 
   const clientUser = {
     id: 'usr_client_demo',
@@ -37,9 +38,19 @@ export async function seedDemoData() {
     createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
   };
 
+  const adminUser = {
+    id: 'usr_admin_demo',
+    name: DEMO_USERS.ADMIN.name,
+    email: DEMO_USERS.ADMIN.email,
+    role: DEMO_USERS.ADMIN.role,
+    passwordHash: adminPassHash,
+    createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
+  };
+
   dbStore.users.set(clientUser.id, clientUser);
   dbStore.users.set(providerUser.id, providerUser);
   dbStore.users.set(judgeUser.id, judgeUser);
+  dbStore.users.set(adminUser.id, adminUser);
 
   // 2. Seed Project
   const projectId = 'proj_hackathon_demo';
@@ -415,3 +426,4 @@ export async function seedDemoData() {
 
   console.log('✅ Demo data successfully seeded! Ready for judges and test runs.');
 }
+

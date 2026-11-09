@@ -42,3 +42,4 @@ describe('Canonical Agreement Fingerprint (SHA-256)', () => {
     assert.notStrictEqual(hash1, hash2);
   });
 });
+

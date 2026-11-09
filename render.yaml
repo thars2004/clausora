@@ -33,3 +33,4 @@ services:
         value: https://api-m.sandbox.paypal.com
       - key: PAYPAL_WEBHOOK_ID
         sync: false
+

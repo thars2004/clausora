@@ -162,3 +162,4 @@ router.get('/:projectId/activity', authMiddleware, (req: AuthRequest, res: Respo
 });
 
 export default router;
+

@@ -52,3 +52,4 @@ In accordance with Section 15 of the specification:
 - Developers and inspectors can run REA (`npx rea-agents setup` / `morluto/rea`) locally on authorized applications.
 - REA extracts runtime traces, network captures, and discovered API surfaces into a standardized JSON report.
 - Clausora's Work DNA Engine ingests this report via `POST /api/rea/import-report` and maps observed behaviors directly into verifiable deliverable milestones.
+

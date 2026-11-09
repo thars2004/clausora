@@ -18,6 +18,7 @@ import scopeDriftRoutes from './routes/scopeDrift.routes';
 import paymentRoutes from './routes/payment.routes';
 import notificationRoutes from './routes/notification.routes';
 import reaRoutes from './routes/rea.routes';
+import adminRoutes from './routes/admin.routes';
 
 const app = express();
 
@@ -96,8 +97,10 @@ app.use('/api', scopeDriftRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rea', reaRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error Handler
 app.use(errorHandler);
 
 export default app;
+

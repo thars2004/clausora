@@ -33,3 +33,4 @@ if (!parsed.success) {
 }
 
 export const env = parsed.success ? parsed.data : envSchema.parse({});
+

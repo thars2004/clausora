@@ -231,13 +231,20 @@ export const ProjectDetailPage: React.FC = () => {
 
         {/* Quick action button */}
         {selectedMilestone && selectedMilestone.status === 'APPROVED_FOR_PAYMENT' && (
-          <button
-            onClick={() => setIsPayPalModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-3 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-900/30 transition animate-bounce"
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>Release PayPal Sandbox Payout (${(selectedMilestone.amountMinor / 100).toFixed(2)})</span>
-          </button>
+          (user?.role === 'client' || user?.role === 'admin') ? (
+            <button
+              onClick={() => setIsPayPalModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-3 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-900/30 transition animate-bounce"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Release PayPal Sandbox Payout (${(selectedMilestone.amountMinor / 100).toFixed(2)})</span>
+            </button>
+          ) : (
+            <div className="px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-amber-300 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-amber-400" />
+              <span>Approved by Client • Awaiting PayPal Release by Client</span>
+            </div>
+          )
         )}
       </div>
 
@@ -399,15 +406,21 @@ export const ProjectDetailPage: React.FC = () => {
                       )}
 
                       {isApproved && (
-                        <button
-                          onClick={() => {
-                            setSelectedMilestone(ms);
-                            setIsPayPalModalOpen(true);
-                          }}
-                          className="px-4 py-2 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-lg transition"
-                        >
-                          PayPal Sandbox
-                        </button>
+                        (user?.role === 'client' || user?.role === 'admin') ? (
+                          <button
+                            onClick={() => {
+                              setSelectedMilestone(ms);
+                              setIsPayPalModalOpen(true);
+                            }}
+                            className="px-4 py-2 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-lg transition"
+                          >
+                            PayPal Sandbox
+                          </button>
+                        ) : (
+                          <span className="text-[11px] font-mono text-amber-300 bg-amber-950/60 px-2.5 py-1 rounded border border-amber-800/40">
+                            Awaiting Client Release
+                          </span>
+                        )
                       )}
                     </div>
                   </div>
@@ -681,3 +694,4 @@ export const ProjectDetailPage: React.FC = () => {
     </div>
   );
 };
+

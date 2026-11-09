@@ -128,6 +128,7 @@ router.post('/demo-switch', async (req, res, next) => {
     let target: { email: string; password: string; name: string; role: any } = DEMO_USERS.CLIENT;
     if (persona === 'provider') target = DEMO_USERS.PROVIDER;
     if (persona === 'judge') target = DEMO_USERS.JUDGE;
+    if (persona === 'admin') target = DEMO_USERS.ADMIN;
 
     // Check if user exists in store, or seed them
     let user: any = null;
@@ -182,6 +183,18 @@ router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
   return res.json({
     success: true,
     data: { user: req.user },
+  });
+});
+
+// GET /api/auth/clients - list available clients for assignment
+router.get('/clients', (req, res) => {
+  const clients = Array.from(dbStore.users.values())
+    .filter((u) => u.role === 'client')
+    .map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+
+  return res.json({
+    success: true,
+    data: { clients },
   });
 });
 

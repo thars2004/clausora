@@ -67,11 +67,21 @@ export const Navbar: React.FC = () => {
             onClick={() => switchPersona('judge')}
             className={`px-2.5 py-1 rounded-lg font-medium transition ${
               user?.email.includes('judge')
-                ? 'bg-amber-600 text-white shadow'
+                ? 'bg-emerald-600 text-white shadow'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             Judge
+          </button>
+          <button
+            onClick={() => switchPersona('admin')}
+            className={`px-2.5 py-1 rounded-lg font-medium transition ${
+              user?.role === 'admin'
+                ? 'bg-amber-600 text-white shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Admin
           </button>
         </div>
 
@@ -110,3 +120,4 @@ export const Navbar: React.FC = () => {
     </header>
   );
 };
+

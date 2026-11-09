@@ -45,4 +45,11 @@ export const DEMO_USERS = {
     name: 'PayPal Hackathon Evaluator',
     role: 'client' as const,
   },
+  ADMIN: {
+    email: 'admin@clausora.dev',
+    password: 'ClausoraAdmin2026!',
+    name: 'Marcus Vance (Platform Admin)',
+    role: 'admin' as const,
+  },
 };
+

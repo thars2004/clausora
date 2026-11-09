@@ -228,3 +228,4 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
     </Modal>
   );
 };
+

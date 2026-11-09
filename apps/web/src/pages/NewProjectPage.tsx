@@ -23,11 +23,27 @@ export const NewProjectPage: React.FC = () => {
   const [sourceType, setSourceType] = useState<'text' | 'file' | 'url' | 'rea'>('text');
   const [sourceContent, setSourceContent] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [clients, setClients] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
 
   const [loading, setLoading] = useState(false);
   const [blueprint, setBlueprint] = useState<WorkBlueprint | null>(null);
   const [projectId, setProjectId] = useState<string>('');
   const [error, setError] = useState<string>('');
+
+  React.useEffect(() => {
+    async function fetchClients() {
+      try {
+        const res = await api.get('/auth/clients');
+        const list = res.data.data?.clients || [];
+        setClients(list);
+        if (list.length > 0) setSelectedClientId(list[0].id);
+      } catch {
+        // ignore
+      }
+    }
+    fetchClients();
+  }, []);
 
   const handleLoadSampleBrief = () => {
     setTitle('Fullstack AI Booking & Milestone Escrow Portal');
@@ -81,6 +97,9 @@ export const NewProjectPage: React.FC = () => {
         formData.append('description', description);
         formData.append('sourceType', sourceType);
         formData.append('sourceContent', sourceContent);
+        if (selectedClientId) {
+          formData.append('clientId', selectedClientId);
+        }
         if (selectedFile) {
           formData.append('file', selectedFile);
         }
@@ -153,6 +172,27 @@ export const NewProjectPage: React.FC = () => {
             </div>
 
             <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Assign Project / Workstream Tasks to Client
+                </label>
+                <select
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
+                >
+                  {clients.length === 0 ? (
+                    <option value="usr_client_demo">Sarah Chen (Acme Ventures) — client@clausora.dev</option>
+                  ) : (
+                    clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.email})
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">Project Title</label>
                 <input
@@ -385,3 +425,4 @@ export const NewProjectPage: React.FC = () => {
     </div>
   );
 };
+

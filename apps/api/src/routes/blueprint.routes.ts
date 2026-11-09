@@ -98,3 +98,4 @@ router.post('/regenerate', authMiddleware, async (req: AuthRequest, res: Respons
 });
 
 export default router;
+

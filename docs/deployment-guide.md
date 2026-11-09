@@ -100,3 +100,4 @@ This guide walks you through deploying Clausora to production with:
 - [x] Open Milestone 2: review evidence graph, click **Approve Milestone for Payment**.
 - [x] Test PayPal Sandbox modal: order creation and server-side capture verification completes successfully.
 - [x] Audit timeline reflects all actions in real time.
+

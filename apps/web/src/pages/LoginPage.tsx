@@ -26,7 +26,7 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = async (persona: 'client' | 'provider' | 'judge') => {
+  const handleDemoLogin = async (persona: 'client' | 'provider' | 'judge' | 'admin') => {
     setLoading(true);
     try {
       await switchPersona(persona);
@@ -98,27 +98,34 @@ export const LoginPage: React.FC = () => {
             <Shield className="w-3.5 h-3.5 text-indigo-400" />
             <span>Hackathon Judge Fast-Pass:</span>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <button
               onClick={() => handleDemoLogin('client')}
               type="button"
-              className="py-2 bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-700/50 text-indigo-300 text-xs font-medium rounded-xl transition"
+              className="py-2 px-2 bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-700/50 text-indigo-300 text-xs font-medium rounded-xl transition text-center"
             >
-              Client Demo
+              Client (Sarah)
             </button>
             <button
               onClick={() => handleDemoLogin('provider')}
               type="button"
-              className="py-2 bg-purple-950/60 hover:bg-purple-900 border border-purple-700/50 text-purple-300 text-xs font-medium rounded-xl transition"
+              className="py-2 px-2 bg-purple-950/60 hover:bg-purple-900 border border-purple-700/50 text-purple-300 text-xs font-medium rounded-xl transition text-center"
             >
-              Provider Demo
+              Provider (Alex)
+            </button>
+            <button
+              onClick={() => handleDemoLogin('admin')}
+              type="button"
+              className="py-2 px-2 bg-amber-950/60 hover:bg-amber-900 border border-amber-700/50 text-amber-300 text-xs font-medium rounded-xl transition text-center"
+            >
+              Admin (Marcus)
             </button>
             <button
               onClick={() => handleDemoLogin('judge')}
               type="button"
-              className="py-2 bg-amber-950/60 hover:bg-amber-900 border border-amber-700/50 text-amber-300 text-xs font-medium rounded-xl transition"
+              className="py-2 px-2 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-700/50 text-emerald-300 text-xs font-medium rounded-xl transition text-center"
             >
-              Judge Demo
+              Judge Fast-Pass
             </button>
           </div>
         </div>
@@ -133,3 +140,4 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
+
