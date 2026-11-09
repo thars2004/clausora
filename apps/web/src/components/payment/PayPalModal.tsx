@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
-import { Badge } from '../common/Badge';
 import { api } from '../../api/client';
 import { Milestone } from '@clausora/shared';
 import {
@@ -10,7 +9,6 @@ import {
   CreditCard,
   Zap,
   AlertCircle,
-  ChevronDown,
 } from 'lucide-react';
 
 interface PayPalModalProps {
@@ -19,6 +17,7 @@ interface PayPalModalProps {
   milestone: Milestone;
   milestonesList?: Milestone[];
   fullProjectAmountDollars?: string;
+  projectRemainingDollars?: string;
   onSelectMilestone?: (ms: Milestone) => void;
   onPaymentSuccess: () => void;
 }
@@ -27,9 +26,8 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
   isOpen,
   onClose,
   milestone,
-  milestonesList = [],
   fullProjectAmountDollars,
-  onSelectMilestone,
+  projectRemainingDollars,
   onPaymentSuccess,
 }) => {
   const [step, setStep] = useState<'input' | 'approve' | 'capturing' | 'success'>('input');
@@ -43,22 +41,22 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
   // Calculations
   const totalMinor = milestone.amountMinor || 0;
   const totalDollars = (totalMinor / 100).toFixed(2);
-  const alreadyPaidMinor = milestone.paidMinor || (milestone.status === 'PAID' ? totalMinor : 0);
-  const alreadyPaidDollars = (alreadyPaidMinor / 100).toFixed(2);
-  const remainingMinor = Math.max(0, totalMinor - alreadyPaidMinor);
-  const remainingDollars = (remainingMinor / 100).toFixed(2);
-
-  // Full amount to display (defaults to full project amount or milestone total)
   const fullAmountToDisplay = fullProjectAmountDollars || totalDollars;
 
-  // Manually editable amount input (defaults to full remaining / full amount)
+  const alreadyPaidMinor = milestone.paidMinor || (milestone.status === 'PAID' ? totalMinor : 0);
+  const remainingMinor = Math.max(0, totalMinor - alreadyPaidMinor);
+  const remainingDollars = projectRemainingDollars !== undefined
+    ? projectRemainingDollars
+    : (remainingMinor / 100).toFixed(2);
+
+  // Manually editable amount input (defaults to remaining due or full amount)
   const [enteredAmount, setEnteredAmount] = useState<string>(remainingDollars);
   const [lastPaidDollars, setLastPaidDollars] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
-      const rem = Math.max(0, totalMinor - (milestone.paidMinor || (milestone.status === 'PAID' ? totalMinor : 0)));
-      const initialAmount = rem > 0 ? (rem / 100).toFixed(2) : (fullProjectAmountDollars || (totalMinor / 100).toFixed(2));
+      const initialAmount =
+        parseFloat(remainingDollars) > 0 ? remainingDollars : fullAmountToDisplay;
       setEnteredAmount(initialAmount);
       setStep('input');
       setError('');
@@ -68,7 +66,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
       setApproveUrl('');
       setCaptureId('');
     }
-  }, [isOpen, milestone.id, milestone.paidMinor, milestone.status, totalMinor, fullProjectAmountDollars]);
+  }, [isOpen, milestone.id, remainingDollars, fullAmountToDisplay]);
 
   const parsedMinor = Math.round((parseFloat(enteredAmount) || 0) * 100);
   const isInputValid = !isNaN(parsedMinor) && parsedMinor > 0;
@@ -108,6 +106,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
     try {
       const res = await api.post(`/payments/milestones/${milestone.id}/create-order`, {
         amountMinor: parsedMinor,
+        projectId: milestone.projectId,
       });
       const { payment, orderId: oid, approveUrl: aUrl } = res.data.data;
       setOrderId(oid);
@@ -144,7 +143,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Make a Payment"
-      subtitle="Escrow Payout & Sandbox Checkout"
+      subtitle="Escrow Settlement & PayPal Checkout"
       maxWidth="md"
     >
       <div className="space-y-3">
@@ -188,7 +187,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
                       onClick={() => setEnteredAmount(remainingDollars)}
                       className="text-[9px] font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition"
                     >
-                      Milestone Due (${remainingDollars})
+                      Pay Remaining (${remainingDollars})
                     </button>
                   )}
                   <button
@@ -222,7 +221,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
               </div>
             </div>
 
-            {/* Restored Modal Button Colors: Instant Pay (Emerald) & PayPal Sandbox (PayPal Blue) */}
+            {/* Action Buttons: Instant Pay (Emerald) & PayPal Sandbox (PayPal Blue) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
               <button
                 type="button"
@@ -255,55 +254,6 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
                   </>
                 )}
               </button>
-            </div>
-
-            {/* BOTTOM: Target Milestone / Deliverable Information - Small Font */}
-            <div className="pt-2.5 border-t border-slate-800/80 space-y-1.5">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-[9px] uppercase font-mono font-bold text-slate-500 tracking-wider">
-                  Target Milestone
-                </span>
-                <Badge
-                  variant={
-                    milestone.status === 'PAID'
-                      ? 'success'
-                      : milestone.status === 'PARTIALLY_PAID'
-                      ? 'warning'
-                      : 'primary'
-                  }
-                  size="sm"
-                >
-                  {milestone.status.replace(/_/g, ' ')}
-                </Badge>
-              </div>
-
-              {milestonesList.length > 1 ? (
-                <div className="relative">
-                  <select
-                    value={milestone.id}
-                    onChange={(e) => {
-                      const selected = milestonesList.find((m) => m.id === e.target.value);
-                      if (selected && onSelectMilestone) {
-                        onSelectMilestone(selected);
-                      }
-                    }}
-                    className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-[11px] font-medium text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
-                  >
-                    {milestonesList.map((m, i) => (
-                      <option key={m.id} value={m.id}>
-                        Phase 0{i + 1}: {m.title} (${(m.amountMinor / 100).toFixed(2)}) — {m.status}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="p-2.5 bg-slate-950/70 border border-slate-800 rounded-lg space-y-0.5">
-                  <div className="text-[11px] font-semibold text-slate-200">{milestone.title}</div>
-                  {milestone.description && (
-                    <p className="text-[10px] text-slate-400 line-clamp-1">{milestone.description}</p>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         )}

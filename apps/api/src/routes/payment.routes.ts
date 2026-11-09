@@ -57,17 +57,42 @@ router.post(
         });
       }
 
-      const alreadyPaid = milestone.paidMinor || (milestone.status === 'PAID' ? milestone.amountMinor : 0);
-      const remainingMinor = Math.max(0, milestone.amountMinor - alreadyPaid);
+      // Get all milestones for this project to calculate project remaining due and waterfall distribution
+      let allProjMilestones = Array.from(dbStore.milestones.values()).filter(
+        (m) => m.projectId === milestone.projectId
+      );
+      if (isDbConnected()) {
+        try {
+          const dbMs: any = await MilestoneModel.find({ projectId: milestone.projectId }).lean();
+          if (dbMs && dbMs.length > 0) {
+            allProjMilestones = dbMs;
+          }
+        } catch {
+          // ignore
+        }
+      }
 
-      if (remainingMinor <= 0) {
+      const totalProjectSettled = allProjMilestones.reduce(
+        (sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)),
+        0
+      );
+      const projectTotalMinor = project?.totalAmountMinor || 50000;
+      const projectRemainingMinor = Math.max(0, projectTotalMinor - totalProjectSettled);
+
+      const alreadyPaid = milestone.paidMinor || (milestone.status === 'PAID' ? milestone.amountMinor : 0);
+      const milestoneRemainingMinor = Math.max(0, milestone.amountMinor - alreadyPaid);
+
+      if (projectRemainingMinor <= 0 && milestoneRemainingMinor <= 0) {
         return res.status(400).json({
           success: false,
-          message: 'This task deliverable is already fully paid and settled.',
+          message: 'This project is already fully paid and settled.',
         });
       }
 
-      const requestedMinor = req.body.amountMinor ? Number(req.body.amountMinor) : remainingMinor;
+      const requestedMinor = req.body.amountMinor
+        ? Number(req.body.amountMinor)
+        : (milestoneRemainingMinor > 0 ? milestoneRemainingMinor : projectRemainingMinor);
+
       if (isNaN(requestedMinor) || requestedMinor <= 0) {
         return res.status(400).json({
           success: false,
@@ -75,8 +100,7 @@ router.post(
         });
       }
 
-      const paymentMinor = Math.min(requestedMinor, remainingMinor);
-      const newPaidMinor = alreadyPaid + paymentMinor;
+      const paymentMinor = Math.min(requestedMinor, projectRemainingMinor > 0 ? projectRemainingMinor : requestedMinor);
 
       const captureId = 'CAP_DEMO_' + Math.random().toString(36).substring(2, 9).toUpperCase();
       const paymentId = 'pay_demo_' + Math.random().toString(36).substring(2, 9);
@@ -99,32 +123,51 @@ router.post(
 
       await dbStore.savePayment(paymentRecord);
 
-      milestone.paidMinor = newPaidMinor;
-      milestone.paypalCaptureId = captureId;
-      if (newPaidMinor >= milestone.amountMinor) {
-        milestone.status = 'PAID';
-      } else {
-        milestone.status = 'PARTIALLY_PAID';
+      // Waterfall distribution: target milestone first, then other project milestones
+      let remainingToDistribute = paymentMinor;
+      const targetAndOthers = [
+        milestone,
+        ...allProjMilestones.filter((m) => m.id !== milestone.id),
+      ];
+
+      for (const m of targetAndOthers) {
+        if (remainingToDistribute <= 0) break;
+        const currentPaid = m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0);
+        const msRemaining = Math.max(0, m.amountMinor - currentPaid);
+        if (msRemaining <= 0) continue;
+
+        const allocation = Math.min(remainingToDistribute, msRemaining);
+        const newPaid = currentPaid + allocation;
+        m.paidMinor = newPaid;
+        m.paypalCaptureId = captureId;
+        if (newPaid >= m.amountMinor) {
+          m.status = 'PAID';
+        } else {
+          m.status = 'PARTIALLY_PAID';
+        }
+        m.updatedAt = new Date().toISOString();
+        await dbStore.saveMilestone(m);
+        remainingToDistribute -= allocation;
       }
-      milestone.updatedAt = new Date().toISOString();
-      await dbStore.saveMilestone(milestone);
 
       // Re-calculate Project overall settled payment in MongoDB Atlas
-      let allProjMilestones = Array.from(dbStore.milestones.values()).filter(
+      let updatedAllMilestones = Array.from(dbStore.milestones.values()).filter(
         (m) => m.projectId === milestone.projectId
       );
       if (isDbConnected()) {
         try {
           const dbMs: any = await MilestoneModel.find({ projectId: milestone.projectId }).lean();
           if (dbMs && dbMs.length > 0) {
-            allProjMilestones = dbMs;
+            updatedAllMilestones = dbMs;
           }
         } catch {
           // ignore
         }
       }
-      const totalSettledMinor = allProjMilestones
-        .reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0);
+      const totalSettledMinor = Math.max(
+        totalProjectSettled + paymentMinor,
+        updatedAllMilestones.reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0)
+      );
 
       await dbStore.updateProject(milestone.projectId, {
         settledAmountMinor: totalSettledMinor,
@@ -191,18 +234,38 @@ router.post(
         });
       }
 
-      // Check if previous completed capture exists for full amount
+      // Check project-wide remaining due
+      let allProjMilestones = Array.from(dbStore.milestones.values()).filter(
+        (m) => m.projectId === milestone.projectId
+      );
+      if (isDbConnected()) {
+        try {
+          const dbMs: any = await MilestoneModel.find({ projectId: milestone.projectId }).lean();
+          if (dbMs && dbMs.length > 0) {
+            allProjMilestones = dbMs;
+          }
+        } catch {}
+      }
+      const totalProjectSettled = allProjMilestones.reduce(
+        (sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)),
+        0
+      );
+      const projectTotalMinor = project?.totalAmountMinor || 50000;
+      const projectRemainingMinor = Math.max(0, projectTotalMinor - totalProjectSettled);
+
       const alreadyPaid = milestone.paidMinor || 0;
-      const remainingMinor = Math.max(0, milestone.amountMinor - alreadyPaid);
-      if (remainingMinor <= 0) {
+      const milestoneRemainingMinor = Math.max(0, milestone.amountMinor - alreadyPaid);
+
+      if (projectRemainingMinor <= 0 && milestoneRemainingMinor <= 0) {
         return res.status(409).json({
           success: false,
-          message: 'This milestone has already been captured and paid in full.',
+          message: 'This project has already been captured and paid in full.',
         });
       }
 
-      const requestedMinor = req.body?.amountMinor ? Number(req.body.amountMinor) : remainingMinor;
-      const orderAmountMinor = Math.min(requestedMinor > 0 ? requestedMinor : remainingMinor, remainingMinor);
+      const requestedMinor = req.body?.amountMinor ? Number(req.body.amountMinor) : (milestoneRemainingMinor > 0 ? milestoneRemainingMinor : projectRemainingMinor);
+      const maxAllowed = projectRemainingMinor > 0 ? projectRemainingMinor : (milestoneRemainingMinor > 0 ? milestoneRemainingMinor : requestedMinor);
+      const orderAmountMinor = Math.min(requestedMinor > 0 ? requestedMinor : maxAllowed, maxAllowed);
 
       // Generate idempotency key
       const idempotencyKey = `ord_${milestoneId}_${Date.now()}`;
@@ -307,20 +370,7 @@ router.post(
         payment.updatedAt = new Date().toISOString();
         await dbStore.savePayment(payment);
 
-        // Transition milestone to PAID or PARTIALLY_PAID
-        const previousPaid = milestone.paidMinor || 0;
-        const newPaidMinor = previousPaid + (payment.amountMinor || 0);
-        milestone.paidMinor = newPaidMinor;
-        if (newPaidMinor >= milestone.amountMinor) {
-          milestone.status = 'PAID';
-        } else {
-          milestone.status = 'PARTIALLY_PAID';
-        }
-        milestone.paypalCaptureId = captureId;
-        milestone.updatedAt = new Date().toISOString();
-        await dbStore.saveMilestone(milestone);
-
-        // Update Project overall settled payment in MongoDB Atlas
+        // Waterfall distribution across milestones
         let allProjMilestones = Array.from(dbStore.milestones.values()).filter(
           (m) => m.projectId === milestone.projectId
         );
@@ -330,12 +380,55 @@ router.post(
             if (dbMs && dbMs.length > 0) {
               allProjMilestones = dbMs;
             }
-          } catch {
-            // ignore
-          }
+          } catch {}
         }
-        const totalSettledMinor = allProjMilestones
-          .reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0);
+        const totalProjectSettled = allProjMilestones.reduce(
+          (sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)),
+          0
+        );
+
+        let remainingToDistribute = payment.amountMinor || 0;
+        const targetAndOthers = [
+          milestone,
+          ...allProjMilestones.filter((m) => m.id !== milestone.id),
+        ];
+
+        for (const m of targetAndOthers) {
+          if (remainingToDistribute <= 0) break;
+          const currentPaid = m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0);
+          const msRemaining = Math.max(0, m.amountMinor - currentPaid);
+          if (msRemaining <= 0) continue;
+
+          const allocation = Math.min(remainingToDistribute, msRemaining);
+          const newPaid = currentPaid + allocation;
+          m.paidMinor = newPaid;
+          m.paypalCaptureId = captureId;
+          if (newPaid >= m.amountMinor) {
+            m.status = 'PAID';
+          } else {
+            m.status = 'PARTIALLY_PAID';
+          }
+          m.updatedAt = new Date().toISOString();
+          await dbStore.saveMilestone(m);
+          remainingToDistribute -= allocation;
+        }
+
+        // Update Project overall settled payment in MongoDB Atlas
+        let updatedAllMilestones = Array.from(dbStore.milestones.values()).filter(
+          (m) => m.projectId === milestone.projectId
+        );
+        if (isDbConnected()) {
+          try {
+            const dbMs: any = await MilestoneModel.find({ projectId: milestone.projectId }).lean();
+            if (dbMs && dbMs.length > 0) {
+              updatedAllMilestones = dbMs;
+            }
+          } catch {}
+        }
+        const totalSettledMinor = Math.max(
+          totalProjectSettled + (payment.amountMinor || 0),
+          updatedAllMilestones.reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0)
+        );
 
         await dbStore.updateProject(milestone.projectId, {
           settledAmountMinor: totalSettledMinor,
