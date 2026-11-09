@@ -160,7 +160,7 @@ export const EvidenceGraph: React.FC<EvidenceGraphProps> = ({
                           {e.title}
                         </span>
                       </div>
-                      <Badge variant="primary" size="sm">{e.type}</Badge>
+                      <Badge variant="primary" size="sm">{e.type === 'rea_trace' ? 'runtime trace' : e.type}</Badge>
                     </div>
 
                     <p className="text-xs text-slate-400">{e.description}</p>

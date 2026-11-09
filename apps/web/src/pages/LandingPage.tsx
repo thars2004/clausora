@@ -149,7 +149,7 @@ export const LandingPage: React.FC = () => {
             </div>
             <h3 className="text-base font-bold text-white">Work DNA Engine</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Accepts briefs, documents, screenshots, and REA inspection reports. Uses Hugging Face Qwen2.5-VL to synthesize structured workstreams, acceptance criteria, and risks.
+              Accepts briefs, technical documents, screenshots, and architecture specifications. Uses Hugging Face Qwen2.5-VL to synthesize structured workstreams, acceptance criteria, and risks.
             </p>
           </div>
 

@@ -87,12 +87,12 @@ export const NewProjectPage: React.FC = () => {
     try {
       const res = await api.get('/rea/sample');
       const sample = res.data.data?.report;
-      setTitle(`${sample.targetName} (REA Reconstructed)`);
+      setTitle(`${sample.targetName} (System Specification)`);
       setDescription(sample.overview);
       setSourceContent(JSON.stringify(sample, null, 2));
       setSourceType('rea');
     } catch {
-      setError('Failed to fetch REA sample report.');
+      setError('Failed to fetch sample specification.');
     }
   };
 
@@ -117,7 +117,7 @@ export const NewProjectPage: React.FC = () => {
         try {
           parsedReport = JSON.parse(sourceContent);
         } catch {
-          throw new Error('Invalid JSON format in REA report input.');
+          throw new Error('Invalid JSON format in specification input.');
         }
 
         const res = await api.post('/rea/import-report', {
@@ -201,7 +201,7 @@ export const NewProjectPage: React.FC = () => {
         </div>
         <h1 className="text-3xl font-extrabold text-white">Create New Project Blueprint</h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Ingest unstructured briefs, documents, screenshots, or REA reverse-engineered reports.
+          Ingest unstructured briefs, technical documents, screenshots, or system architecture specifications.
         </p>
       </div>
 
@@ -316,7 +316,7 @@ export const NewProjectPage: React.FC = () => {
                 className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-medium"
               >
                 <GitPullRequest className="w-3.5 h-3.5" />
-                <span>Import REA Report</span>
+                <span>Import Architecture Spec</span>
               </button>
             </div>
 
@@ -370,7 +370,7 @@ export const NewProjectPage: React.FC = () => {
                 }`}
               >
                 <GitPullRequest className="w-4 h-4" />
-                <span>REA Inspector JSON</span>
+                <span>Architecture Spec JSON</span>
               </button>
             </div>
 
@@ -403,7 +403,7 @@ export const NewProjectPage: React.FC = () => {
                   onChange={(e) => setSourceContent(e.target.value)}
                   placeholder={
                     sourceType === 'rea'
-                      ? 'Paste REA inspection report JSON here...'
+                      ? 'Paste system architecture specification JSON here...'
                       : sourceType === 'url'
                       ? 'https://github.com/organization/repository-name'
                       : 'Paste client emails, Slack messages, task lists, or statement of work text...'

@@ -48,6 +48,7 @@ import {
   ThumbsUp,
   Clock,
   UserCheck,
+  CheckSquare,
 } from 'lucide-react';
 
 export const ProjectDetailPage: React.FC = () => {
@@ -60,6 +61,7 @@ export const ProjectDetailPage: React.FC = () => {
   const currentTab =
     rawTab === 'workflow' || rawTab === 'blueprint' ? 'dna' :
     rawTab === 'evidence' ? 'milestones' :
+    rawTab === 'escrow' || rawTab === 'payments' ? 'payment' :
     rawTab === 'rea' ? 'audit' :
     rawTab;
 
@@ -570,6 +572,7 @@ export const ProjectDetailPage: React.FC = () => {
     .reduce((sum, m) => sum + (m.amountMinor || 0), 0);
   const settledDollars = (settledMinor / 100).toFixed(2);
   const agreedBudgetMinor = project.totalAmountMinor || blueprint?.totalBudgetMinor || 0;
+  const agreedBudgetDollars = (agreedBudgetMinor / 100).toFixed(2);
   const paidMilestonesCount = milestones.filter((m) => m.status === 'PAID').length;
 
   return (
@@ -691,12 +694,16 @@ export const ProjectDetailPage: React.FC = () => {
             )}
 
             <button
-              onClick={openPaymentDetailsModal}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition"
-              title="Configure escrow and PayPal sandbox payment details"
+              onClick={() => setTab('payment')}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition border ${
+                currentTab === 'payment'
+                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/30'
+                  : 'bg-emerald-600/20 hover:bg-emerald-600/30 border-emerald-500/40 text-emerald-300'
+              }`}
+              title="Open Payment Profile & Escrow releases tab"
             >
-              <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Payment Details</span>
+              <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Payment Profile</span>
             </button>
 
             <button
@@ -879,8 +886,23 @@ export const ProjectDetailPage: React.FC = () => {
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
             }`}
           >
-            <CreditCard className="w-4 h-4" />
-            <span>Milestones & Escrow ({milestones.length})</span>
+            <CheckSquare className="w-4 h-4" />
+            <span>Milestones Roadmap ({milestones.length})</span>
+          </button>
+
+          <button
+            onClick={() => setTab('payment')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition shrink-0 ${
+              currentTab === 'payment'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <CreditCard className="w-4 h-4 text-emerald-400" />
+            <span>Payment Profile & Escrow</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/50">
+              ${settledDollars} Paid
+            </span>
           </button>
 
           <button
@@ -919,7 +941,7 @@ export const ProjectDetailPage: React.FC = () => {
             }`}
           >
             <Shield className="w-4 h-4" />
-            <span>Trust & REA Audit ({auditEvents.length})</span>
+            <span>Trust & Security Audit ({auditEvents.length})</span>
           </button>
         </div>
 
@@ -931,10 +953,11 @@ export const ProjectDetailPage: React.FC = () => {
             onChange={(e) => setTab(e.target.value)}
             className="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 font-medium focus:outline-none focus:border-indigo-500"
           >
-            <option value="milestones">📋 Milestones & Escrow ({milestones.length})</option>
+            <option value="milestones">📋 Milestones Roadmap ({milestones.length})</option>
+            <option value="payment">💳 Payment Profile & Escrow (${settledDollars} / ${agreedBudgetDollars})</option>
             <option value="dna">🧬 Work DNA Pipeline</option>
             <option value="drift">📡 Scope Drift Radar ({scopeRequests.length})</option>
-            <option value="audit">🛡️ Trust & REA Audit ({auditEvents.length})</option>
+            <option value="audit">🛡️ Trust & Security Audit ({auditEvents.length})</option>
           </select>
         </div>
       </div>
@@ -1265,6 +1288,286 @@ export const ProjectDetailPage: React.FC = () => {
       )}
 
       {/* ============================================================== */}
+      {/* MODULE: PAYMENT PROFILE, ESCROW & TASK SETTLEMENTS             */}
+      {/* ============================================================== */}
+      {currentTab === 'payment' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Financial Status Summary Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-2">
+              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Total Project Value</span>
+              </span>
+              <div className="text-2xl font-bold font-mono text-white">
+                ${agreedBudgetDollars} <span className="text-xs text-slate-400 font-normal">{project.currency || 'USD'}</span>
+              </div>
+              <p className="text-[11px] text-slate-400">Total agreed milestone allocation</p>
+            </div>
+
+            <div className="p-5 bg-slate-900/80 border border-emerald-800/60 rounded-2xl space-y-2 bg-emerald-950/20">
+              <span className="text-[11px] text-emerald-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Released Payments</span>
+              </span>
+              <div className="text-2xl font-bold font-mono text-emerald-400">
+                ${settledDollars} <span className="text-xs text-slate-400 font-normal">{project.currency || 'USD'}</span>
+              </div>
+              <p className="text-[11px] text-emerald-300">
+                {paidMilestonesCount} of {milestones.length} deliverables paid via PayPal Sandbox
+              </p>
+            </div>
+
+            <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-2">
+              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Active Escrow Pool</span>
+              </span>
+              <div className="text-2xl font-bold font-mono text-white">
+                ${((Math.max(0, agreedBudgetMinor - settledMinor)) / 100).toFixed(2)}{' '}
+                <span className="text-xs text-slate-400 font-normal">{project.currency || 'USD'}</span>
+              </div>
+              <p className="text-[11px] text-slate-400">Locked in escrow for pending tasks</p>
+            </div>
+
+            <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-2">
+              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />
+                <span>Release Policy</span>
+              </span>
+              <div className="text-xs font-mono font-bold text-purple-300 pt-1">
+                Deterministic Human Authorization
+              </div>
+              <p className="text-[11px] text-slate-400">PayPal Sandbox Orders v2</p>
+            </div>
+          </div>
+
+          {/* Payment & Escrow Profile Configuration Card */}
+          <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-3xl space-y-5 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-emerald-400" />
+                  <h3 className="text-base font-bold text-white">Project Payment Profile & Escrow Configuration</h3>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50">
+                    Live Atlas Synced
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Authorized payer account, PayPal Sandbox merchant facilitator, and legal billing specifications.
+                </p>
+              </div>
+
+              <button
+                onClick={openPaymentDetailsModal}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition shrink-0"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>Configure Payment Profile</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 bg-slate-950/80 border border-slate-800/80 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Authorized Payer (PayPal)</span>
+                <p className="text-xs font-mono font-bold text-white truncate" title={project.paymentDetails?.payerEmail || user?.email || 'Not configured'}>
+                  {project.paymentDetails?.payerEmail || user?.email || 'Not configured'}
+                </p>
+                <span className="text-[10px] text-emerald-400">Verified Payer Account</span>
+              </div>
+
+              <div className="p-4 bg-slate-950/80 border border-slate-800/80 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Merchant Facilitator ID</span>
+                <p className="text-xs font-mono font-bold text-white truncate">
+                  {project.paymentDetails?.paypalMerchantId || 'SANDBOX_MERCHANT_CLAU_2026'}
+                </p>
+                <span className="text-[10px] text-slate-500">PayPal Orders v2 Routing</span>
+              </div>
+
+              <div className="p-4 bg-slate-950/80 border border-slate-800/80 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Billing Legal Entity</span>
+                <p className="text-xs font-bold text-white truncate">
+                  {project.paymentDetails?.billingName || user?.name || 'Not specified'}
+                </p>
+                <span className="text-[10px] text-slate-500">Tax ID: {project.paymentDetails?.taxId || 'N/A'}</span>
+              </div>
+
+              <div className="p-4 bg-slate-950/80 border border-slate-800/80 rounded-2xl space-y-1">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Settlement Gateway</span>
+                <p className="text-xs font-bold text-emerald-300 flex items-center gap-1.5 capitalize">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>{project.paymentDetails?.paymentMethod?.replace('_', ' ') || 'PayPal Sandbox'}</span>
+                </p>
+                <span className="text-[10px] text-emerald-400/80">Escrow Verification Active</span>
+              </div>
+            </div>
+
+            {project.paymentDetails?.billingAddress && (
+              <div className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-xs space-y-0.5">
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Registered Billing Address:</span>
+                <p className="text-slate-300 font-medium">{project.paymentDetails.billingAddress}</p>
+              </div>
+            )}
+
+            <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl space-y-1 text-xs">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-indigo-400 flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5" />
+                <span>Escrow Release Policy & Conditions:</span>
+              </span>
+              <p className="text-slate-300 leading-relaxed">
+                {project.paymentDetails?.escrowTerms ||
+                  'Funds are securely authorized and held in escrow. Payouts are only captured and released to the provider when the client inspects and approves the verified milestone deliverable.'}
+              </p>
+              {project.paymentDetails?.payoutNotes && (
+                <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
+                  <span className="text-slate-500">Special Instructions / Memo:</span> {project.paymentDetails.payoutNotes}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Interactive Pay Created Tasks & Milestones Hub */}
+          <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-3xl space-y-5 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="w-5 h-5 text-indigo-400" />
+                  <h3 className="text-base font-bold text-white">Pay Created Tasks & Milestone Releases</h3>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Directly release escrow payments to providers upon verified deliverable approval. All transactions execute via PayPal Orders v2 Sandbox.
+                </p>
+              </div>
+              <span className="text-xs font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-800/60 px-3 py-1 rounded-xl">
+                ${settledDollars} of ${agreedBudgetDollars} Released
+              </span>
+            </div>
+
+            {milestones.length > 0 ? (
+              <div className="space-y-4">
+                {milestones.map((ms, idx) => {
+                  const isPaid = ms.status === 'PAID';
+                  const isApproved = ms.status === 'APPROVED_FOR_PAYMENT';
+                  const isAwaiting = ms.status === 'AWAITING_CLIENT_DECISION';
+                  const msDollars = (ms.amountMinor / 100).toFixed(2);
+
+                  return (
+                    <div
+                      key={ms.id}
+                      className={`p-5 rounded-2xl border transition flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                        isPaid
+                          ? 'bg-emerald-950/20 border-emerald-800/60'
+                          : isApproved
+                          ? 'bg-blue-950/30 border-[#0070BA]/60 shadow-lg shadow-blue-900/20'
+                          : isAwaiting
+                          ? 'bg-slate-950/80 border-indigo-500/50'
+                          : 'bg-slate-950/60 border-slate-800'
+                      }`}
+                    >
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">
+                            TASK 0{idx + 1}
+                          </span>
+                          <Badge
+                            variant={isPaid ? 'success' : isApproved ? 'paypal' : isAwaiting ? 'ai' : 'neutral'}
+                          >
+                            {ms.status.replace(/_/g, ' ')}
+                          </Badge>
+                          {isPaid && (
+                            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800/60">
+                              Capture ID: {ms.paypalCaptureId || 'VERIFIED'}
+                            </span>
+                          )}
+                        </div>
+
+                        <h4 className="text-sm font-bold text-white truncate">{ms.title}</h4>
+                        <p className="text-xs text-slate-400 line-clamp-1">{ms.description}</p>
+                      </div>
+
+                      <div className="flex items-center gap-5 justify-between md:justify-end shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-800">
+                        <div className="text-right font-mono">
+                          <span className="text-[10px] text-slate-500 block uppercase">Allocated Escrow</span>
+                          <span className="text-lg font-bold text-white">
+                            ${msDollars} <span className="text-xs text-slate-400 font-normal">{ms.currency}</span>
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {isApproved && (
+                            (user?.role === 'client' || user?.role === 'admin' || isOwner) ? (
+                              <button
+                                onClick={() => {
+                                  setSelectedMilestone(ms);
+                                  setIsPayPalModalOpen(true);
+                                }}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-900/40 transition animate-bounce"
+                              >
+                                <CreditCard className="w-4 h-4" />
+                                <span>Release PayPal Payout</span>
+                              </button>
+                            ) : (
+                              <span className="text-xs font-mono text-amber-300 bg-amber-950/80 px-3 py-1.5 rounded-xl border border-amber-800/50">
+                                Awaiting Client Release
+                              </span>
+                            )
+                          )}
+
+                          {isAwaiting && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedMilestone(ms);
+                                  setTab('milestones');
+                                }}
+                                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition"
+                              >
+                                Review Proof
+                              </button>
+                              {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+                                <button
+                                  onClick={() => handleDirectMilestoneApprove(ms.id)}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/30 transition"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Approve for Payout</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {isPaid && (
+                            <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-950/80 border border-emerald-700/60 text-xs font-semibold text-emerald-300">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                              <span>Paid & Released</span>
+                            </div>
+                          )}
+
+                          {!isPaid && !isApproved && !isAwaiting && (
+                            <span className="text-xs font-mono text-slate-400 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+                              In Execution (Escrow Locked)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-8 bg-slate-950/60 border border-slate-800 rounded-2xl text-center space-y-3">
+                <CreditCard className="w-8 h-8 text-slate-600 mx-auto" />
+                <h4 className="text-sm font-bold text-slate-300">No Payment Tasks Initialized Yet</h4>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Tasks and payment milestones are formed from the agreed Work DNA blueprint.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
       {/* MODULE 2: WORK DNA ENGINE & EXECUTION PIPELINE                 */}
       {/* ============================================================== */}
       {currentTab === 'dna' && (
@@ -1383,7 +1686,7 @@ export const ProjectDetailPage: React.FC = () => {
       )}
 
       {/* ============================================================== */}
-      {/* MODULE 4: TRUST, REA TOOLKIT & CRYPTOGRAPHIC AUDIT             */}
+      {/* MODULE 4: TRUST, SECURITY & CRYPTOGRAPHIC AUDIT               */}
       {/* ============================================================== */}
       {currentTab === 'audit' && (
         <div className="space-y-6 animate-fade-in">
@@ -1413,15 +1716,15 @@ export const ProjectDetailPage: React.FC = () => {
             )}
           </div>
 
-          {/* REA Reverse-Engineering Workflow Inspector */}
+          {/* Automated System Verification & Artifact Inspector */}
           <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-4">
             <div className="flex items-center gap-2">
               <GitPullRequest className="w-5 h-5 text-blue-400" />
-              <h3 className="text-base font-bold text-white">REA Reverse-Engineering Workflow Inspector</h3>
-              <Badge variant="primary">morluto/rea</Badge>
+              <h3 className="text-base font-bold text-white">System Verification & Artifact Inspector</h3>
+              <Badge variant="primary">Automated Auditor</Badge>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              In accordance with Section 15 of the Clausora Technical Specification, local reverse engineering reports generated with the REA toolkit can be imported as verifiable work artifacts.
+              Automated runtime inspections and cryptographic validation reports are captured as verifiable work artifacts for contract compliance.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">

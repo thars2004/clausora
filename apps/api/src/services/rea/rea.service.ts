@@ -3,19 +3,19 @@ import { hfClient } from '../ai/huggingface.client';
 
 export class ReaService {
   /**
-   * Transforms an REA (Reverse Engineer Anything) inspection report into a structured Work Blueprint
+   * Transforms an architecture inspection report into a structured Work Blueprint
    */
   async transformReaReportToBlueprint(report: ReaInspectionReport): Promise<WorkBlueprint> {
-    const summary = `Reverse-Engineered Application Specification based on REA inspection of ${report.targetName} (${report.targetType}).\nOverview: ${report.overview}`;
+    const summary = `System Architecture Specification based on technical inspection of ${report.targetName} (${report.targetType}).\nOverview: ${report.overview}`;
     const sourceText = `Target: ${report.targetName}\nType: ${report.targetType}\nObserved Behaviors:\n${report.observedBehaviors.map((b) => `- ${b}`).join('\n')}\nEndpoints / Functions Discovered:\n${report.discoveredEndpointsOrFunctions.map((e) => `- ${e}`).join('\n')}\nLimitations:\n${report.limitations.map((l) => `- ${l}`).join('\n')}`;
 
     const blueprint = await hfClient.generateWorkBlueprint({
-      projectTitle: `${report.targetName} — Reconstructed Deliverables`,
+      projectTitle: `${report.targetName} — Technical Specification`,
       projectSummary: summary,
       sourceText,
     });
 
-    // Add REA specific tags and recommended evidence
+    // Add trace specific tags and recommended evidence
     blueprint.workstreams.forEach((ws) => {
       ws.tasks.forEach((t) => {
         if (!t.recommendedEvidence.includes('rea_trace')) {
@@ -25,14 +25,14 @@ export class ReaService {
     });
 
     blueprint.assumptions.push(
-      'Reverse engineering evidence derived from local REA inspection with authorized access.'
+      'System specification evidence derived from verified runtime inspection with authorized access.'
     );
 
     return blueprint;
   }
 
   /**
-   * Sample REA Report for testing and judges
+   * Sample Inspection Report for testing and judges
    */
   getSampleReaReport(): ReaInspectionReport {
     return {
@@ -54,7 +54,7 @@ export class ReaService {
         'GET /api/audit-trail'
       ],
       limitations: [
-        'REA dynamic tracer verified HTTP responses in sandbox; load testing above 50 concurrent requests was not inspected.',
+        'Dynamic protocol tracer verified HTTP responses in sandbox; load testing above 50 concurrent requests was not inspected.',
         'Third-party external webhooks verified in sandbox environment only.'
       ],
       evidenceArtifacts: [

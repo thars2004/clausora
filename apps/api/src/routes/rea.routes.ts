@@ -6,7 +6,7 @@ import { ReaReportSchema, Project, ProjectStatus } from '@clausora/shared';
 
 const router = Router();
 
-// GET /api/rea/sample - get sample REA inspection report
+// GET /api/rea/sample - get sample inspection report
 router.get('/sample', (req, res) => {
   const sample = reaService.getSampleReaReport();
   return res.json({
@@ -15,7 +15,7 @@ router.get('/sample', (req, res) => {
   });
 });
 
-// POST /api/rea/import-report - ingest REA reverse engineered report
+// POST /api/rea/import-report - ingest system specification report
 router.post('/import-report', authMiddleware, async (req: AuthRequest, res: Response, next) => {
   try {
     const parsed = ReaReportSchema.parse(req.body);
@@ -40,7 +40,7 @@ router.post('/import-report', authMiddleware, async (req: AuthRequest, res: Resp
     // Create project
     const project: Project = {
       id: projectId,
-      title: `${parsed.targetName} (REA Reconstructed)`,
+      title: `${parsed.targetName} (System Specification)`,
       description: parsed.overview,
       ownerId: finalOwnerId,
       providerIds: finalProviderIds,
@@ -52,14 +52,14 @@ router.post('/import-report', authMiddleware, async (req: AuthRequest, res: Resp
     };
     await dbStore.saveProject(project);
 
-    // Save REA report as source asset
-    const assetId = 'asset_rea_' + Math.random().toString(36).substring(2, 8);
+    // Save architecture spec report as source asset
+    const assetId = 'asset_spec_' + Math.random().toString(36).substring(2, 8);
     dbStore.sourceAssets.set(assetId, {
       id: assetId,
       projectId,
       uploadedBy: userId,
       type: 'rea_report',
-      name: `REA_Inspection_${parsed.targetName}.json`,
+      name: `System_Spec_${parsed.targetName}.json`,
       urlOrKey: 'memory/rea_report',
       mimeType: 'application/json',
       sizeBytes: JSON.stringify(parsed).length,
@@ -68,7 +68,7 @@ router.post('/import-report', authMiddleware, async (req: AuthRequest, res: Resp
     });
     project.sourceAssets.push(assetId);
 
-    // Transform REA report into Work Blueprint
+    // Transform report into Work Blueprint
     const blueprint = await reaService.transformReaReportToBlueprint(parsed);
     blueprint.projectId = projectId;
     await dbStore.saveBlueprint(blueprint);
@@ -84,7 +84,7 @@ router.post('/import-report', authMiddleware, async (req: AuthRequest, res: Resp
       eventType: 'REA_REPORT_IMPORTED',
       entityType: 'project',
       entityId: projectId,
-      summary: `Imported REA Reverse-Engineering Report for "${parsed.targetName}". Generated Work Blueprint with runtime traces mapped to deliverables.`,
+      summary: `Imported Architecture Specification for "${parsed.targetName}". Generated Work Blueprint with runtime traces mapped to deliverables.`,
     });
 
     return res.status(201).json({
@@ -93,7 +93,7 @@ router.post('/import-report', authMiddleware, async (req: AuthRequest, res: Resp
         project,
         blueprint,
       },
-      message: 'REA inspection report successfully synthesized into Work Blueprint.',
+      message: 'System architecture specification successfully synthesized into Work Blueprint.',
     });
   } catch (err) {
     next(err);
