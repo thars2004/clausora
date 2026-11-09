@@ -10,12 +10,16 @@ import {
   CreditCard,
   Zap,
   AlertCircle,
+  ChevronDown,
 } from 'lucide-react';
 
 interface PayPalModalProps {
   isOpen: boolean;
   onClose: () => void;
   milestone: Milestone;
+  milestonesList?: Milestone[];
+  fullProjectAmountDollars?: string;
+  onSelectMilestone?: (ms: Milestone) => void;
   onPaymentSuccess: () => void;
 }
 
@@ -23,6 +27,9 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
   isOpen,
   onClose,
   milestone,
+  milestonesList = [],
+  fullProjectAmountDollars,
+  onSelectMilestone,
   onPaymentSuccess,
 }) => {
   const [step, setStep] = useState<'input' | 'approve' | 'capturing' | 'success'>('input');
@@ -41,14 +48,18 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
   const remainingMinor = Math.max(0, totalMinor - alreadyPaidMinor);
   const remainingDollars = (remainingMinor / 100).toFixed(2);
 
-  // Manually editable amount
+  // Full amount to display (defaults to full project amount or milestone total)
+  const fullAmountToDisplay = fullProjectAmountDollars || totalDollars;
+
+  // Manually editable amount input (defaults to full remaining / full amount)
   const [enteredAmount, setEnteredAmount] = useState<string>(remainingDollars);
   const [lastPaidDollars, setLastPaidDollars] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
       const rem = Math.max(0, totalMinor - (milestone.paidMinor || (milestone.status === 'PAID' ? totalMinor : 0)));
-      setEnteredAmount((rem / 100).toFixed(2));
+      const initialAmount = rem > 0 ? (rem / 100).toFixed(2) : (fullProjectAmountDollars || (totalMinor / 100).toFixed(2));
+      setEnteredAmount(initialAmount);
       setStep('input');
       setError('');
       setLoading(false);
@@ -57,15 +68,15 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
       setApproveUrl('');
       setCaptureId('');
     }
-  }, [isOpen, milestone.id, milestone.paidMinor, milestone.status, totalMinor]);
+  }, [isOpen, milestone.id, milestone.paidMinor, milestone.status, totalMinor, fullProjectAmountDollars]);
 
   const parsedMinor = Math.round((parseFloat(enteredAmount) || 0) * 100);
-  const isInputValid = !isNaN(parsedMinor) && parsedMinor > 0 && parsedMinor <= remainingMinor;
+  const isInputValid = !isNaN(parsedMinor) && parsedMinor > 0;
 
   // 1. Instant Demo Payment
   const handleDemoPay = async () => {
     if (!isInputValid) {
-      setError(`Enter an amount between $0.01 and $${remainingDollars}.`);
+      setError(`Please enter a valid payment amount greater than $0.00.`);
       return;
     }
     setLoading(true);
@@ -73,6 +84,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
     try {
       const res = await api.post(`/payments/milestones/${milestone.id}/demo-pay`, {
         amountMinor: parsedMinor,
+        projectId: milestone.projectId,
       });
       setCaptureId(res.data.data?.captureId || 'VERIFIED');
       setLastPaidDollars((parsedMinor / 100).toFixed(2));
@@ -88,7 +100,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
   // 2. PayPal Sandbox Checkout
   const handlePayPalCheckout = async () => {
     if (!isInputValid) {
-      setError(`Enter an amount between $0.01 and $${remainingDollars}.`);
+      setError(`Please enter a valid payment amount greater than $0.00.`);
       return;
     }
     setLoading(true);
@@ -131,24 +143,28 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Payment"
-      subtitle={milestone.title}
+      title="Make a Payment"
+      subtitle="Escrow Payout & Sandbox Checkout"
       maxWidth="md"
     >
       <div className="space-y-4">
-        {/* Compact Balance Summary */}
-        <div className="flex items-center justify-between p-3.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono">
+        {/* TOP: Full Authorized Amount Display */}
+        <div className="p-4 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between shadow-inner">
           <div>
-            <span className="text-slate-500 block text-[10px] uppercase">Total</span>
-            <span className="font-bold text-slate-300">${totalDollars}</span>
-          </div>
-          <div>
-            <span className="text-slate-500 block text-[10px] uppercase">Paid</span>
-            <span className="font-bold text-emerald-400">${alreadyPaidDollars}</span>
+            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-semibold block">
+              Full Authorized Amount
+            </span>
+            <div className="text-2xl font-black font-mono text-white mt-0.5">
+              ${fullAmountToDisplay} <span className="text-xs text-slate-400 font-normal">{milestone.currency || 'USD'}</span>
+            </div>
           </div>
           <div className="text-right">
-            <span className="text-indigo-400 block text-[10px] uppercase font-bold">Remaining Due</span>
-            <span className="font-bold text-white text-sm">${remainingDollars}</span>
+            <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-wider font-semibold block">
+              Remaining Due
+            </span>
+            <div className="text-xl font-bold font-mono text-emerald-400 mt-0.5">
+              ${remainingDollars}
+            </div>
           </div>
         </div>
 
@@ -159,86 +175,137 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
           </div>
         )}
 
-        {/* STEP 1: Manually Editable Amount Input & Pay Actions */}
+        {/* STEP 1: Manually Editable Amount Input & Action Buttons */}
         {step === 'input' && (
-          remainingMinor <= 0 ? (
-            <div className="p-4 text-center bg-emerald-950/30 border border-emerald-800/60 rounded-xl space-y-1">
-              <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto" />
-              <p className="text-xs font-bold text-white">Fully Paid</p>
-              <p className="text-[11px] text-slate-400">${totalDollars} settled.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs">
-                  <label className="font-semibold text-slate-200">Payment Amount</label>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-xs">
+                <label className="font-semibold text-slate-200">Payment Amount</label>
+                <div className="flex items-center gap-1.5">
+                  {remainingDollars !== fullAmountToDisplay && parseFloat(remainingDollars) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setEnteredAmount(remainingDollars)}
+                      className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold transition"
+                    >
+                      Milestone Due (${remainingDollars})
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => setEnteredAmount(remainingDollars)}
-                    className="text-[11px] font-mono text-indigo-400 hover:text-indigo-300"
+                    onClick={() => setEnteredAmount(fullAmountToDisplay)}
+                    className="text-[10px] font-mono px-2.5 py-0.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold transition"
                   >
-                    Set Max (${remainingDollars})
+                    Pay Full (${fullAmountToDisplay})
                   </button>
                 </div>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold text-base">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    max={remainingDollars}
-                    value={enteredAmount}
-                    onChange={(e) => {
-                      setEnteredAmount(e.target.value);
-                      setError('');
-                    }}
-                    placeholder="0.00"
-                    className="w-full pl-8 pr-16 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-base font-mono font-bold text-white focus:outline-none focus:border-indigo-500 transition"
-                  />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
-                    {milestone.currency || 'USD'}
-                  </span>
-                </div>
               </div>
-
-              {/* Direct Payment Action Buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={handleDemoPay}
-                  disabled={loading || !isInputValid}
-                  className="flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow disabled:opacity-50"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4" />
-                      <span>Instant Pay (${enteredAmount || '0.00'})</span>
-                    </>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handlePayPalCheckout}
-                  disabled={loading || !isInputValid}
-                  className="flex items-center justify-center gap-2 py-2.5 px-4 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl transition shadow disabled:opacity-50"
-                >
-                  {loading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <CreditCard className="w-4 h-4" />
-                      <span>PayPal Sandbox (${enteredAmount || '0.00'})</span>
-                    </>
-                  )}
-                </button>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold text-lg">
+                  $
+                </span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={enteredAmount}
+                  onChange={(e) => {
+                    setEnteredAmount(e.target.value);
+                    setError('');
+                  }}
+                  placeholder="0.00"
+                  className="w-full pl-8 pr-16 py-3 bg-slate-950 border border-slate-700 rounded-xl text-lg font-mono font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-semibold text-slate-400">
+                  {milestone.currency || 'USD'}
+                </span>
               </div>
             </div>
-          )
+
+            {/* Changed Button Colors: Instant Pay (Indigo/Violet/Purple) & PayPal Sandbox (PayPal Yellow/Gold) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={handleDemoPay}
+                disabled={loading || !isInputValid}
+                className="flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition hover:scale-[1.01] disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 text-amber-300" />
+                    <span>Instant Pay (${enteredAmount || '0.00'})</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePayPalCheckout}
+                disabled={loading || !isInputValid}
+                className="flex items-center justify-center gap-2 py-3 px-4 bg-[#FFC439] hover:bg-[#F2BA36] text-[#003087] text-xs font-black rounded-xl shadow-lg shadow-amber-500/20 border border-[#e5a822] transition hover:scale-[1.01] disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4 text-[#003087]" />
+                    <span>PayPal Sandbox (${enteredAmount || '0.00'})</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* BOTTOM: Target Milestone / Deliverable Information */}
+            <div className="pt-3 border-t border-slate-800/80 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[10px] uppercase font-mono font-bold text-slate-500 tracking-wider">
+                  Target Milestone
+                </span>
+                <Badge
+                  variant={
+                    milestone.status === 'PAID'
+                      ? 'success'
+                      : milestone.status === 'PARTIALLY_PAID'
+                      ? 'warning'
+                      : 'primary'
+                  }
+                  size="sm"
+                >
+                  {milestone.status.replace(/_/g, ' ')}
+                </Badge>
+              </div>
+
+              {milestonesList.length > 1 ? (
+                <div className="relative">
+                  <select
+                    value={milestone.id}
+                    onChange={(e) => {
+                      const selected = milestonesList.find((m) => m.id === e.target.value);
+                      if (selected && onSelectMilestone) {
+                        onSelectMilestone(selected);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  >
+                    {milestonesList.map((m, i) => (
+                      <option key={m.id} value={m.id}>
+                        Phase 0{i + 1}: {m.title} (${(m.amountMinor / 100).toFixed(2)}) — {m.status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl space-y-1">
+                  <div className="text-xs font-semibold text-slate-200">{milestone.title}</div>
+                  {milestone.description && (
+                    <p className="text-[11px] text-slate-400 line-clamp-1">{milestone.description}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* STEP 2: PayPal Approve & Capture */}

@@ -738,20 +738,20 @@ export const ProjectDetailPage: React.FC = () => {
               onClick={() => setTab('payment')}
               className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition border ${
                 currentTab === 'payment'
-                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/30'
-                  : 'bg-emerald-600/20 hover:bg-emerald-600/30 border-emerald-500/40 text-emerald-300'
+                  ? 'bg-[#0070BA] text-white border-blue-400 shadow-md shadow-blue-900/30'
+                  : 'bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/40 text-blue-300'
               }`}
               title="Open Payment Profile & Escrow releases tab"
             >
-              <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+              <CreditCard className="w-3.5 h-3.5 text-blue-400" />
               <span>Payment Profile</span>
             </button>
 
             {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
               <button
                 onClick={handleOpenDirectPaymentModal}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-900/40 hover:scale-[1.02]"
-                title="Open payment modal to enter amount or split payment"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#0070BA] via-indigo-600 to-blue-600 hover:from-[#005ea6] hover:to-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-blue-900/40 border border-blue-400/30 hover:scale-[1.02]"
+                title="Open payment modal to enter amount or full payout"
               >
                 <Zap className="w-3.5 h-3.5 text-amber-300" />
                 <span>Make a Payment</span>
@@ -1454,7 +1454,7 @@ export const ProjectDetailPage: React.FC = () => {
               {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
                 <button
                   onClick={handleOpenDirectPaymentModal}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl transition shadow-md shadow-blue-900/30"
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-300" />
                   <span>Make a Payment</span>
@@ -1519,7 +1519,7 @@ export const ProjectDetailPage: React.FC = () => {
                                 setSelectedMilestone(ms);
                                 setIsPayPalModalOpen(true);
                               }}
-                              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition"
+                              className="px-3.5 py-1.5 bg-gradient-to-r from-[#0070BA] to-blue-600 hover:from-[#005ea6] hover:to-blue-500 text-white text-xs font-semibold rounded-lg transition shadow-sm shadow-blue-900/30"
                             >
                               Pay
                             </button>
@@ -1536,7 +1536,7 @@ export const ProjectDetailPage: React.FC = () => {
                 {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
                   <button
                     onClick={handleOpenDirectPaymentModal}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#0070BA] via-indigo-600 to-blue-600 hover:from-[#005ea6] hover:to-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-blue-900/40"
                   >
                     <Zap className="w-3.5 h-3.5 text-amber-300" />
                     <span>Pay Escrow (${agreedBudgetDollars} USD)</span>
@@ -1815,6 +1815,9 @@ export const ProjectDetailPage: React.FC = () => {
           isOpen={isPayPalModalOpen}
           onClose={() => setIsPayPalModalOpen(false)}
           milestone={selectedMilestone}
+          milestonesList={milestones}
+          fullProjectAmountDollars={agreedBudgetDollars}
+          onSelectMilestone={(ms) => setSelectedMilestone(ms)}
           onPaymentSuccess={fetchProjectData}
         />
       )}
