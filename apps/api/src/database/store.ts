@@ -95,6 +95,17 @@ class ClausoraLiveStore {
   }
 
   // --- Users Persistence ---
+  findUserById(userId: string): (User & { passwordHash?: string }) | undefined {
+    return this.users.get(userId);
+  }
+
+  findUserByEmail(email: string): (User & { passwordHash?: string }) | undefined {
+    for (const u of this.users.values()) {
+      if (u.email.toLowerCase() === email.toLowerCase()) return u;
+    }
+    return undefined;
+  }
+
   async saveUser(user: User & { passwordHash: string }): Promise<void> {
     this.users.set(user.id, user);
     if (isDbConnected()) {
@@ -105,6 +116,40 @@ class ClausoraLiveStore {
         console.warn('⚠️ Atlas UserModel save error:', err.message);
       }
     }
+  }
+
+  async updateUser(userId: string, data: Partial<User & { passwordHash?: string }>): Promise<User | null> {
+    const existing = this.users.get(userId);
+    const updated = {
+      ...(existing || {}),
+      ...data,
+      id: userId,
+    } as User & { passwordHash: string };
+
+    this.users.set(userId, updated);
+
+    if (isDbConnected()) {
+      try {
+        await UserModel.findOneAndUpdate({ id: userId }, { $set: data }, { new: true, upsert: true });
+        console.log(`✅ [MongoDB Atlas] User updated: ${userId} (${updated.email})`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas UserModel update error:', err.message);
+      }
+    }
+    return updated;
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    const existed = this.users.delete(userId);
+    if (isDbConnected()) {
+      try {
+        await UserModel.deleteOne({ id: userId });
+        console.log(`✅ [MongoDB Atlas] User deleted: ${userId}`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas UserModel delete error:', err.message);
+      }
+    }
+    return existed;
   }
 
   // --- Projects Persistence ---

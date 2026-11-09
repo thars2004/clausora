@@ -1,6 +1,8 @@
 import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { dbStore } from '../database/store';
+import { isDbConnected } from '../database/connection';
+import { ProjectModel, WorkBlueprintModel, MilestoneModel, AgreementModel } from '../database/models';
 import { CreateProjectInputSchema, Project } from '@clausora/shared';
 import { hfClient } from '../services/ai/huggingface.client';
 import { storageService } from '../services/storage/storage.service';
@@ -9,21 +11,33 @@ import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 const router = Router();
 
-// GET /api/projects - role-isolated project listing
-router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
+// GET /api/projects - role-isolated project listing with live Atlas DB sync
+router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const userId = req.user!.id;
   const userRole = req.user!.role;
+
+  let allProjects: any[] = [];
+  if (isDbConnected()) {
+    try {
+      allProjects = await ProjectModel.find().lean();
+      allProjects.forEach((p: any) => dbStore.projects.set(p.id, p));
+    } catch {
+      allProjects = Array.from(dbStore.projects.values());
+    }
+  } else {
+    allProjects = Array.from(dbStore.projects.values());
+  }
 
   let userProjects: any[] = [];
   if (userRole === 'admin') {
     // Admin sees all projects
-    userProjects = Array.from(dbStore.projects.values());
+    userProjects = allProjects;
   } else if (userRole === 'client') {
     // Client strictly sees their own projects
-    userProjects = Array.from(dbStore.projects.values()).filter((p) => p.ownerId === userId);
+    userProjects = allProjects.filter((p) => p.ownerId === userId);
   } else {
     // Provider strictly sees projects where they are assigned as provider
-    userProjects = Array.from(dbStore.projects.values()).filter((p) => p.providerIds.includes(userId));
+    userProjects = allProjects.filter((p) => p.providerIds && p.providerIds.includes(userId));
   }
 
   return res.json({
@@ -172,20 +186,31 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
   }
 });
 
-// GET /api/projects/:projectId - secure tenant check
-router.get('/:projectId', authMiddleware, (req: AuthRequest, res: Response) => {
+// GET /api/projects/:projectId - secure tenant check with live Atlas fallback
+router.get('/:projectId', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { projectId } = req.params;
-  const project = dbStore.projects.get(projectId);
+  let project: any = dbStore.projects.get(projectId);
+
+  if (!project && isDbConnected()) {
+    try {
+      project = await ProjectModel.findOne({ id: projectId }).lean();
+      if (project) {
+        dbStore.projects.set(projectId, project);
+      }
+    } catch (err: any) {
+      console.warn('Atlas project query error:', err.message);
+    }
+  }
 
   if (!project) {
-    return res.status(404).json({ success: false, message: 'Project not found' });
+    return res.status(404).json({ success: false, message: `Project "${projectId}" not found in database.` });
   }
 
   const userId = req.user!.id;
   const userRole = req.user!.role;
 
   // Security check: Only Admin, the Client owner, or the Assigned Provider can view this project
-  if (userRole !== 'admin' && project.ownerId !== userId && !project.providerIds.includes(userId)) {
+  if (userRole !== 'admin' && project.ownerId !== userId && (!project.providerIds || !project.providerIds.includes(userId))) {
     return res.status(403).json({
       success: false,
       message: 'Forbidden: You do not have permission to access this project.',
@@ -193,14 +218,47 @@ router.get('/:projectId', authMiddleware, (req: AuthRequest, res: Response) => {
   }
 
   // Find latest blueprint
-  const blueprints = Array.from(dbStore.blueprints.values()).filter((b) => b.projectId === projectId);
+  let blueprints = Array.from(dbStore.blueprints.values()).filter((b) => b.projectId === projectId);
+  if (blueprints.length === 0 && isDbConnected()) {
+    try {
+      const dbBlueprints: any = await WorkBlueprintModel.find({ projectId }).lean();
+      if (dbBlueprints && dbBlueprints.length > 0) {
+        blueprints = dbBlueprints;
+        dbBlueprints.forEach((b: any) => dbStore.blueprints.set(b.id, b));
+      }
+    } catch {
+      // ignore
+    }
+  }
   const latestBlueprint = blueprints[blueprints.length - 1] || null;
 
   // Find milestones
-  const milestones = Array.from(dbStore.milestones.values()).filter((m) => m.projectId === projectId);
+  let milestones = Array.from(dbStore.milestones.values()).filter((m) => m.projectId === projectId);
+  if (milestones.length === 0 && isDbConnected()) {
+    try {
+      const dbMilestones: any = await MilestoneModel.find({ projectId }).lean();
+      if (dbMilestones && dbMilestones.length > 0) {
+        milestones = dbMilestones;
+        dbMilestones.forEach((m: any) => dbStore.milestones.set(m.id, m));
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   // Find agreements
-  const agreements = Array.from(dbStore.agreements.values()).filter((a) => a.projectId === projectId);
+  let agreements = Array.from(dbStore.agreements.values()).filter((a) => a.projectId === projectId);
+  if (agreements.length === 0 && isDbConnected()) {
+    try {
+      const dbAgreements: any = await AgreementModel.find({ projectId }).lean();
+      if (dbAgreements && dbAgreements.length > 0) {
+        agreements = dbAgreements;
+        dbAgreements.forEach((a: any) => dbStore.agreements.set(a.id, a));
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   return res.json({
     success: true,
@@ -210,6 +268,7 @@ router.get('/:projectId', authMiddleware, (req: AuthRequest, res: Response) => {
       milestones,
       agreements,
     },
+    message: `Cockpit data retrieved for project "${project.title}".`,
   });
 });
 

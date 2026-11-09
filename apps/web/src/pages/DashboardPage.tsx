@@ -3,6 +3,8 @@ import { api } from '../api/client';
 import { Project, AuditEvent } from '@clausora/shared';
 import { Badge } from '../components/common/Badge';
 import { Link } from 'react-router-dom';
+import { useScrollPagination } from '../hooks/useScrollPagination';
+import { useToast } from '../context/ToastContext';
 import {
   FolderGit2,
   PlusCircle,
@@ -13,52 +15,69 @@ import {
   ArrowUpRight,
   Sparkles,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date>(new Date());
+  const { toast } = useToast();
+
+  const {
+    visibleItems: paginatedProjects,
+    hasMore: hasMoreProjects,
+    loadMore: loadMoreProjects,
+    visibleCount: loadedProjectsCount,
+    totalCount: totalProjectsCount,
+  } = useScrollPagination(projects, { pageSize: 6 });
+
+  async function fetchData(isBackground = false) {
+    try {
+      if (!isBackground) setLoading(true);
+      const res = await api.get('/projects');
+      setProjects(res.data.data?.projects || []);
+
+      try {
+        const actRes = await api.get('/projects/proj_hackathon_demo/activity');
+        setAuditEvents(actRes.data.data?.events || []);
+      } catch {
+        // fallback
+      }
+      setLastSynced(new Date());
+      if (!isBackground) {
+        toast.info(res.data.message || `Loaded ${res.data.data?.projects?.length || 0} projects from live Atlas database`);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch dashboard data:', err);
+      if (!isBackground) {
+        toast.error(err.response?.data?.message || 'Failed to sync live project data');
+      }
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function fetchData(isBackground = false) {
-      try {
-        if (!isBackground) setLoading(true);
-        const res = await api.get('/projects');
-        if (!isMounted) return;
-        setProjects(res.data.data?.projects || []);
-
-        try {
-          const actRes = await api.get('/projects/proj_hackathon_demo/activity');
-          if (isMounted) {
-            setAuditEvents(actRes.data.data?.events || []);
-          }
-        } catch {
-          // fallback
-        }
-        setLastSynced(new Date());
-      } catch (err) {
-        console.error('Failed to fetch dashboard data:', err);
-      } finally {
-        if (isMounted && !isBackground) setLoading(false);
-      }
-    }
-
     fetchData();
 
-    // 6-second live polling interval for real-time live database synchronization
+    // 10-second live polling interval for real-time live database synchronization
     const timer = setInterval(() => {
       fetchData(true);
-    }, 6000);
+    }, 10000);
 
     return () => {
-      isMounted = false;
       clearInterval(timer);
     };
   }, []);
+
+  const handleManualSync = async () => {
+    setSyncing(true);
+    await fetchData(false);
+    setSyncing(false);
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -76,13 +95,24 @@ export const DashboardPage: React.FC = () => {
             Track agreements, deliverable readiness, scope changes, and PayPal Sandbox payouts.
           </p>
         </div>
-        <Link
-          to="/new-project"
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-indigo-600/20 transition"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>New Work DNA Project</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleManualSync}
+            disabled={syncing}
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-xl shadow transition disabled:opacity-60"
+            title="Refresh from MongoDB Atlas"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-indigo-400' : ''}`} />
+            <span>{syncing ? 'Syncing...' : 'Sync DB'}</span>
+          </button>
+          <Link
+            to="/new-project"
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-indigo-600/20 transition"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>New Work DNA Project</span>
+          </Link>
+        </div>
       </div>
 
       {/* Top Metric Cards */}
@@ -137,41 +167,72 @@ export const DashboardPage: React.FC = () => {
             <div className="p-12 flex justify-center text-slate-500">
               <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
             </div>
-          ) : (
-            <div className="space-y-3">
-              {projects.map((proj) => (
-                <Link
-                  key={proj.id}
-                  to={`/projects/${proj.id}`}
-                  className="block p-5 bg-slate-900/70 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl transition group"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2.5">
-                        <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition">
-                          {proj.title}
-                        </h4>
-                        <Badge variant="primary" size="sm">{proj.status}</Badge>
-                      </div>
-                      <p className="text-xs text-slate-400 line-clamp-2 max-w-xl">
-                        {proj.description}
-                      </p>
-                    </div>
-                    <div className="p-2 bg-slate-800 text-slate-300 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition">
-                      <ArrowUpRight className="w-4 h-4" />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                    <div className="flex items-center gap-4">
-                      <span>Agreement: <strong className="text-slate-200">v1 (SHA-256 Verified)</strong></span>
-                      <span>Next Payout: <strong className="text-emerald-400">$600.00 USD</strong></span>
-                    </div>
-                    <span className="text-indigo-400 font-medium">Open Cockpit →</span>
-                  </div>
-                </Link>
-              ))}
+          ) : projects.length === 0 ? (
+            <div className="p-10 border border-dashed border-slate-800 rounded-2xl text-center space-y-3">
+              <FolderGit2 className="w-8 h-8 text-slate-600 mx-auto" />
+              <p className="text-sm text-slate-400">No projects found in this workspace.</p>
+              <Link
+                to="/new-project"
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-xs font-semibold text-white rounded-lg hover:bg-indigo-500 transition"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Create First Project</span>
+              </Link>
             </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {paginatedProjects.map((proj: Project) => (
+                  <Link
+                    key={proj.id}
+                    to={`/projects/${proj.id}`}
+                    className="block p-5 bg-slate-900/70 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl transition group"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2.5">
+                          <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition">
+                            {proj.title}
+                          </h4>
+                          <Badge variant="primary" size="sm">{proj.status}</Badge>
+                        </div>
+                        <p className="text-xs text-slate-400 line-clamp-2 max-w-xl">
+                          {proj.description}
+                        </p>
+                      </div>
+                      <div className="p-2 bg-slate-800 text-slate-300 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition">
+                        <ArrowUpRight className="w-4 h-4" />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                      <div className="flex items-center gap-4">
+                        <span>Agreement: <strong className="text-slate-200">v1 (SHA-256 Verified)</strong></span>
+                        <span>Next Payout: <strong className="text-emerald-400">$600.00 USD</strong></span>
+                      </div>
+                      <span className="text-indigo-400 font-medium">Open Cockpit →</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Scroll Pagination Footer */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 border-t border-slate-800/60">
+                <span className="font-mono">
+                  Showing {loadedProjectsCount} of {totalProjectsCount} projects
+                </span>
+                {hasMoreProjects ? (
+                  <button
+                    onClick={loadMoreProjects}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition text-xs font-medium"
+                  >
+                    <span>Load more (or scroll down)</span>
+                  </button>
+                ) : (
+                  <span className="text-slate-600 text-[11px]">All projects loaded</span>
+                )}
+              </div>
+            </>
           )}
         </div>
 

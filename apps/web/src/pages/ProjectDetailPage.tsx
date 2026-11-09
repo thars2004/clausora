@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { useScrollPagination } from '../hooks/useScrollPagination';
 import {
   Project,
   WorkBlueprint,
@@ -34,6 +36,8 @@ import {
   GitMerge,
   DollarSign,
   Calendar,
+  RefreshCw,
+  ChevronDown,
 } from 'lucide-react';
 
 export const ProjectDetailPage: React.FC = () => {
@@ -41,6 +45,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') || 'milestones';
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const [project, setProject] = useState<Project | null>(null);
   const [blueprint, setBlueprint] = useState<WorkBlueprint | null>(null);
@@ -51,6 +56,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [scopeRequests, setScopeRequests] = useState<ScopeChangeRequest[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   // Active milestone for evidence review / checkout
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
@@ -66,32 +72,42 @@ export const ProjectDetailPage: React.FC = () => {
   const [newEvidenceDesc, setNewEvidenceDesc] = useState('');
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
 
-  const fetchProjectData = async (isBackground = false) => {
+  // Scroll pagination for Audit timeline events
+  const auditPagination = useScrollPagination(auditEvents, { pageSize: 6 });
+
+  const fetchProjectData = async (isBackground = false, isUserInitiated = false) => {
     try {
       const pId = projectId || 'proj_hackathon_demo';
       const res = await api.get(`/projects/${pId}`);
       const { project: pData, blueprint: bData, milestones: mData, agreements: aData } = res.data.data;
       setProject(pData);
       setBlueprint(bData);
-      setMilestones(mData);
-      setAgreements(aData);
+      setMilestones(mData || []);
+      setAgreements(aData || []);
+
+      if (isUserInitiated) {
+        toast.success(
+          res.data.message || `Project Cockpit synchronized with Live Atlas DB: "${pData.title}"`,
+          'Cockpit Synced'
+        );
+      }
 
       // Select or refresh active milestone
       let activeMs: Milestone | null = null;
       setSelectedMilestone((prev) => {
         if (prev) {
-          const match = mData.find((m: Milestone) => m.id === prev.id);
+          const match = (mData || []).find((m: Milestone) => m.id === prev.id);
           if (match) {
             activeMs = match;
             return match;
           }
         }
-        const target = mData.find((m: Milestone) => m.status === 'AWAITING_CLIENT_DECISION') || mData[0] || null;
+        const target = (mData || []).find((m: Milestone) => m.status === 'AWAITING_CLIENT_DECISION') || (mData || [])[0] || null;
         activeMs = target;
         return target;
       });
 
-      const msToInspect = activeMs || mData[0];
+      const msToInspect = activeMs || (mData || [])[0];
       if (msToInspect) {
         try {
           const eviRes = await api.get(`/milestones/${msToInspect.id}/evidence`);
@@ -118,10 +134,23 @@ export const ProjectDetailPage: React.FC = () => {
       } catch {
         // ignore
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load project details:', err);
+      const errMsg = err.response?.data?.message || err.message || 'Failed to load project details from server';
+      if (!isBackground) {
+        toast.error(errMsg, 'Cockpit Sync Error');
+      }
     } finally {
       if (!isBackground) setLoading(false);
+    }
+  };
+
+  const handleManualSync = async () => {
+    setSyncing(true);
+    try {
+      await fetchProjectData(false, true);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -143,18 +172,19 @@ export const ProjectDetailPage: React.FC = () => {
     if (!selectedMilestone || !newEvidenceTitle) return;
     setSubmittingEvidence(true);
     try {
-      await api.post(`/milestones/${selectedMilestone.id}/evidence`, {
+      const res = await api.post(`/milestones/${selectedMilestone.id}/evidence`, {
         title: newEvidenceTitle,
         description: newEvidenceDesc,
         urlOrContent: newEvidenceUrl,
         type: newEvidenceUrl.includes('github') ? 'repository' : 'url',
       });
+      toast.success(res.data.message || 'Evidence artifact submitted successfully to Evidence Graph.', 'Evidence Submitted');
       setNewEvidenceTitle('');
       setNewEvidenceUrl('');
       setNewEvidenceDesc('');
       await fetchProjectData();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to submit evidence artifact.', 'Evidence Error');
     } finally {
       setSubmittingEvidence(false);
     }
@@ -163,10 +193,11 @@ export const ProjectDetailPage: React.FC = () => {
   // Provider submits milestone for AI review
   const handleSubmitMilestone = async (milestoneId: string) => {
     try {
-      await api.post(`/milestones/${milestoneId}/submit`);
+      const res = await api.post(`/milestones/${milestoneId}/submit`);
+      toast.info(res.data.message || 'Milestone submitted for Work DNA review and client decision.', 'Milestone Submitted');
       await fetchProjectData();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to submit milestone for review.', 'Submission Error');
     }
   };
 
@@ -174,11 +205,12 @@ export const ProjectDetailPage: React.FC = () => {
   const handleApproveMilestone = async () => {
     if (!selectedMilestone) return;
     try {
-      await api.post(`/milestones/${selectedMilestone.id}/approve`);
+      const res = await api.post(`/milestones/${selectedMilestone.id}/approve`);
+      toast.success(res.data.message || 'Milestone approved! PayPal checkout authorized.', 'Milestone Approved');
       await fetchProjectData();
       setIsPayPalModalOpen(true);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to approve milestone.', 'Approval Error');
     }
   };
 
@@ -188,10 +220,11 @@ export const ProjectDetailPage: React.FC = () => {
     const notes = prompt('Enter revision feedback for provider:');
     if (!notes) return;
     try {
-      await api.post(`/milestones/${selectedMilestone.id}/request-revision`, { revisionNotes: notes });
+      const res = await api.post(`/milestones/${selectedMilestone.id}/request-revision`, { revisionNotes: notes });
+      toast.warning(res.data.message || 'Milestone revision requested. Provider notified.', 'Revision Requested');
       await fetchProjectData();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to request revision.', 'Revision Error');
     }
   };
 
@@ -201,13 +234,14 @@ export const ProjectDetailPage: React.FC = () => {
     if (!newRequestText.trim() || !project) return;
     setDriftLoading(true);
     try {
-      await api.post(`/projects/${project.id}/change-requests`, {
+      const res = await api.post(`/projects/${project.id}/change-requests`, {
         newRequestText,
       });
+      toast.info(res.data.message || `Scope radar classified request: ${res.data.data?.changeRequest?.classification || 'Analyzed'}`, 'Scope Drift Radar');
       setNewRequestText('');
       await fetchProjectData();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to evaluate scope change request.', 'Radar Error');
     } finally {
       setDriftLoading(false);
     }
@@ -217,7 +251,7 @@ export const ProjectDetailPage: React.FC = () => {
     return (
       <div className="py-24 flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-        <p className="text-xs text-slate-400">Loading project cockpit & cryptographic state...</p>
+        <p className="text-xs text-slate-400">Loading project cockpit & cryptographic state from MongoDB Atlas...</p>
       </div>
     );
   }
@@ -236,6 +270,15 @@ export const ProjectDetailPage: React.FC = () => {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>Live Atlas DB</span>
             </div>
+            <button
+              onClick={handleManualSync}
+              disabled={syncing}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/50 text-[11px] text-indigo-300 font-mono transition shadow"
+              title="Synchronize cockpit data from MongoDB Atlas"
+            >
+              <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin text-indigo-400' : ''}`} />
+              <span>{syncing ? 'Syncing Atlas...' : 'Sync Cockpit'}</span>
+            </button>
           </div>
           <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
             {project.description}
@@ -717,7 +760,7 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
 
           <div className="space-y-4">
-            {auditEvents.map((ev) => (
+            {auditPagination.visibleItems.map((ev) => (
               <div key={ev.id} className="relative pl-6 pb-4 border-l border-slate-800 text-left">
                 <div className="absolute -left-1.5 top-1 w-3 h-3 rounded-full bg-indigo-500 border-2 border-slate-950" />
                 <div className="flex items-center justify-between">
@@ -737,6 +780,26 @@ export const ProjectDetailPage: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Audit Events Scroll Pagination Footer */}
+          <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <span className="text-slate-400 font-mono">
+              Page {auditPagination.currentPage} of {auditPagination.totalPages} • Showing{' '}
+              {auditPagination.visibleItems.length} / {auditEvents.length} events
+            </span>
+
+            {auditPagination.hasMore ? (
+              <button
+                onClick={() => auditPagination.loadMore()}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-semibold rounded-xl border border-slate-700 transition"
+              >
+                <span>Scroll down or click to load more audit events</span>
+                <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
+              </button>
+            ) : (
+              <span className="text-slate-500 font-mono text-[11px]">All audit events loaded</span>
+            )}
           </div>
         </div>
       )}

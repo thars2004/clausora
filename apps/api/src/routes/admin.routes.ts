@@ -1,6 +1,9 @@
 import { Router, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { authMiddleware, AuthRequest, requireRole } from '../middleware/auth';
 import { dbStore } from '../database/store';
+import { isDbConnected } from '../database/connection';
+import { UserModel } from '../database/models';
 import { AdminOverviewStats, AnalyticsData } from '@clausora/shared';
 
 const router = Router();
@@ -45,9 +48,20 @@ router.get('/stats', authMiddleware, requireRole(['admin']), (req: AuthRequest, 
   });
 });
 
-// GET /api/admin/users - master users directory
-router.get('/users', authMiddleware, requireRole(['admin']), (req: AuthRequest, res: Response) => {
-  const users = Array.from(dbStore.users.values()).map((u) => {
+// GET /api/admin/users - master users directory with live Atlas sync
+router.get('/users', authMiddleware, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
+  let sourceUsers: any[] = [];
+  if (isDbConnected()) {
+    try {
+      sourceUsers = await UserModel.find().lean();
+    } catch {
+      sourceUsers = Array.from(dbStore.users.values());
+    }
+  } else {
+    sourceUsers = Array.from(dbStore.users.values());
+  }
+
+  const users = sourceUsers.map((u: any) => {
     const projectCount = Array.from(dbStore.projects.values()).filter(
       (p) => p.ownerId === u.id || p.providerIds.includes(u.id)
     ).length;
@@ -65,6 +79,91 @@ router.get('/users', authMiddleware, requireRole(['admin']), (req: AuthRequest, 
     success: true,
     data: { users },
   });
+});
+
+// PUT /api/admin/users/:userId - update user details & role
+router.put('/users/:userId', authMiddleware, requireRole(['admin']), async (req: AuthRequest, res: Response, next) => {
+  try {
+    const { userId } = req.params;
+    const { name, email, role, password } = req.body;
+
+    const existing: any = dbStore.users.get(userId) || (isDbConnected() ? await UserModel.findOne({ id: userId }).lean() : null);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'User not found in system.' });
+    }
+
+    if (role && !['client', 'provider', 'admin'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role. Must be client, provider, or admin.' });
+    }
+
+    const updates: any = {};
+    if (name) updates.name = name.trim();
+    if (email) updates.email = email.toLowerCase().trim();
+    if (role) updates.role = role;
+    if (password && password.trim().length >= 6) {
+      updates.passwordHash = await bcrypt.hash(password.trim(), 12);
+    }
+
+    const updatedUser = await dbStore.updateUser(userId, updates);
+
+    dbStore.addAuditEvent({
+      projectId: 'system',
+      actorId: req.user!.id,
+      actorName: req.user!.name,
+      actorRole: req.user!.role,
+      eventType: 'USER_UPDATED',
+      entityType: 'user',
+      entityId: userId,
+      summary: `Admin updated user account "${updates.name || existing.name}" (${userId}, role: ${updates.role || existing.role}).`,
+    });
+
+    return res.json({
+      success: true,
+      data: { user: updatedUser },
+      message: `User "${updates.name || existing.name}" updated successfully.`,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/admin/users/:userId - delete user account from live database
+router.delete('/users/:userId', authMiddleware, requireRole(['admin']), async (req: AuthRequest, res: Response, next) => {
+  try {
+    const { userId } = req.params;
+
+    if (req.user!.id === userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Security constraint: You cannot delete your own active administrator account.',
+      });
+    }
+
+    const existing: any = dbStore.users.get(userId) || (isDbConnected() ? await UserModel.findOne({ id: userId }).lean() : null);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'User not found in database.' });
+    }
+
+    await dbStore.deleteUser(userId);
+
+    dbStore.addAuditEvent({
+      projectId: 'system',
+      actorId: req.user!.id,
+      actorName: req.user!.name,
+      actorRole: req.user!.role,
+      eventType: 'USER_DELETED',
+      entityType: 'user',
+      entityId: userId,
+      summary: `Admin deleted user account "${existing.name}" (${existing.email}, ${userId}).`,
+    });
+
+    return res.json({
+      success: true,
+      message: `User "${existing.name}" (${existing.email}) deleted successfully.`,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // GET /api/admin/payments - master payments settlement ledger

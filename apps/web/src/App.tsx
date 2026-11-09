@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { LandingPage } from './pages/LandingPage';
@@ -35,23 +36,25 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 export const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppLayout>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/admin" element={<AdminPortalPage />} />
-            <Route path="/new-project" element={<NewProjectPage />} />
-            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AppLayout>
-      </BrowserRouter>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppLayout>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/admin" element={<AdminPortalPage />} />
+              <Route path="/new-project" element={<NewProjectPage />} />
+              <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AppLayout>
+        </BrowserRouter>
+      </AuthProvider>
+    </ToastProvider>
   );
 };
 
