@@ -1,16 +1,146 @@
 import { z } from 'zod';
 
+export const LanguageMetadataSchema = z.object({
+  detectedLanguage: z.enum(['en', 'ta', 'hi', 'es', 'fr', 'de', 'ar', 'ja', 'other']).default('en'),
+  detectedLanguageName: z.string().default('English'),
+  confidence: z.number().min(0).max(1).default(1.0),
+  originalInputExcerpt: z.string().default(''),
+  translatedSummary: z.string().optional(),
+  isMultilingual: z.boolean().default(false),
+});
+
+export const RequirementItemSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  category: z.enum(['functional', 'technical', 'security', 'ui_ux', 'performance', 'integration', 'compliance', 'operational']).default('functional'),
+  sourceReference: z.string().default(''),
+  status: z.enum(['confirmed', 'implied', 'recommended', 'missing', 'conflicted', 'out_of_scope']).default('confirmed'),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+  relatedDeliverables: z.array(z.string()).default([]),
+  relatedCriteriaIds: z.array(z.string()).default([]),
+  isUserExplicit: z.boolean().default(true),
+});
+
+export const BusinessAnalysisSchema = z.object({
+  businessObjective: z.string().default(''),
+  targetAudience: z.array(z.string()).default([]),
+  userProblemsSolved: z.array(z.string()).default([]),
+  expectedBusinessValue: z.string().default(''),
+  operationalRequirements: z.array(z.string()).default([]),
+  successMetrics: z.array(z.string()).default([]),
+});
+
+export const TechnicalAnalysisSchema = z.object({
+  recommendedArchitecture: z.string().default(''),
+  technologyStack: z.object({
+    frontend: z.array(z.string()).default([]),
+    backend: z.array(z.string()).default([]),
+    database: z.array(z.string()).default([]),
+    apis: z.array(z.string()).default([]),
+    infrastructure: z.array(z.string()).default([]),
+  }).default({ frontend: [], backend: [], database: [], apis: [], infrastructure: [] }),
+  integrationComplexity: z.enum(['low', 'medium', 'high', 'very_high']).default('medium'),
+  securityRequirements: z.array(z.string()).default([]),
+  scalabilityConsiderations: z.array(z.string()).default([]),
+});
+
+export const FunctionalAnalysisSchema = z.object({
+  coreFeatures: z.array(z.string()).default([]),
+  supportingFeatures: z.array(z.string()).default([]),
+  primaryUserJourneys: z.array(z.string()).default([]),
+  adminWorkflows: z.array(z.string()).default([]),
+  keyEdgeCases: z.array(z.string()).default([]),
+});
+
+export const DeliveryAnalysisSchema = z.object({
+  developmentComplexity: z.enum(['low', 'medium', 'high']).default('medium'),
+  criticalPath: z.array(z.string()).default([]),
+  testingRequirements: z.array(z.string()).default([]),
+  deploymentReadinessChecklist: z.array(z.string()).default([]),
+  handoverRequirements: z.array(z.string()).default([]),
+});
+
+export const RiskItemSchema = z.object({
+  riskId: z.string(),
+  description: z.string(),
+  category: z.enum(['technical', 'scope', 'timeline', 'integration', 'security', 'budget']).default('technical'),
+  probability: z.enum(['low', 'medium', 'high']).default('medium'),
+  impact: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+  severity: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+  mitigationStrategy: z.string().default(''),
+  humanDecisionRequired: z.boolean().default(false),
+});
+
+export const SubtaskItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().default(''),
+  deliverable: z.string().default(''),
+  isCompleted: z.boolean().default(false),
+});
+
+export const AcceptanceCriterionItemSchema = z.object({
+  id: z.string(),
+  criterion: z.string(),
+  verificationMethod: z.enum([
+    'automated_test',
+    'visual_inspection',
+    'api_verification',
+    'code_review',
+    'security_scan',
+    'user_journey_test',
+  ]).default('visual_inspection'),
+  expectedResult: z.string().default(''),
+  requiredEvidence: z.array(z.enum(['screenshot', 'url', 'document', 'repository_link', 'video', 'rea_trace'])).default(['screenshot', 'url']),
+  status: z.enum(['unverified', 'supported', 'partially_supported', 'not_supported', 'insufficient_evidence']).default('unverified'),
+});
+
 export const TaskItemSchema = z.object({
   id: z.string().default(() => Math.random().toString(36).substring(2, 9)),
   title: z.string().min(1, 'Task title is required'),
   description: z.string().default(''),
-  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+  relatedRequirementIds: z.array(z.string()).default([]),
+  workstreamId: z.string().optional(),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+  complexity: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+  estimatedEffortHours: z.number().default(8),
+  estimatedDurationDays: z.number().default(2),
   dependencies: z.array(z.string()).default([]),
+  requiredSkills: z.array(z.string()).default([]),
+  subtasks: z.array(SubtaskItemSchema).default([]),
   deliverable: z.string().min(1, 'Deliverable description is required'),
-  acceptanceCriteria: z.array(z.string()).min(1, 'At least one acceptance criterion is required'),
+  acceptanceCriteria: z.array(z.string()).default([]),
+  structuredCriteria: z.array(AcceptanceCriterionItemSchema).default([]),
   recommendedEvidence: z.array(z.enum(['screenshot', 'url', 'document', 'repository_link', 'video', 'rea_trace'])).default(['screenshot', 'url']),
+  definitionOfDone: z.string().default('Code tested, deliverables documented and verified against acceptance criteria.'),
+  requiresHumanDecision: z.boolean().default(false),
   confidence: z.number().min(0).max(1).default(0.85),
   status: z.enum(['todo', 'in_progress', 'submitted', 'needs_revision', 'done']).default('todo'),
+});
+
+export const QualityAssessmentSchema = z.object({
+  requirementCoverage: z.number().min(0).max(100).default(85),
+  technicalCompleteness: z.number().min(0).max(100).default(85),
+  taskClarity: z.number().min(0).max(100).default(90),
+  acceptanceCriteriaQuality: z.number().min(0).max(100).default(85),
+  dependencyConsistency: z.number().min(0).max(100).default(90),
+  timelineConsistency: z.number().min(0).max(100).default(85),
+  riskIdentification: z.number().min(0).max(100).default(85),
+  evidenceReadiness: z.number().min(0).max(100).default(90),
+  languageAccuracy: z.number().min(0).max(100).default(95),
+  overallScore: z.number().min(0).max(100).default(88),
+  explanations: z.record(z.string()).default({}),
+  unresolvedIssues: z.array(z.string()).default([]),
+});
+
+export const ClarificationQuestionItemSchema = z.object({
+  id: z.string(),
+  category: z.enum(['business', 'technical', 'timeline', 'budget', 'delivery']).default('technical'),
+  question: z.string(),
+  context: z.string().default(''),
+  importance: z.enum(['critical', 'helpful', 'optional']).default('helpful'),
+  answered: z.boolean().default(false),
+  answer: z.string().optional(),
 });
 
 export const WorkstreamSchema = z.object({
@@ -47,6 +177,15 @@ export const WorkBlueprintSchema = z.object({
   projectTitle: z.string().min(1, 'Project title is required'),
   projectSummary: z.string().min(1, 'Project summary is required'),
   detectedProjectType: z.enum(['web_app', 'mobile_app', 'design', 'content', 'other']).default('web_app'),
+  languageMetadata: LanguageMetadataSchema.optional(),
+  requirements: z.array(RequirementItemSchema).default([]),
+  businessAnalysis: BusinessAnalysisSchema.optional(),
+  technicalAnalysis: TechnicalAnalysisSchema.optional(),
+  functionalAnalysis: FunctionalAnalysisSchema.optional(),
+  deliveryAnalysis: DeliveryAnalysisSchema.optional(),
+  riskRegister: z.array(RiskItemSchema).default([]),
+  qualityAssessment: QualityAssessmentSchema.optional(),
+  categorizedClarifications: z.array(ClarificationQuestionItemSchema).default([]),
   workstreams: z.array(WorkstreamSchema).min(1, 'At least one workstream is required'),
   assumptions: z.array(z.string()).default([]),
   missingInformation: z.array(z.string()).default([]),
@@ -56,7 +195,9 @@ export const WorkBlueprintSchema = z.object({
   workflowDiagram: z.string().optional(),
   workflowSteps: z.array(WorkflowStepSchema).default([]),
   totalBudgetMinor: z.number().optional(),
+  budgetConfirmedByHuman: z.boolean().default(false),
   targetDeadline: z.string().optional(),
+  deadlineConfirmedByHuman: z.boolean().default(false),
 });
 
 export const CriterionAnalysisResultSchema = z.object({

@@ -57,3 +57,4 @@ describe('AI Work DNA Blueprint Synthesis & Workflow Tests', () => {
     assert.strictEqual(blueprint.workflowSteps[0].stepNumber, 1);
   });
 });
+

@@ -109,7 +109,8 @@ export const NewProjectPage: React.FC = () => {
     try {
       const resolvedClientId = user?.role === 'client' ? user.id : (selectedClientId || 'usr_client_demo');
       const resolvedProviderId = user?.role === 'provider' ? user.id : (selectedProviderId || 'usr_provider_demo');
-      const amountMinor = Math.round(parseFloat(totalAmount || '0') * 100);
+      const parsedFloat = parseFloat(totalAmount || '0');
+      const amountMinor = !isNaN(parsedFloat) && parsedFloat > 0 ? Math.round(parsedFloat * 100) : undefined;
 
       if (sourceType === 'rea') {
         let parsedReport;
@@ -123,9 +124,9 @@ export const NewProjectPage: React.FC = () => {
           ...parsedReport,
           clientId: resolvedClientId,
           providerId: resolvedProviderId,
-          totalAmountMinor: amountMinor > 0 ? amountMinor : 150000,
+          totalAmountMinor: amountMinor,
           currency,
-          deadline,
+          deadline: deadline || undefined,
         });
         setProjectId(res.data.data.project.id);
         setBlueprint(res.data.data.blueprint);
@@ -135,7 +136,9 @@ export const NewProjectPage: React.FC = () => {
         formData.append('description', description);
         formData.append('sourceType', sourceType);
         formData.append('sourceContent', sourceContent);
-        formData.append('totalAmountMinor', String(amountMinor > 0 ? amountMinor : 150000));
+        if (amountMinor) {
+          formData.append('totalAmountMinor', String(amountMinor));
+        }
         formData.append('currency', currency);
         if (deadline) {
           formData.append('deadline', deadline);
@@ -168,7 +171,13 @@ export const NewProjectPage: React.FC = () => {
     if (!projectId || !blueprint) return;
     setLoading(true);
     try {
-      const budgetToSend = blueprint.totalBudgetMinor || Math.round(parseFloat(totalAmount || '0') * 100) || 150000;
+      const budgetToSend = blueprint.totalBudgetMinor || (parseFloat(totalAmount || '0') > 0 ? Math.round(parseFloat(totalAmount) * 100) : 0);
+      if (!budgetToSend || budgetToSend <= 0) {
+        setError('Financial Safety: Human confirmation is required. Please enter a valid agreed budget before generating a legally binding agreement.');
+        setLoading(false);
+        return;
+      }
+
       await api.post(`/projects/${projectId}/agreements`, {
         totalAmountMinor: budgetToSend,
         currency: currency || 'USD',
@@ -415,22 +424,24 @@ export const NewProjectPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Total Budget */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Total Project Budget</span>
+                <label className="block text-xs font-semibold text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Total Project Budget (Optional)</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-400/80 font-mono">Financial Safety Guarded</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
                     <input
                       type="number"
-                      min="10"
+                      min="0"
                       step="50"
                       value={totalAmount}
                       onChange={(e) => setTotalAmount(e.target.value)}
-                      placeholder="1500"
+                      placeholder="e.g. 1500 (or leave empty)"
                       className="w-full pl-7 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-emerald-500 font-mono"
-                      required
                     />
                   </div>
                   <select
@@ -443,8 +454,22 @@ export const NewProjectPage: React.FC = () => {
                     <option value="GBP">GBP (£)</option>
                   </select>
                 </div>
+                <p className="text-[11px] text-slate-500">
+                  If omitted, Clausora will strictly mark amounts as pending human input and never invent budget figures.
+                </p>
                 {/* Quick Presets */}
                 <div className="flex items-center gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setTotalAmount('')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono transition ${
+                      totalAmount === ''
+                        ? 'bg-amber-600 text-white font-bold'
+                        : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Unset (TBD)
+                  </button>
                   {['500', '1000', '1500', '2500', '5000'].map((amt) => (
                     <button
                       key={amt}
@@ -464,20 +489,35 @@ export const NewProjectPage: React.FC = () => {
 
               {/* Target Deadline */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Target Project Completion Deadline</span>
+                <label className="block text-xs font-semibold text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Target Project Completion Deadline</span>
+                  </span>
+                  <span className="text-[10px] text-indigo-400/80 font-mono">Timeline Guarded</span>
                 </label>
-                <input
-                  type="date"
-                  value={deadline}
-                  min={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-indigo-500 font-mono"
-                  required
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={deadline}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-indigo-500 font-mono"
+                  />
+                  {deadline && (
+                    <button
+                      type="button"
+                      onClick={() => setDeadline('')}
+                      className="px-2.5 py-2.5 bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white rounded-xl text-xs font-mono transition"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
                 <p className="text-[11px] text-slate-500">
-                  AI will distribute milestones chronologically leading up to this date.
+                  {deadline
+                    ? 'AI will align phases chronologically toward this target.'
+                    : 'No confirmed date selected. Estimated durations will be non-binding pending start date confirmation.'}
                 </p>
               </div>
             </div>

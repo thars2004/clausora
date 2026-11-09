@@ -48,15 +48,139 @@ export interface SourceAsset {
   createdAt: string;
 }
 
+export type LanguageCode = 'en' | 'ta' | 'hi' | 'es' | 'fr' | 'de' | 'ar' | 'ja' | 'other';
+
+export interface LanguageMetadata {
+  detectedLanguage: LanguageCode;
+  detectedLanguageName: string;
+  confidence: number;
+  originalInputExcerpt: string;
+  translatedSummary?: string;
+  isMultilingual: boolean;
+}
+
+export type RequirementCategory =
+  | 'functional'
+  | 'technical'
+  | 'security'
+  | 'ui_ux'
+  | 'performance'
+  | 'integration'
+  | 'compliance'
+  | 'operational';
+
+export type RequirementStatus =
+  | 'confirmed'
+  | 'implied'
+  | 'recommended'
+  | 'missing'
+  | 'conflicted'
+  | 'out_of_scope';
+
+export interface RequirementItem {
+  id: string; // e.g. REQ-001
+  description: string;
+  category: RequirementCategory;
+  sourceReference: string;
+  status: RequirementStatus;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  relatedDeliverables: string[];
+  relatedCriteriaIds: string[];
+  isUserExplicit: boolean;
+}
+
+export interface BusinessAnalysis {
+  businessObjective: string;
+  targetAudience: string[];
+  userProblemsSolved: string[];
+  expectedBusinessValue: string;
+  operationalRequirements: string[];
+  successMetrics: string[];
+}
+
+export interface TechnicalAnalysis {
+  recommendedArchitecture: string;
+  technologyStack: {
+    frontend: string[];
+    backend: string[];
+    database: string[];
+    apis: string[];
+    infrastructure: string[];
+  };
+  integrationComplexity: 'low' | 'medium' | 'high' | 'very_high';
+  securityRequirements: string[];
+  scalabilityConsiderations: string[];
+}
+
+export interface FunctionalAnalysis {
+  coreFeatures: string[];
+  supportingFeatures: string[];
+  primaryUserJourneys: string[];
+  adminWorkflows: string[];
+  keyEdgeCases: string[];
+}
+
+export interface DeliveryAnalysis {
+  developmentComplexity: 'low' | 'medium' | 'high';
+  criticalPath: string[]; // task IDs in order
+  testingRequirements: string[];
+  deploymentReadinessChecklist: string[];
+  handoverRequirements: string[];
+}
+
+export interface RiskItem {
+  riskId: string; // e.g. RSK-001
+  description: string;
+  category: 'technical' | 'scope' | 'timeline' | 'integration' | 'security' | 'budget';
+  probability: 'low' | 'medium' | 'high';
+  impact: 'low' | 'medium' | 'high' | 'critical';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  mitigationStrategy: string;
+  humanDecisionRequired: boolean;
+}
+
+export interface SubtaskItem {
+  id: string; // e.g. SUB-001
+  title: string;
+  description: string;
+  deliverable: string;
+  isCompleted: boolean;
+}
+
+export interface AcceptanceCriterionItem {
+  id: string; // e.g. AC-001
+  criterion: string;
+  verificationMethod:
+    | 'automated_test'
+    | 'visual_inspection'
+    | 'api_verification'
+    | 'code_review'
+    | 'security_scan'
+    | 'user_journey_test';
+  expectedResult: string;
+  requiredEvidence: Array<'screenshot' | 'url' | 'document' | 'repository_link' | 'video' | 'rea_trace'>;
+  status: 'unverified' | 'supported' | 'partially_supported' | 'not_supported' | 'insufficient_evidence';
+}
+
 export interface TaskItem {
   id: string;
   title: string;
   description: string;
-  priority: 'low' | 'medium' | 'high';
+  relatedRequirementIds?: string[];
+  workstreamId?: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  complexity?: 'low' | 'medium' | 'high' | 'critical';
+  estimatedEffortHours?: number;
+  estimatedDurationDays?: number;
   dependencies: string[];
+  requiredSkills?: string[];
+  subtasks?: SubtaskItem[];
   deliverable: string;
-  acceptanceCriteria: string[];
+  acceptanceCriteria: string[]; // flat strings for backward compatibility
+  structuredCriteria?: AcceptanceCriterionItem[]; // rich testable criteria
   recommendedEvidence: Array<'screenshot' | 'url' | 'document' | 'repository_link' | 'video' | 'rea_trace'>;
+  definitionOfDone?: string;
+  requiresHumanDecision?: boolean;
   confidence: number;
   status: 'todo' | 'in_progress' | 'submitted' | 'needs_revision' | 'done';
   assignedClientId?: string;
@@ -93,6 +217,31 @@ export interface WorkflowStep {
   amountMinor?: number;
 }
 
+export interface QualityAssessment {
+  requirementCoverage: number; // 0-100
+  technicalCompleteness: number; // 0-100
+  taskClarity: number; // 0-100
+  acceptanceCriteriaQuality: number; // 0-100
+  dependencyConsistency: number; // 0-100
+  timelineConsistency: number; // 0-100
+  riskIdentification: number; // 0-100
+  evidenceReadiness: number; // 0-100
+  languageAccuracy: number; // 0-100
+  overallScore: number; // 0-100
+  explanations: Record<string, string>;
+  unresolvedIssues: string[];
+}
+
+export interface ClarificationQuestionItem {
+  id: string;
+  category: 'business' | 'technical' | 'timeline' | 'budget' | 'delivery';
+  question: string;
+  context: string;
+  importance: 'critical' | 'helpful' | 'optional';
+  answered: boolean;
+  answer?: string;
+}
+
 export interface WorkBlueprint {
   id: string;
   projectId: string;
@@ -100,6 +249,15 @@ export interface WorkBlueprint {
   projectTitle: string;
   projectSummary: string;
   detectedProjectType: 'web_app' | 'mobile_app' | 'design' | 'content' | 'other';
+  languageMetadata?: LanguageMetadata;
+  requirements?: RequirementItem[];
+  businessAnalysis?: BusinessAnalysis;
+  technicalAnalysis?: TechnicalAnalysis;
+  functionalAnalysis?: FunctionalAnalysis;
+  deliveryAnalysis?: DeliveryAnalysis;
+  riskRegister?: RiskItem[];
+  qualityAssessment?: QualityAssessment;
+  categorizedClarifications?: ClarificationQuestionItem[];
   workstreams: Workstream[];
   assumptions: string[];
   missingInformation: string[];
@@ -109,7 +267,9 @@ export interface WorkBlueprint {
   workflowDiagram?: string;
   workflowSteps?: WorkflowStep[];
   totalBudgetMinor?: number;
+  budgetConfirmedByHuman?: boolean;
   targetDeadline?: string;
+  deadlineConfirmedByHuman?: boolean;
   aiModel: string;
   createdAt: string;
 }
