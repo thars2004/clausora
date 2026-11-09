@@ -143,8 +143,13 @@ class ClausoraLiveStore {
     const existed = this.users.delete(userId);
     if (isDbConnected()) {
       try {
-        await UserModel.deleteOne({ id: userId });
-        console.log(`✅ [MongoDB Atlas] User deleted: ${userId}`);
+        // Soft-delete user in MongoDB Atlas so DB details, audit trails, and references are preserved
+        await UserModel.findOneAndUpdate(
+          { id: userId },
+          { $set: { isDeleted: true, deletedAt: new Date().toISOString() } },
+          { new: true }
+        );
+        console.log(`✅ [MongoDB Atlas] User soft-deleted (DB details preserved): ${userId}`);
       } catch (err: any) {
         console.warn('⚠️ Atlas UserModel delete error:', err.message);
       }
@@ -153,7 +158,7 @@ class ClausoraLiveStore {
   }
 
   // --- Projects Persistence ---
-  async saveProject(project: Project & { ownerId: string; providerIds: string[]; sourceAssets: string[] }): Promise<void> {
+  async saveProject(project: Project & { ownerId: string; providerIds: string[]; sourceAssets: string[]; createdBy?: string; creatorRole?: string; acceptedBy?: string; acceptedAt?: string }): Promise<void> {
     this.projects.set(project.id, project);
     if (isDbConnected()) {
       try {
@@ -163,6 +168,44 @@ class ClausoraLiveStore {
         console.warn('⚠️ Atlas ProjectModel save error:', err.message);
       }
     }
+  }
+
+  async updateProject(projectId: string, data: Partial<any>): Promise<any> {
+    const existing = this.projects.get(projectId);
+    const updated = {
+      ...(existing || {}),
+      ...data,
+      id: projectId,
+      updatedAt: new Date().toISOString(),
+    };
+    this.projects.set(projectId, updated as any);
+    if (isDbConnected()) {
+      try {
+        await ProjectModel.findOneAndUpdate({ id: projectId }, { $set: updated }, { new: true, upsert: true });
+        console.log(`✅ [MongoDB Atlas] Project updated: ${projectId}`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas ProjectModel update error:', err.message);
+      }
+    }
+    return updated;
+  }
+
+  async deleteProject(projectId: string): Promise<boolean> {
+    const existed = this.projects.delete(projectId);
+    if (isDbConnected()) {
+      try {
+        // Soft-delete project to preserve DB details, audit logs, and agreement history
+        await ProjectModel.findOneAndUpdate(
+          { id: projectId },
+          { $set: { isDeleted: true, deletedAt: new Date().toISOString() } },
+          { new: true }
+        );
+        console.log(`✅ [MongoDB Atlas] Project soft-deleted (DB details preserved): ${projectId}`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas ProjectModel soft-delete error:', err.message);
+      }
+    }
+    return existed;
   }
 
   // --- Milestones Persistence ---

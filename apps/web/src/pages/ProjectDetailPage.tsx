@@ -18,6 +18,7 @@ import { Badge } from '../components/common/Badge';
 import { EvidenceGraph } from '../components/evidence/EvidenceGraph';
 import { PayPalModal } from '../components/payment/PayPalModal';
 import { WorkflowVisualizer } from '../components/workflow/WorkflowVisualizer';
+import { Modal } from '../components/common/Modal';
 import {
   FileText,
   CheckCircle2,
@@ -41,6 +42,12 @@ import {
   ChevronDown,
   ArrowUpRight,
   FolderGit2,
+  Pencil,
+  Trash2,
+  ArrowLeft,
+  ThumbsUp,
+  Clock,
+  UserCheck,
 } from 'lucide-react';
 
 export const ProjectDetailPage: React.FC = () => {
@@ -80,6 +87,20 @@ export const ProjectDetailPage: React.FC = () => {
   const [newEvidenceUrl, setNewEvidenceUrl] = useState('');
   const [newEvidenceDesc, setNewEvidenceDesc] = useState('');
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
+
+  // Edit & Delete Project State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editDeadline, setEditDeadline] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [updatingProject, setUpdatingProject] = useState(false);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
+
+  // Accept Project State
+  const [acceptingProject, setAcceptingProject] = useState(false);
 
   // Scroll pagination for Audit timeline events
   const auditPagination = useScrollPagination(auditEvents, { pageSize: 6 });
@@ -289,6 +310,70 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
+  // Accept project proposal handler
+  const handleAcceptProject = async () => {
+    if (!project) return;
+    setAcceptingProject(true);
+    try {
+      const res = await api.post(`/projects/${project.id}/accept`);
+      toast.success(res.data.message || 'Project proposal accepted! Status is now ACTIVE.', 'Project Activated');
+      await fetchProjectData(false, false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to accept project proposal.', 'Acceptance Error');
+    } finally {
+      setAcceptingProject(false);
+    }
+  };
+
+  // Open Edit Modal
+  const openEditModal = () => {
+    if (!project) return;
+    setEditTitle(project.title);
+    setEditDescription(project.description || '');
+    setEditDeadline(project.deadline || '');
+    setEditAmount(project.totalAmountMinor ? (project.totalAmountMinor / 100).toString() : '');
+    setIsEditModalOpen(true);
+  };
+
+  // Submit Edit Project
+  const handleUpdateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!project) return;
+    setUpdatingProject(true);
+    try {
+      const payload: any = {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        deadline: editDeadline || undefined,
+        totalAmountMinor: editAmount ? Math.round(Number(editAmount) * 100) : undefined,
+      };
+      const res = await api.put(`/projects/${project.id}`, payload);
+      toast.success(res.data.message || 'Project updated successfully.', 'Project Updated');
+      setIsEditModalOpen(false);
+      await fetchProjectData(false, false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update project.', 'Update Error');
+    } finally {
+      setUpdatingProject(false);
+    }
+  };
+
+  // Submit Delete Project
+  const handleDeleteProject = async () => {
+    if (!project) return;
+    setDeletingProject(true);
+    try {
+      const res = await api.delete(`/projects/${project.id}`);
+      toast.success(res.data.message || `Project "${project.title}" deleted successfully.`, 'Project Deleted');
+      setIsDeleteModalOpen(false);
+      navigate('/projects');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to delete project.', 'Delete Error');
+    } finally {
+      setDeletingProject(false);
+    }
+  };
+
   if (accessDenied) {
     return (
       <div className="py-12 max-w-2xl mx-auto space-y-6 text-center animate-fade-in">
@@ -374,15 +459,58 @@ export const ProjectDetailPage: React.FC = () => {
 
   const latestAgreement = agreements[agreements.length - 1];
 
+  const isPendingAcceptance = project.status === 'awaiting_approval' || project.status === 'draft';
+  const isClientCreator = project.creatorRole === 'client' || (!project.creatorRole && project.ownerId === project.createdBy);
+  const isProviderCreator = project.creatorRole === 'provider';
+
+  // If Client created, assigned Provider (or admin) can accept
+  // If Provider created, Client owner (or admin) can accept
+  const canAcceptProject = isPendingAcceptance && (
+    user?.role === 'admin' ||
+    (isClientCreator && user?.role === 'provider' && (project.providerIds?.includes(user?.id || '') || project.providerIds?.length === 0)) ||
+    (isProviderCreator && user?.role === 'client' && project.ownerId === user?.id)
+  );
+
+  const isCreator = user?.id === project.createdBy || user?.id === project.ownerId;
+  const canEditOrDelete = isCreator || user?.role === 'admin';
+
   return (
     <div className="space-y-6 pb-20 animate-fade-in">
+      {/* Top Breadcrumbs & Identity Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/projects"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition font-medium"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-indigo-400" />
+            <span>All Projects Directory</span>
+          </Link>
+          <span className="font-mono text-[11px] text-slate-500">ID: {project.id}</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+            {user?.role === 'admin'
+              ? '🛡️ Platform Admin'
+              : isCreator
+              ? '👑 You Created This Project'
+              : '🤝 Assigned Counterpart'}
+          </span>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-700/40 text-[11px] text-emerald-300 font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Live Atlas DB</span>
+          </div>
+        </div>
+      </div>
+
       {/* Workspace Switcher Strip */}
-      {allUserProjects.length > 0 && (
+      {allUserProjects.length > 1 && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-900/90 border border-slate-800 rounded-2xl">
           <div className="flex items-center gap-2 overflow-x-auto py-0.5">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0 pl-1">
               <FolderGit2 className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Your Projects:</span>
+              <span>Switch Workspace:</span>
             </span>
 
             {allUserProjects.map((p) => {
@@ -419,140 +547,190 @@ export const ProjectDetailPage: React.FC = () => {
               <span>All Projects ({allUserProjects.length})</span>
               <ArrowUpRight className="w-3 h-3" />
             </Link>
-            {(user?.role === 'client' || user?.role === 'admin') && (
-              <Link
-                to="/new-project"
-                className="text-[11px] text-white font-medium flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition"
-              >
-                <Plus className="w-3 h-3" />
-                <span>New</span>
-              </Link>
-            )}
           </div>
         </div>
       )}
 
-      {/* Project Header Banner */}
-      <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-extrabold text-white">{project.title}</h1>
-            <Badge variant="primary">{project.status}</Badge>
-
-            {/* Quick Switch Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition"
+      {/* Project Hero Banner */}
+      <div className="bg-[#111827] border border-slate-800 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{project.title}</h1>
+              <Badge
+                variant={
+                  project.status === 'active'
+                    ? 'success'
+                    : project.status === 'awaiting_approval'
+                    ? 'warning'
+                    : 'primary'
+                }
               >
-                <FolderGit2 className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Workspaces ({allUserProjects.length})</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
-              </button>
-
-              {showProjectDropdown && (
-                <div className="absolute left-0 mt-2 w-72 sm:w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 space-y-1">
-                  <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-slate-400 flex items-center justify-between border-b border-slate-800">
-                    <span>Select Workspace</span>
-                    <span className="font-mono">{allUserProjects.length} total</span>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto space-y-1 py-1">
-                    {allUserProjects.map((p) => {
-                      const isCurrent = p.id === project.id;
-                      return (
-                        <Link
-                          key={p.id}
-                          to={`/projects/${p.id}`}
-                          onClick={() => setShowProjectDropdown(false)}
-                          className={`block p-2.5 rounded-xl text-left transition ${
-                            isCurrent
-                              ? 'bg-indigo-600/20 border border-indigo-500/50 text-indigo-300'
-                              : 'hover:bg-slate-800/80 text-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between text-xs font-semibold">
-                            <span className="truncate max-w-[200px]">{p.title}</span>
-                            <span className="text-[10px] font-mono capitalize text-slate-400">{p.status}</span>
-                          </div>
-                          <div className="text-[10px] font-mono text-slate-500 mt-0.5 truncate">
-                            ID: {p.id}
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                  <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between px-2 text-[11px]">
-                    <Link
-                      to="/projects"
-                      onClick={() => setShowProjectDropdown(false)}
-                      className="text-indigo-400 hover:underline font-medium"
-                    >
-                      Manage All Projects →
-                    </Link>
-                  </div>
-                </div>
-              )}
+                {project.status === 'awaiting_approval' ? 'Awaiting Acceptance' : project.status}
+              </Badge>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                Created by {isClientCreator ? 'Client' : isProviderCreator ? 'Provider' : 'Admin'}
+              </span>
             </div>
 
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-700/40 text-[10px] text-emerald-300 font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Live Atlas DB</span>
-            </div>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
+              {project.description || 'No detailed scope description provided.'}
+            </p>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
             <button
               onClick={handleManualSync}
               disabled={syncing}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/50 text-[11px] text-indigo-300 font-mono transition shadow"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition shadow disabled:opacity-60"
               title="Synchronize cockpit data from MongoDB Atlas"
             >
-              <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin text-indigo-400' : ''}`} />
-              <span>{syncing ? 'Syncing Atlas...' : 'Sync Cockpit'}</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-indigo-400' : ''}`} />
+              <span>{syncing ? 'Syncing...' : 'Sync Atlas'}</span>
             </button>
-          </div>
-          <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-            {project.description}
-          </p>
 
-          {/* Fingerprint & Project Target Badges */}
-          <div className="flex items-center gap-3 pt-1 flex-wrap">
-            {latestAgreement && (
-              <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
-                <Fingerprint className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Agreement v{latestAgreement.version}:</span>
-                <span className="text-indigo-300 font-semibold bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/40">
-                  {latestAgreement.snapshotHash.substring(0, 16)}...
-                </span>
-              </div>
-            )}
+            {canEditOrDelete && (
+              <>
+                <button
+                  onClick={openEditModal}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition"
+                  title="Edit project details"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
 
-            {(project.totalAmountMinor || blueprint?.totalBudgetMinor) && (
-              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-950/60 border border-emerald-800/40 text-emerald-300 font-mono text-[11px] font-bold">
-                <DollarSign className="w-3 h-3 text-emerald-400" />
-                <span>Budget: ${(((project.totalAmountMinor || blueprint?.totalBudgetMinor || 0) / 100)).toFixed(2)} {project.currency || 'USD'}</span>
-              </div>
-            )}
-
-            {(project.deadline || blueprint?.targetDeadline) && (
-              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-300 font-mono text-[11px]">
-                <Calendar className="w-3 h-3 text-indigo-400" />
-                <span>Target: {project.deadline || blueprint?.targetDeadline}</span>
-              </div>
+                <button
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 text-xs font-semibold text-rose-300 transition"
+                  title="Delete project"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </button>
+              </>
             )}
           </div>
         </div>
 
-        {/* Quick action button */}
+        {/* Dynamic Acceptance Banner */}
+        {isPendingAcceptance && (
+          <div className="pt-2">
+            {canAcceptProject ? (
+              <div className="p-5 bg-gradient-to-r from-amber-950/50 via-indigo-950/40 to-emerald-950/50 border border-amber-500/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl animate-pulse">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                    <h4 className="text-sm font-bold text-white">Project Proposal Awaiting Your Acceptance</h4>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
+                    {isClientCreator
+                      ? 'The Client created this project and proposed the deliverables. Review the scope and click below to accept and activate the project.'
+                      : 'The Provider submitted this project proposal. Accept the proposal to authorize deliverables and enable PayPal milestone releases.'}
+                  </p>
+                </div>
+                <button
+                  onClick={handleAcceptProject}
+                  disabled={acceptingProject}
+                  className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition shrink-0 disabled:opacity-50"
+                >
+                  {acceptingProject ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />}
+                  <span>Accept & Activate Project</span>
+                </button>
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-900/90 border border-amber-700/50 rounded-2xl flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-amber-400 shrink-0" />
+                  <div>
+                    <h5 className="text-xs font-bold text-amber-300">Proposal Pending Counterpart Review</h5>
+                    <p className="text-[11px] text-slate-400">
+                      You created this project proposal. Waiting for the {isClientCreator ? 'assigned Provider' : 'Client owner'} to accept the terms before work begins.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 border border-amber-800/50 uppercase font-semibold shrink-0">
+                  Pending Acceptance
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 4 KPI Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-1">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1.5 uppercase tracking-wider font-medium">
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Agreed Budget</span>
+            </span>
+            <div className="text-xl font-bold text-white font-mono">
+              ${(((project.totalAmountMinor || blueprint?.totalBudgetMinor || 0) / 100)).toFixed(2)}{' '}
+              <span className="text-xs text-slate-400 font-normal">{project.currency || 'USD'}</span>
+            </div>
+            <p className="text-[10px] text-slate-500">Human-confirmed amount</p>
+          </div>
+
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-1">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1.5 uppercase tracking-wider font-medium">
+              <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+              <span>PayPal Releases</span>
+            </span>
+            <div className="text-xl font-bold text-emerald-400 font-mono">
+              $400.00 <span className="text-xs text-slate-400 font-normal">USD</span>
+            </div>
+            <p className="text-[10px] text-emerald-400/80">Sandbox capture verified</p>
+          </div>
+
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-1">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1.5 uppercase tracking-wider font-medium">
+              <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Target Delivery</span>
+            </span>
+            <div className="text-sm font-bold text-slate-200 font-mono truncate">
+              {project.deadline || blueprint?.targetDeadline || 'Open Schedule'}
+            </div>
+            <p className="text-[10px] text-slate-500">Milestone timeline</p>
+          </div>
+
+          <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-1">
+            <span className="text-[11px] text-slate-400 flex items-center gap-1.5 uppercase tracking-wider font-medium">
+              <Fingerprint className="w-3.5 h-3.5 text-purple-400" />
+              <span>Contract Hash</span>
+            </span>
+            <div className="text-xs font-mono text-purple-300 truncate">
+              {latestAgreement ? `${latestAgreement.snapshotHash.substring(0, 16)}...` : 'Pending Generation'}
+            </div>
+            <p className="text-[10px] text-slate-500">SHA-256 canonical fingerprint</p>
+          </div>
+        </div>
+
+        {/* Quick PayPal Release Banner */}
         {selectedMilestone && selectedMilestone.status === 'APPROVED_FOR_PAYMENT' && (
           (user?.role === 'client' || user?.role === 'admin') ? (
-            <button
-              onClick={() => setIsPayPalModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-3 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-900/30 transition animate-bounce"
-            >
-              <CreditCard className="w-4 h-4" />
-              <span>Release PayPal Sandbox Payout (${(selectedMilestone.amountMinor / 100).toFixed(2)})</span>
-            </button>
+            <div className="p-4 bg-[#0070BA]/15 border border-[#0070BA]/50 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2.5">
+                <CreditCard className="w-5 h-5 text-[#0070BA] shrink-0" />
+                <div>
+                  <h4 className="text-xs font-bold text-white">
+                    Milestone "{selectedMilestone.title}" Approved for Payment (${(selectedMilestone.amountMinor / 100).toFixed(2)})
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Deliverables verified. Ready to capture and release funds via PayPal Sandbox Orders v2.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsPayPalModalOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-900/30 transition animate-bounce shrink-0"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Release PayPal Payout</span>
+              </button>
+            </div>
           ) : (
-            <div className="px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-amber-300 flex items-center gap-2">
+            <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-amber-300 flex items-center gap-2">
               <Shield className="w-4 h-4 text-amber-400" />
               <span>Approved by Client • Awaiting PayPal Release by Client</span>
             </div>
@@ -1041,6 +1219,122 @@ export const ProjectDetailPage: React.FC = () => {
           milestone={selectedMilestone}
           onPaymentSuccess={fetchProjectData}
         />
+      )}
+
+      {/* Edit Project Modal */}
+      {project && (
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          title="Edit Project Blueprint & Details"
+          subtitle={`Modifying project ${project.id}. Only authorized creators can apply changes.`}
+          maxWidth="lg"
+        >
+          <form onSubmit={handleUpdateProject} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Project Title</label>
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                required
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Scope & Description</label>
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={3}
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Deadline</label>
+                <input
+                  type="date"
+                  value={editDeadline}
+                  onChange={(e) => setEditDeadline(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Total Agreed Budget ($ USD)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  placeholder="e.g. 2500.00"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updatingProject}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {updatingProject && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Save Changes</span>
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Project Confirmation Modal */}
+      {project && (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          title="Delete Project Workspace"
+          subtitle="Are you sure you want to delete this project?"
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <div className="p-4 bg-rose-950/40 border border-rose-800/60 rounded-xl text-xs text-rose-300 space-y-2">
+              <p className="font-semibold">⚠️ Deleting Project "{project.title}"</p>
+              <p className="text-slate-400">
+                This project will be removed from your active workspaces. Historical cryptographic audit trails and agreement proofs are securely preserved in the live database for compliance.
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteProject}
+                disabled={deletingProject}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {deletingProject && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Confirm Deletion</span>
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

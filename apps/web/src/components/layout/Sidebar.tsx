@@ -149,21 +149,6 @@ export const Sidebar: React.FC = () => {
               </NavLink>
             )}
 
-            {/* Dynamic Project Cockpit */}
-            <NavLink
-              to={getProjectRoute()}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition ${
-                  isActive && location.pathname.startsWith('/projects/')
-                    ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/30'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-                }`
-              }
-            >
-              <FolderGit2 className="w-4 h-4 shrink-0" />
-              <span>Project Cockpit</span>
-            </NavLink>
-
             <NavLink
               to="/analytics"
               className={({ isActive }) =>

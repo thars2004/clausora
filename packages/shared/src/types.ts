@@ -23,6 +23,10 @@ export interface Project {
   description: string;
   ownerId: string;
   providerIds: string[];
+  createdBy?: string;
+  creatorRole?: UserRole;
+  acceptedBy?: string;
+  acceptedAt?: string;
   status: ProjectStatus;
   sourceAssets: string[];
   currentAgreementId: string;
@@ -30,6 +34,8 @@ export interface Project {
   totalAmountMinor?: number;
   currency?: string;
   workflowDiagram?: string;
+  isDeleted?: boolean;
+  deletedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

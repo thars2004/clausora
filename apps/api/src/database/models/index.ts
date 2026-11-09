@@ -8,6 +8,8 @@ const UserSchema = new Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     role: { type: String, enum: ['client', 'provider', 'admin'], required: true, index: true },
     passwordHash: { type: String, required: true },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: String },
     createdAt: { type: String, default: () => new Date().toISOString() },
   },
   { timestamps: true }
@@ -23,6 +25,10 @@ const ProjectSchema = new Schema(
     description: { type: String, default: '' },
     ownerId: { type: String, required: true, index: true }, // Client owner
     providerIds: { type: [String], default: [], index: true }, // Assigned providers
+    createdBy: { type: String, index: true },
+    creatorRole: { type: String, enum: ['client', 'provider', 'admin'] },
+    acceptedBy: { type: String },
+    acceptedAt: { type: String },
     status: {
       type: String,
       enum: ['draft', 'analysing', 'awaiting_approval', 'active', 'completed', 'paused', 'disputed'],
@@ -35,6 +41,8 @@ const ProjectSchema = new Schema(
     totalAmountMinor: { type: Number },
     currency: { type: String, default: 'USD' },
     workflowDiagram: { type: String },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: String },
     createdAt: { type: String, default: () => new Date().toISOString() },
     updatedAt: { type: String, default: () => new Date().toISOString() },
   },

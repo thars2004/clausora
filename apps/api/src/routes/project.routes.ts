@@ -19,13 +19,13 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   let allProjects: any[] = [];
   if (isDbConnected()) {
     try {
-      allProjects = await ProjectModel.find().lean();
+      allProjects = await ProjectModel.find({ isDeleted: { $ne: true } }).lean();
       allProjects.forEach((p: any) => dbStore.projects.set(p.id, p));
     } catch {
-      allProjects = Array.from(dbStore.projects.values());
+      allProjects = Array.from(dbStore.projects.values()).filter((p: any) => !p.isDeleted);
     }
   } else {
-    allProjects = Array.from(dbStore.projects.values());
+    allProjects = Array.from(dbStore.projects.values()).filter((p: any) => !p.isDeleted);
   }
 
   let userProjects: any[] = [];
@@ -106,13 +106,15 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
       if (parsed.providerId) finalProviderIds.push(parsed.providerId);
     }
 
-    const project: Project & { ownerId: string; providerIds: string[]; sourceAssets: string[] } = {
+    const project: any = {
       id: projectId,
       title: parsed.title,
       description: parsed.description,
       ownerId: finalOwnerId,
       providerIds: finalProviderIds,
-      status: 'analysing',
+      createdBy: userId,
+      creatorRole: userRole,
+      status: userRole === 'admin' ? 'active' : 'awaiting_approval',
       sourceAssets: assetId ? [assetId] : [],
       currentAgreementId: '',
       deadline: parsed.deadline,
@@ -292,6 +294,158 @@ router.get('/:projectId/activity', authMiddleware, (req: AuthRequest, res: Respo
   return res.json({
     success: true,
     data: { events },
+  });
+});
+
+// POST /api/projects/:projectId/accept - Counterpart accepts the project proposal
+router.post('/:projectId/accept', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { projectId } = req.params;
+  const userId = req.user!.id;
+  const userRole = req.user!.role;
+
+  let project: any = dbStore.projects.get(projectId);
+  if (!project && isDbConnected()) {
+    project = await ProjectModel.findOne({ id: projectId }).lean();
+  }
+  if (!project) {
+    return res.status(404).json({ success: false, message: 'Project not found.' });
+  }
+
+  // Permission check:
+  // If created by Client, assigned Provider (or admin) must accept.
+  // If created by Provider, Client owner (or admin) must accept.
+  const isClientCreator = project.creatorRole === 'client' || (!project.creatorRole && project.ownerId === project.createdBy);
+  let canAccept = false;
+
+  if (userRole === 'admin') {
+    canAccept = true;
+  } else if (isClientCreator) {
+    canAccept = project.providerIds && project.providerIds.includes(userId);
+  } else {
+    canAccept = project.ownerId === userId;
+  }
+
+  if (!canAccept) {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden: Only the assigned counterpart has authorization to accept this project proposal.',
+    });
+  }
+
+  const updated = await dbStore.updateProject(projectId, {
+    status: 'active',
+    acceptedBy: userId,
+    acceptedAt: new Date().toISOString(),
+  });
+
+  dbStore.addAuditEvent({
+    projectId,
+    actorId: userId,
+    actorName: req.user!.name,
+    actorRole: userRole,
+    eventType: 'PROJECT_ACCEPTED',
+    entityType: 'project',
+    entityId: projectId,
+    summary: `Project "${project.title}" was officially accepted and activated by ${req.user!.name} (${userRole}).`,
+  });
+
+  return res.json({
+    success: true,
+    data: { project: updated },
+    message: `Project proposal successfully accepted! Status is now ACTIVE.`,
+  });
+});
+
+// PUT /api/projects/:projectId - Strong creator permission check for editing
+router.put('/:projectId', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { projectId } = req.params;
+  const userId = req.user!.id;
+  const userRole = req.user!.role;
+
+  let project: any = dbStore.projects.get(projectId);
+  if (!project && isDbConnected()) {
+    project = await ProjectModel.findOne({ id: projectId }).lean();
+  }
+  if (!project) {
+    return res.status(404).json({ success: false, message: 'Project not found.' });
+  }
+
+  // Strict permission: Only creator (or admin) can edit
+  const isCreator = project.createdBy === userId || project.ownerId === userId;
+  if (!isCreator && userRole !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden: Only the user who created this project has permission to edit its details.',
+    });
+  }
+
+  const { title, description, deadline, totalAmountMinor, currency } = req.body;
+  const updates: any = {};
+  if (title) updates.title = title.trim();
+  if (description !== undefined) updates.description = description.trim();
+  if (deadline !== undefined) updates.deadline = deadline;
+  if (totalAmountMinor !== undefined) updates.totalAmountMinor = Number(totalAmountMinor);
+  if (currency) updates.currency = currency;
+
+  const updated = await dbStore.updateProject(projectId, updates);
+
+  dbStore.addAuditEvent({
+    projectId,
+    actorId: userId,
+    actorName: req.user!.name,
+    actorRole: userRole,
+    eventType: 'PROJECT_UPDATED',
+    entityType: 'project',
+    entityId: projectId,
+    summary: `Project details updated by ${req.user!.name}.`,
+  });
+
+  return res.json({
+    success: true,
+    data: { project: updated },
+    message: 'Project updated successfully.',
+  });
+});
+
+// DELETE /api/projects/:projectId - Strong creator permission check for deletion
+router.delete('/:projectId', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { projectId } = req.params;
+  const userId = req.user!.id;
+  const userRole = req.user!.role;
+
+  let project: any = dbStore.projects.get(projectId);
+  if (!project && isDbConnected()) {
+    project = await ProjectModel.findOne({ id: projectId }).lean();
+  }
+  if (!project) {
+    return res.status(404).json({ success: false, message: 'Project not found.' });
+  }
+
+  // Strict permission: Only creator (or admin) can delete
+  const isCreator = project.createdBy === userId || project.ownerId === userId;
+  if (!isCreator && userRole !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden: Only the user who created this project has permission to delete it.',
+    });
+  }
+
+  await dbStore.deleteProject(projectId);
+
+  dbStore.addAuditEvent({
+    projectId,
+    actorId: userId,
+    actorName: req.user!.name,
+    actorRole: userRole,
+    eventType: 'PROJECT_DELETED',
+    entityType: 'project',
+    entityId: projectId,
+    summary: `Project "${project.title}" deleted by creator ${req.user!.name}.`,
+  });
+
+  return res.json({
+    success: true,
+    message: `Project "${project.title}" was deleted successfully.`,
   });
 });
 
