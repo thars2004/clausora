@@ -750,7 +750,7 @@ export const ProjectDetailPage: React.FC = () => {
             {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
               <button
                 onClick={handleOpenDirectPaymentModal}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#0070BA] via-indigo-600 to-blue-600 hover:from-[#005ea6] hover:to-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-blue-900/40 border border-blue-400/30 hover:scale-[1.02]"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold transition shadow-lg shadow-purple-900/40 border border-purple-400/30 hover:scale-[1.02]"
                 title="Open payment modal to enter amount or full payout"
               >
                 <Zap className="w-3.5 h-3.5 text-amber-300" />
@@ -1454,7 +1454,7 @@ export const ProjectDetailPage: React.FC = () => {
               {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
                 <button
                   onClick={handleOpenDirectPaymentModal}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl transition shadow-md shadow-blue-900/30"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-purple-900/40 border border-purple-400/30"
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-300" />
                   <span>Make a Payment</span>
@@ -1536,7 +1536,7 @@ export const ProjectDetailPage: React.FC = () => {
                 {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
                   <button
                     onClick={handleOpenDirectPaymentModal}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#0070BA] via-indigo-600 to-blue-600 hover:from-[#005ea6] hover:to-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-blue-900/40"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-purple-900/40 border border-purple-400/30"
                   >
                     <Zap className="w-3.5 h-3.5 text-amber-300" />
                     <span>Pay Escrow (${agreedBudgetDollars} USD)</span>
