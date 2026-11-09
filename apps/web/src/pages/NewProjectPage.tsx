@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { Badge } from '../components/common/Badge';
+import { WorkflowVisualizer } from '../components/workflow/WorkflowVisualizer';
 import { WorkBlueprint } from '@clausora/shared';
 import {
   Sparkles,
@@ -16,6 +17,10 @@ import {
   ArrowRight,
   ShieldAlert,
   Users,
+  Calendar,
+  DollarSign,
+  Clock,
+  Layers,
 } from 'lucide-react';
 
 export const NewProjectPage: React.FC = () => {
@@ -31,6 +36,14 @@ export const NewProjectPage: React.FC = () => {
   const [providers, setProviders] = useState<Array<{ id: string; name: string; email: string }>>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedProviderId, setSelectedProviderId] = useState<string>('');
+
+  // Budget & Deadline States
+  const [totalAmount, setTotalAmount] = useState<string>('1500');
+  const [currency, setCurrency] = useState<string>('USD');
+  const [deadline, setDeadline] = useState<string>(() => {
+    const d = new Date(Date.now() + 21 * 86400000);
+    return d.toISOString().split('T')[0];
+  });
 
   const [loading, setLoading] = useState(false);
   const [blueprint, setBlueprint] = useState<WorkBlueprint | null>(null);
@@ -66,6 +79,8 @@ export const NewProjectPage: React.FC = () => {
 3. Deliverable proof review screen displaying screenshots, repository links, and AI limitation notes.
 4. Human client approval action triggering PayPal Orders v2 sandbox checkout and server-side capture verification.
 5. Scope drift detector to flag unbudgeted client change requests.`);
+    setTotalAmount('1500');
+    setDeadline(new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0]);
   };
 
   const handleLoadSampleReaReport = async () => {
@@ -94,6 +109,7 @@ export const NewProjectPage: React.FC = () => {
     try {
       const resolvedClientId = user?.role === 'client' ? user.id : (selectedClientId || 'usr_client_demo');
       const resolvedProviderId = user?.role === 'provider' ? user.id : (selectedProviderId || 'usr_provider_demo');
+      const amountMinor = Math.round(parseFloat(totalAmount || '0') * 100);
 
       if (sourceType === 'rea') {
         let parsedReport;
@@ -107,6 +123,9 @@ export const NewProjectPage: React.FC = () => {
           ...parsedReport,
           clientId: resolvedClientId,
           providerId: resolvedProviderId,
+          totalAmountMinor: amountMinor > 0 ? amountMinor : 150000,
+          currency,
+          deadline,
         });
         setProjectId(res.data.data.project.id);
         setBlueprint(res.data.data.blueprint);
@@ -116,6 +135,11 @@ export const NewProjectPage: React.FC = () => {
         formData.append('description', description);
         formData.append('sourceType', sourceType);
         formData.append('sourceContent', sourceContent);
+        formData.append('totalAmountMinor', String(amountMinor > 0 ? amountMinor : 150000));
+        formData.append('currency', currency);
+        if (deadline) {
+          formData.append('deadline', deadline);
+        }
         if (resolvedClientId) {
           formData.append('clientId', resolvedClientId);
         }
@@ -144,9 +168,10 @@ export const NewProjectPage: React.FC = () => {
     if (!projectId || !blueprint) return;
     setLoading(true);
     try {
+      const budgetToSend = blueprint.totalBudgetMinor || Math.round(parseFloat(totalAmount || '0') * 100) || 150000;
       await api.post(`/projects/${projectId}/agreements`, {
-        totalAmountMinor: 100000, // $1,000 USD
-        currency: 'USD',
+        totalAmountMinor: budgetToSend,
+        currency: currency || 'USD',
         milestones: blueprint.suggestedMilestones,
       });
       navigate(`/projects/${projectId}`);
@@ -380,6 +405,84 @@ export const NewProjectPage: React.FC = () => {
             )}
           </div>
 
+          {/* Section 3: Target Budget & Completion Deadline */}
+          <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-200">3. Target Budget & Completion Deadline</h3>
+              <span className="text-xs text-indigo-400 font-mono">PayPal Orders v2 Compatible</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Total Budget */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Total Project Budget</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                    <input
+                      type="number"
+                      min="10"
+                      step="50"
+                      value={totalAmount}
+                      onChange={(e) => setTotalAmount(e.target.value)}
+                      placeholder="1500"
+                      className="w-full pl-7 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-emerald-500 font-mono"
+                      required
+                    />
+                  </div>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 text-xs font-mono focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                  </select>
+                </div>
+                {/* Quick Presets */}
+                <div className="flex items-center gap-1.5 pt-1">
+                  {['500', '1000', '1500', '2500', '5000'].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setTotalAmount(amt)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono transition ${
+                        totalAmount === amt
+                          ? 'bg-emerald-600 text-white font-bold'
+                          : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      ${amt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Target Deadline */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Target Project Completion Deadline</span>
+                </label>
+                <input
+                  type="date"
+                  value={deadline}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 text-xs focus:outline-none focus:border-indigo-500 font-mono"
+                  required
+                />
+                <p className="text-[11px] text-slate-500">
+                  AI will distribute milestones chronologically leading up to this date.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Submit Action */}
           <button
             type="submit"
@@ -402,21 +505,36 @@ export const NewProjectPage: React.FC = () => {
       ) : (
         /* Work Blueprint Review Screen */
         <div className="space-y-6 animate-fade-in">
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
-              <Badge variant="ai">Work DNA Blueprint Synthesized</Badge>
-              <h2 className="text-xl font-bold text-white mt-1">{blueprint.projectTitle}</h2>
+              <div className="flex items-center gap-2">
+                <Badge variant="ai">Work DNA Blueprint Synthesized</Badge>
+                {blueprint.targetDeadline && (
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-950/80 border border-indigo-700/50 text-[10px] text-indigo-300 font-mono">
+                    Deadline: {blueprint.targetDeadline}
+                  </span>
+                )}
+                {blueprint.totalBudgetMinor && (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/50 text-[10px] text-emerald-300 font-mono font-bold">
+                    ${(blueprint.totalBudgetMinor / 100).toFixed(2)} USD
+                  </span>
+                )}
+              </div>
+              <h2 className="text-xl font-bold text-white mt-2">{blueprint.projectTitle}</h2>
               <p className="text-xs text-slate-400 mt-1 max-w-xl">{blueprint.projectSummary}</p>
             </div>
             <button
               onClick={handleCreateAgreement}
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-emerald-900/30 transition"
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-emerald-900/30 transition shrink-0"
             >
               <span>Baseline Formal Agreement (SHA-256)</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Interactive Visual Workflow Diagram */}
+          <WorkflowVisualizer blueprint={blueprint} />
 
           {/* Workstreams and Tasks */}
           <div className="space-y-4">

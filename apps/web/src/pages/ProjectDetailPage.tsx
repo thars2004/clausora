@@ -15,6 +15,7 @@ import {
 import { Badge } from '../components/common/Badge';
 import { EvidenceGraph } from '../components/evidence/EvidenceGraph';
 import { PayPalModal } from '../components/payment/PayPalModal';
+import { WorkflowVisualizer } from '../components/workflow/WorkflowVisualizer';
 import {
   FileText,
   CheckCircle2,
@@ -30,6 +31,9 @@ import {
   AlertTriangle,
   Send,
   Fingerprint,
+  GitMerge,
+  DollarSign,
+  Calendar,
 } from 'lucide-react';
 
 export const ProjectDetailPage: React.FC = () => {
@@ -237,16 +241,32 @@ export const ProjectDetailPage: React.FC = () => {
             {project.description}
           </p>
 
-          {/* Fingerprint badge */}
-          {latestAgreement && (
-            <div className="flex items-center gap-2 pt-1 font-mono text-[11px] text-slate-400">
-              <Fingerprint className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Agreement v{latestAgreement.version} Fingerprint:</span>
-              <span className="text-indigo-300 font-semibold bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/40">
-                {latestAgreement.snapshotHash.substring(0, 20)}...
-              </span>
-            </div>
-          )}
+          {/* Fingerprint & Project Target Badges */}
+          <div className="flex items-center gap-3 pt-1 flex-wrap">
+            {latestAgreement && (
+              <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
+                <Fingerprint className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Agreement v{latestAgreement.version}:</span>
+                <span className="text-indigo-300 font-semibold bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/40">
+                  {latestAgreement.snapshotHash.substring(0, 16)}...
+                </span>
+              </div>
+            )}
+
+            {(project.totalAmountMinor || blueprint?.totalBudgetMinor) && (
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-950/60 border border-emerald-800/40 text-emerald-300 font-mono text-[11px] font-bold">
+                <DollarSign className="w-3 h-3 text-emerald-400" />
+                <span>Budget: ${(((project.totalAmountMinor || blueprint?.totalBudgetMinor || 0) / 100)).toFixed(2)} {project.currency || 'USD'}</span>
+              </div>
+            )}
+
+            {(project.deadline || blueprint?.targetDeadline) && (
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-300 font-mono text-[11px]">
+                <Calendar className="w-3 h-3 text-indigo-400" />
+                <span>Target: {project.deadline || blueprint?.targetDeadline}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Quick action button */}
@@ -280,6 +300,18 @@ export const ProjectDetailPage: React.FC = () => {
         >
           <CreditCard className="w-4 h-4" />
           <span>Milestones Roadmap</span>
+        </button>
+
+        <button
+          onClick={() => setTab('workflow')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
+            currentTab === 'workflow'
+              ? 'bg-indigo-600 text-white shadow'
+              : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+        >
+          <GitMerge className="w-4 h-4" />
+          <span>Execution Flow & Pipeline</span>
         </button>
 
         <button
@@ -345,6 +377,13 @@ export const ProjectDetailPage: React.FC = () => {
           <span>Audit Timeline</span>
         </button>
       </div>
+
+      {/* TAB: WORKFLOW & EXECUTION PIPELINE */}
+      {currentTab === 'workflow' && (
+        <div className="space-y-6 animate-fade-in">
+          <WorkflowVisualizer blueprint={blueprint} project={project} />
+        </div>
+      )}
 
       {/* TAB 1: MILESTONES ROADMAP */}
       {currentTab === 'milestones' && (

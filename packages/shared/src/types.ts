@@ -26,6 +26,10 @@ export interface Project {
   status: ProjectStatus;
   sourceAssets: string[];
   currentAgreementId: string;
+  deadline?: string;
+  totalAmountMinor?: number;
+  currency?: string;
+  workflowDiagram?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,6 +80,19 @@ export interface SuggestedMilestone {
   dueDate?: string;
 }
 
+export interface WorkflowStep {
+  id: string;
+  stepNumber: number;
+  title: string;
+  phase: string;
+  description: string;
+  deliverable: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  milestoneRef?: string;
+  estimatedDays?: number;
+  amountMinor?: number;
+}
+
 export interface WorkBlueprint {
   id: string;
   projectId: string;
@@ -89,6 +106,10 @@ export interface WorkBlueprint {
   risks: string[];
   clarifyingQuestions: string[];
   suggestedMilestones: SuggestedMilestone[];
+  workflowDiagram?: string;
+  workflowSteps?: WorkflowStep[];
+  totalBudgetMinor?: number;
+  targetDeadline?: string;
   aiModel: string;
   createdAt: string;
 }

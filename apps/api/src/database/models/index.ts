@@ -31,6 +31,10 @@ const ProjectSchema = new Schema(
     },
     sourceAssets: { type: [String], default: [] },
     currentAgreementId: { type: String, default: '' },
+    deadline: { type: String },
+    totalAmountMinor: { type: Number },
+    currency: { type: String, default: 'USD' },
+    workflowDiagram: { type: String },
     createdAt: { type: String, default: () => new Date().toISOString() },
     updatedAt: { type: String, default: () => new Date().toISOString() },
   },
@@ -153,6 +157,10 @@ const WorkBlueprintSchema = new Schema(
     risks: { type: [String], default: [] },
     clarifyingQuestions: { type: [String], default: [] },
     suggestedMilestones: { type: [Schema.Types.Mixed], default: [] },
+    workflowDiagram: { type: String },
+    workflowSteps: { type: [Schema.Types.Mixed], default: [] },
+    totalBudgetMinor: { type: Number },
+    targetDeadline: { type: String },
     aiModel: { type: String, default: 'Qwen/Qwen2.5-VL-7B-Instruct' },
     createdAt: { type: String, default: () => new Date().toISOString() },
   },
@@ -302,3 +310,4 @@ const NotificationSchema = new Schema(
 );
 
 export const NotificationModel = mongoose.models.Notification || mongoose.model('Notification', NotificationSchema);
+

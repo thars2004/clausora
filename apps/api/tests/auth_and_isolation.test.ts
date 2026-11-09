@@ -82,3 +82,4 @@ describe('Security, Auth & Role Isolation Tests', () => {
     assert.strictEqual(adminVisible.length, 3);
   });
 });
+

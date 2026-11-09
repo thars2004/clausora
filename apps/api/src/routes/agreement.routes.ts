@@ -28,8 +28,8 @@ router.post('/projects/:projectId/agreements', authMiddleware, async (req: AuthR
       projectSummary: blueprint.projectSummary,
       workstreams: blueprint.workstreams,
       milestones: milestones || blueprint.suggestedMilestones,
-      totalAmountMinor: totalAmountMinor || 100000, // $1000 default
-      currency: currency || 'USD',
+      totalAmountMinor: totalAmountMinor || project.totalAmountMinor || blueprint.totalBudgetMinor || 100000,
+      currency: currency || project.currency || 'USD',
     };
 
     const canonicalJson = canonicalStringify(snapshot);

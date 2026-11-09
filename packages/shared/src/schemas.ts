@@ -30,6 +30,19 @@ export const SuggestedMilestoneSchema = z.object({
   dueDate: z.string().optional(),
 });
 
+export const WorkflowStepSchema = z.object({
+  id: z.string(),
+  stepNumber: z.number(),
+  title: z.string(),
+  phase: z.string(),
+  description: z.string(),
+  deliverable: z.string(),
+  status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
+  milestoneRef: z.string().optional(),
+  estimatedDays: z.number().optional(),
+  amountMinor: z.number().optional(),
+});
+
 export const WorkBlueprintSchema = z.object({
   projectTitle: z.string().min(1, 'Project title is required'),
   projectSummary: z.string().min(1, 'Project summary is required'),
@@ -40,6 +53,10 @@ export const WorkBlueprintSchema = z.object({
   risks: z.array(z.string()).default([]),
   clarifyingQuestions: z.array(z.string()).default([]),
   suggestedMilestones: z.array(SuggestedMilestoneSchema).default([]),
+  workflowDiagram: z.string().optional(),
+  workflowSteps: z.array(WorkflowStepSchema).default([]),
+  totalBudgetMinor: z.number().optional(),
+  targetDeadline: z.string().optional(),
 });
 
 export const CriterionAnalysisResultSchema = z.object({
@@ -119,6 +136,9 @@ export const CreateProjectInputSchema = z.object({
   sourceContent: z.string().optional(),
   clientId: z.string().optional(),
   providerId: z.string().optional(),
+  deadline: z.string().optional(),
+  totalAmountMinor: z.number().int().positive().optional(),
+  currency: z.string().default('USD'),
 });
 
 export const CreateMilestoneInputSchema = z.object({

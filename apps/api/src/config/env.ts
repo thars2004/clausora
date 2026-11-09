@@ -16,6 +16,8 @@ const envSchema = z.object({
   COOKIE_SECRET: z.string().default('clausora_cookie_secret_dev_2026_abc!'),
   HF_TOKEN: z.string().optional(),
   HF_MODEL: z.string().default('Qwen/Qwen2.5-VL-7B-Instruct'),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().default('gemini-1.5-flash'),
   PAYPAL_MODE: z.enum(['sandbox', 'live']).default('sandbox'),
   PAYPAL_CLIENT_ID: z.string().optional(),
   PAYPAL_CLIENT_SECRET: z.string().optional(),

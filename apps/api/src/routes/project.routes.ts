@@ -46,6 +46,9 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
       sourceContent: body.sourceContent || '',
       clientId: body.clientId,
       providerId: body.providerId,
+      deadline: body.deadline || undefined,
+      totalAmountMinor: body.totalAmountMinor ? Number(body.totalAmountMinor) : undefined,
+      currency: body.currency || 'USD',
     });
 
     const projectId = 'proj_' + Math.random().toString(36).substring(2, 10);
@@ -98,6 +101,9 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
       status: 'analysing',
       sourceAssets: assetId ? [assetId] : [],
       currentAgreementId: '',
+      deadline: parsed.deadline,
+      totalAmountMinor: parsed.totalAmountMinor,
+      currency: parsed.currency,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -115,11 +121,14 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
       summary: `Created project "${project.title}" (Assigned Client: ${finalOwnerId}, Assigned Provider: ${finalProviderIds.join(', ') || 'Unassigned'}).`,
     });
 
-    // Generate Work Blueprint using Hugging Face Inference
+    // Generate Work Blueprint using Multimodal AI / Dynamic Work DNA Engine
     const blueprint = await hfClient.generateWorkBlueprint({
       projectTitle: project.title,
       projectSummary: project.description,
       sourceText: extractedText,
+      deadline: parsed.deadline,
+      totalAmountMinor: parsed.totalAmountMinor,
+      currency: parsed.currency,
     });
     blueprint.projectId = projectId;
 
@@ -134,6 +143,9 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
     await dbStore.saveBlueprint(blueprint);
 
     project.status = 'awaiting_approval';
+    if (blueprint.workflowDiagram) {
+      project.workflowDiagram = blueprint.workflowDiagram;
+    }
     await dbStore.saveProject(project);
 
     dbStore.addAuditEvent({
