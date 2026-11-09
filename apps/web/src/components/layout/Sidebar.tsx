@@ -17,6 +17,8 @@ import {
   CreditCard,
   Briefcase,
   ChevronRight,
+  ChevronDown,
+  GitMerge,
 } from 'lucide-react';
 
 interface ProjectSummary {
@@ -62,6 +64,26 @@ export const Sidebar: React.FC = () => {
     (userProjects.length > 0 ? userProjects[0].id : null);
 
   const activeProject = userProjects.find((p) => p.id === activeProjectId);
+
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(true);
+
+  // Active Tab Detection Helpers
+  const searchParams = new URLSearchParams(location.search);
+  const currentTabParam = searchParams.get('tab');
+  const adminTab = currentTabParam || 'overview';
+
+  const isAdminActive = (tab: string) => {
+    return location.pathname === '/admin' && (adminTab === tab || (tab === 'overview' && !currentTabParam));
+  };
+
+  const isProjectTabActive = (tab: string) => {
+    if (!location.pathname.startsWith('/projects/')) return false;
+    const projectTab = currentTabParam || 'milestones';
+    if (tab === 'dna' && (projectTab === 'dna' || projectTab === 'workflow' || projectTab === 'blueprint')) return true;
+    if (tab === 'milestones' && (projectTab === 'milestones' || projectTab === 'evidence')) return true;
+    if (tab === 'audit' && (projectTab === 'audit' || projectTab === 'rea')) return true;
+    return projectTab === tab;
+  };
 
   // Fallback target for feature links when no project is accessible
   const getProjectRoute = (tab?: string) => {
@@ -174,14 +196,12 @@ export const Sidebar: React.FC = () => {
             </span>
             <div className="mt-2 space-y-1">
               <NavLink
-                to="/admin"
-                className={({ isActive }) =>
-                  `flex items-center justify-between px-3 py-2 text-xs font-medium rounded-xl transition ${
-                    isActive
-                      ? 'bg-amber-600/20 text-amber-300 border border-amber-500/40'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-                  }`
-                }
+                to="/admin?tab=overview"
+                className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded-xl transition ${
+                  isAdminActive('overview')
+                    ? 'bg-amber-600/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
               >
                 <div className="flex items-center gap-2.5">
                   <Shield className="w-4 h-4 text-amber-400" />
@@ -193,98 +213,156 @@ export const Sidebar: React.FC = () => {
               </NavLink>
 
               <NavLink
-                to="/admin"
-                className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
+                to="/admin?tab=users"
+                className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded-xl transition ${
+                  isAdminActive('users')
+                    ? 'bg-amber-600/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
               >
-                <Users className="w-4 h-4 text-indigo-400" />
-                <span>All Users</span>
+                <div className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4 text-indigo-400" />
+                  <span>All Users</span>
+                </div>
+                <span className="text-[9px] font-mono text-indigo-300 bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-800/40">
+                  USERS
+                </span>
               </NavLink>
 
               <NavLink
-                to="/admin"
-                className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
+                to="/admin?tab=tasks"
+                className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded-xl transition ${
+                  isAdminActive('tasks')
+                    ? 'bg-amber-600/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
               >
-                <CheckSquare className="w-4 h-4 text-emerald-400" />
-                <span>Global Tasks</span>
+                <div className="flex items-center gap-2.5">
+                  <CheckSquare className="w-4 h-4 text-emerald-400" />
+                  <span>Global Tasks</span>
+                </div>
+                <span className="text-[9px] font-mono text-emerald-300 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/40">
+                  TASKS
+                </span>
               </NavLink>
 
               <NavLink
-                to="/admin"
-                className="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
+                to="/admin?tab=payments"
+                className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded-xl transition ${
+                  isAdminActive('payments')
+                    ? 'bg-amber-600/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
               >
-                <CreditCard className="w-4 h-4 text-blue-400" />
-                <span>All Payments</span>
+                <div className="flex items-center gap-2.5">
+                  <CreditCard className="w-4 h-4 text-blue-400" />
+                  <span>All Payments</span>
+                </div>
+                <span className="text-[9px] font-mono text-blue-300 bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-800/40">
+                  PAYPAL
+                </span>
               </NavLink>
             </div>
           </div>
         )}
 
-        {/* 3. Role-Based Feature Modules for Active Workspace */}
-        <div>
-          <div className="flex items-center justify-between px-3">
-            <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-              {role === 'provider' ? 'Provider Tools' : role === 'admin' ? 'Project Modules' : 'Client Controls'}
-            </span>
-            {activeProject && (
-              <span className="text-[9px] font-mono text-indigo-400 truncate max-w-[80px]" title={activeProject.title}>
-                {activeProject.title}
-              </span>
+        {/* 3. Role-Based Feature Modules / Active Workspace Dropdown */}
+        {activeProjectId && (
+          <div className="border border-slate-800/90 rounded-2xl bg-slate-900/40 p-2.5 space-y-2">
+            <div
+              onClick={() => setIsProjectDropdownOpen((prev) => !prev)}
+              className="flex items-center justify-between px-1 cursor-pointer select-none group"
+              title="Toggle project navigation menu"
+            >
+              <div className="flex items-center gap-2 overflow-hidden">
+                <FolderGit2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                <span
+                  className="text-[11px] font-bold text-slate-300 truncate"
+                  title={activeProject?.title || 'Active Project Workspace'}
+                >
+                  {activeProject?.title || 'Active Workspace'}
+                </span>
+              </div>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform duration-200 shrink-0 ${
+                  isProjectDropdownOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </div>
+
+            {isProjectDropdownOpen && (
+              <div className="space-y-1 pt-1 border-t border-slate-800/60 pl-1">
+                <NavLink
+                  to={`/projects/${activeProjectId}?tab=milestones`}
+                  className={`flex items-center justify-between px-2.5 py-1.5 text-xs rounded-xl transition ${
+                    isProjectTabActive('milestones')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    <span>Milestones & Escrow</span>
+                  </div>
+                  <span className="text-[9px] font-mono text-blue-300 bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-800/40">
+                    Roadmap
+                  </span>
+                </NavLink>
+
+                <NavLink
+                  to={`/projects/${activeProjectId}?tab=dna`}
+                  className={`flex items-center justify-between px-2.5 py-1.5 text-xs rounded-xl transition ${
+                    isProjectTabActive('dna')
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <GitMerge className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                    <span>Work DNA Pipeline</span>
+                  </div>
+                  <span className="text-[9px] font-mono text-purple-300 bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-800/40">
+                    Flow
+                  </span>
+                </NavLink>
+
+                <NavLink
+                  to={`/projects/${activeProjectId}?tab=drift`}
+                  className={`flex items-center justify-between px-2.5 py-1.5 text-xs rounded-xl transition ${
+                    isProjectTabActive('drift')
+                      ? 'bg-amber-600/20 text-amber-300 border border-amber-500/30'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Radio className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Scope Drift Radar</span>
+                  </div>
+                  <span className="text-[9px] font-mono text-amber-300 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/40">
+                    Radar
+                  </span>
+                </NavLink>
+
+                <NavLink
+                  to={`/projects/${activeProjectId}?tab=audit`}
+                  className={`flex items-center justify-between px-2.5 py-1.5 text-xs rounded-xl transition ${
+                    isProjectTabActive('audit')
+                      ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-500/30'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Trust & REA Audit</span>
+                  </div>
+                  <span className="text-[9px] font-mono text-emerald-300 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/40">
+                    SHA
+                  </span>
+                </NavLink>
+              </div>
             )}
           </div>
-          <div className="mt-2 space-y-1">
-            <NavLink
-              to={getProjectRoute('evidence')}
-              className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
-            >
-              <div className="flex items-center gap-2.5">
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-                <span>{role === 'provider' ? 'Submit Proof' : 'Evidence Graph'}</span>
-              </div>
-              <span className="text-[9px] font-mono text-emerald-300 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/40">
-                Proof
-              </span>
-            </NavLink>
-
-            <NavLink
-              to={getProjectRoute('drift')}
-              className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
-            >
-              <div className="flex items-center gap-2.5">
-                <Radio className="w-4 h-4 text-amber-400" />
-                <span>Scope Drift Radar</span>
-              </div>
-              <span className="text-[9px] font-mono text-amber-300 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/40">
-                Diff
-              </span>
-            </NavLink>
-
-            <NavLink
-              to={getProjectRoute('rea')}
-              className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
-            >
-              <div className="flex items-center gap-2.5">
-                <GitPullRequest className="w-4 h-4 text-blue-400" />
-                <span>REA Inspector</span>
-              </div>
-              <span className="text-[9px] font-mono text-blue-300 bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-800/40">
-                Tool
-              </span>
-            </NavLink>
-
-            <NavLink
-              to={getProjectRoute('audit')}
-              className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
-            >
-              <div className="flex items-center gap-2.5">
-                <History className="w-4 h-4 text-slate-400" />
-                <span>Audit Timeline</span>
-              </div>
-              <span className="text-[9px] font-mono text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded">
-                SHA
-              </span>
-            </NavLink>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Footer Notice */}

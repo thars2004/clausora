@@ -54,7 +54,19 @@ export const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const currentTab = searchParams.get('tab') || 'milestones';
+
+  // Unified Tab Resolution with backwards-compatibility aliases
+  const rawTab = searchParams.get('tab') || 'milestones';
+  const currentTab =
+    rawTab === 'workflow' || rawTab === 'blueprint' ? 'dna' :
+    rawTab === 'evidence' ? 'milestones' :
+    rawTab === 'rea' ? 'audit' :
+    rawTab;
+
+  const setTab = (tab: string) => {
+    setSearchParams({ tab });
+  };
+
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -76,6 +88,28 @@ export const ProjectDetailPage: React.FC = () => {
 
   // Active milestone for evidence review / checkout
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const activeSelectedMilestone = selectedMilestone || (milestones.length > 0 ? milestones[0] : null);
+
+  // Dedicated effect to load evidence and review whenever selectedMilestone changes
+  useEffect(() => {
+    if (!activeSelectedMilestone) return;
+    let isMounted = true;
+    const loadMilestoneEvidence = async () => {
+      try {
+        const eviRes = await api.get(`/milestones/${activeSelectedMilestone.id}/evidence`);
+        if (isMounted) setEvidenceItems(eviRes.data.data?.evidence || []);
+        const revRes = await api.get(`/milestones/${activeSelectedMilestone.id}/review`);
+        if (isMounted) setAiReview(revRes.data.data?.review || null);
+      } catch {
+        // ignore
+      }
+    };
+    loadMilestoneEvidence();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeSelectedMilestone?.id]);
+
   const [isPayPalModalOpen, setIsPayPalModalOpen] = useState(false);
 
   // Scope Drift form state
@@ -224,10 +258,6 @@ export const ProjectDetailPage: React.FC = () => {
     }, 6000);
     return () => clearInterval(interval);
   }, [projectId]);
-
-  const setTab = (tab: string) => {
-    setSearchParams({ tab });
-  };
 
   // Submit new evidence
   const handleAddEvidence = async (e: React.FormEvent) => {
@@ -738,264 +768,365 @@ export const ProjectDetailPage: React.FC = () => {
         )}
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3 overflow-x-auto text-xs font-semibold">
-        <button
-          onClick={() => setTab('milestones')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
-            currentTab === 'milestones'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
-          }`}
-        >
-          <CreditCard className="w-4 h-4" />
-          <span>Milestones Roadmap</span>
-        </button>
+      {/* Primary Navigation Bar & Module Switcher */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2 overflow-x-auto text-xs font-semibold w-full sm:w-auto">
+          <button
+            onClick={() => setTab('milestones')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition shrink-0 ${
+              currentTab === 'milestones'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>Milestones & Escrow ({milestones.length})</span>
+          </button>
 
-        <button
-          onClick={() => setTab('workflow')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
-            currentTab === 'workflow'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
-          }`}
-        >
-          <GitMerge className="w-4 h-4" />
-          <span>Execution Flow & Pipeline</span>
-        </button>
+          <button
+            onClick={() => setTab('dna')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition shrink-0 ${
+              currentTab === 'dna'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <GitMerge className="w-4 h-4" />
+            <span>Work DNA Pipeline</span>
+          </button>
 
-        <button
-          onClick={() => setTab('evidence')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
-            currentTab === 'evidence'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
-          }`}
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>Evidence Graph</span>
-        </button>
+          <button
+            onClick={() => setTab('drift')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition shrink-0 ${
+              currentTab === 'drift'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <Radio className="w-4 h-4" />
+            <span>Scope Drift Radar</span>
+            {scopeRequests.length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            )}
+          </button>
 
-        <button
-          onClick={() => setTab('drift')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
-            currentTab === 'drift'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
-          }`}
-        >
-          <Radio className="w-4 h-4" />
-          <span>Scope Drift Radar</span>
-          {scopeRequests.length > 0 && (
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-          )}
-        </button>
+          <button
+            onClick={() => setTab('audit')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition shrink-0 ${
+              currentTab === 'audit'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            <span>Trust & REA Audit ({auditEvents.length})</span>
+          </button>
+        </div>
 
-        <button
-          onClick={() => setTab('blueprint')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
-            currentTab === 'blueprint'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          <span>Work Blueprint & Agreement</span>
-        </button>
-
-        <button
-          onClick={() => setTab('rea')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
-            currentTab === 'rea'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
-          }`}
-        >
-          <GitPullRequest className="w-4 h-4" />
-          <span>REA Inspector</span>
-        </button>
-
-        <button
-          onClick={() => setTab('audit')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
-            currentTab === 'audit'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900'
-          }`}
-        >
-          <History className="w-4 h-4" />
-          <span>Audit Timeline</span>
-        </button>
+        {/* Quick Dropdown Module Switcher */}
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+          <span className="text-[11px] text-slate-500 font-mono hidden md:inline">Module:</span>
+          <select
+            value={currentTab}
+            onChange={(e) => setTab(e.target.value)}
+            className="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 font-medium focus:outline-none focus:border-indigo-500"
+          >
+            <option value="milestones">📋 Milestones & Escrow ({milestones.length})</option>
+            <option value="dna">🧬 Work DNA Pipeline</option>
+            <option value="drift">📡 Scope Drift Radar ({scopeRequests.length})</option>
+            <option value="audit">🛡️ Trust & REA Audit ({auditEvents.length})</option>
+          </select>
+        </div>
       </div>
 
-      {/* TAB: WORKFLOW & EXECUTION PIPELINE */}
-      {currentTab === 'workflow' && (
+      {/* ============================================================== */}
+      {/* MODULE 1: MILESTONES ROADMAP & INTEGRATED EVIDENCE HUB          */}
+      {/* ============================================================== */}
+      {currentTab === 'milestones' && (
+        <div className="space-y-8 animate-fade-in">
+          {/* Milestones Roadmap Grid */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-indigo-400" />
+                  <span>Project Deliverables & Milestones Roadmap</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Track progress, review submitted proof artifacts, and release authorized PayPal payments upon milestone approval.
+                </p>
+              </div>
+              <span className="text-xs font-mono text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1 rounded-xl">
+                {milestones.filter((m) => m.status === 'PAID').length} of {milestones.length} Settled
+              </span>
+            </div>
+
+            {milestones.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {milestones.map((ms, idx) => {
+                  const isPaid = ms.status === 'PAID';
+                  const isAwaiting = ms.status === 'AWAITING_CLIENT_DECISION';
+                  const isApproved = ms.status === 'APPROVED_FOR_PAYMENT';
+                  const isSelected = activeSelectedMilestone?.id === ms.id;
+                  const amountDollars = (ms.amountMinor / 100).toFixed(2);
+
+                  return (
+                    <div
+                      key={ms.id}
+                      className={`p-6 rounded-2xl border transition text-left flex flex-col justify-between space-y-4 ${
+                        isPaid
+                          ? 'bg-emerald-950/20 border-emerald-800/60'
+                          : isAwaiting
+                          ? 'bg-slate-900 border-indigo-500/80 shadow-lg shadow-indigo-500/10'
+                          : isSelected
+                          ? 'bg-slate-900 border-indigo-500/50'
+                          : 'bg-slate-900/70 border-slate-800'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-mono text-slate-500">MILESTONE 0{idx + 1}</span>
+                          <Badge
+                            variant={isPaid ? 'success' : isAwaiting ? 'ai' : isApproved ? 'paypal' : 'neutral'}
+                          >
+                            {ms.status.replace(/_/g, ' ')}
+                          </Badge>
+                        </div>
+                        <h3 className="text-base font-bold text-white">{ms.title}</h3>
+                        <p className="text-xs text-slate-400">{ms.description}</p>
+                      </div>
+
+                      {/* Payment reference if paid */}
+                      {isPaid && (
+                        <div className="p-3 bg-emerald-950/40 border border-emerald-700/50 rounded-xl font-mono text-xs text-emerald-300 space-y-1">
+                          <div className="flex justify-between">
+                            <span>PayPal Capture:</span>
+                            <span className="font-bold">{ms.paypalCaptureId}</span>
+                          </div>
+                          <div className="flex justify-between text-slate-400">
+                            <span>Status:</span>
+                            <span>Server Verified</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Amount and Actions */}
+                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+                        <div>
+                          <span className="text-[11px] text-slate-500 block">Authorized Value</span>
+                          <span className="text-xl font-bold font-mono text-white">
+                            ${amountDollars} <span className="text-xs text-slate-400 font-normal">{ms.currency}</span>
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => setSelectedMilestone(ms)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
+                              isSelected
+                                ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50'
+                                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                            }`}
+                          >
+                            {isSelected ? '✓ Selected' : 'View Proof'}
+                          </button>
+
+                          {ms.status === 'IN_PROGRESS' && user?.role === 'provider' && (
+                            <button
+                              onClick={() => {
+                                setSelectedMilestone(ms);
+                                handleSubmitMilestone(ms.id);
+                              }}
+                              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition"
+                            >
+                              Submit Proof
+                            </button>
+                          )}
+
+                          {isAwaiting && (
+                            <button
+                              onClick={() => setSelectedMilestone(ms)}
+                              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition animate-pulse"
+                            >
+                              Review Evidence
+                            </button>
+                          )}
+
+                          {isApproved && (
+                            (user?.role === 'client' || user?.role === 'admin') ? (
+                              <button
+                                onClick={() => {
+                                  setSelectedMilestone(ms);
+                                  setIsPayPalModalOpen(true);
+                                }}
+                                className="px-4 py-2 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-lg transition shadow-lg shadow-blue-900/30"
+                              >
+                                PayPal Sandbox
+                              </button>
+                            ) : (
+                              <span className="text-[11px] font-mono text-amber-300 bg-amber-950/60 px-2.5 py-1 rounded border border-amber-800/40">
+                                Awaiting Client Release
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-8 bg-slate-900/40 border border-slate-800 rounded-2xl text-center space-y-3">
+                <CreditCard className="w-8 h-8 text-slate-600 mx-auto" />
+                <h4 className="text-sm font-bold text-slate-300">No Milestones Initialized Yet</h4>
+                <p className="text-xs text-slate-400 max-w-md mx-auto">
+                  Milestones are established from the agreed Work DNA Blueprint. Inspect the Work DNA Pipeline to review proposed deliverables.
+                </p>
+                <button
+                  onClick={() => setTab('dna')}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition"
+                >
+                  View Work DNA Pipeline →
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Integrated Milestone Evidence & Verification Hub */}
+          {activeSelectedMilestone && (
+            <div className="pt-6 border-t border-slate-800 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                      Selected Milestone Verification Hub
+                    </span>
+                    <Badge variant="primary" size="sm">
+                      {activeSelectedMilestone.title}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Select any milestone below to inspect evidence artifacts, AI verification scorecards, and submit proof.
+                  </p>
+                </div>
+
+                {/* Milestone Switcher Pills */}
+                {milestones.length > 1 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                    {milestones.map((m, i) => (
+                      <button
+                        key={m.id}
+                        onClick={() => setSelectedMilestone(m)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
+                          activeSelectedMilestone.id === m.id
+                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
+                            : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-800'
+                        }`}
+                      >
+                        <span>M0{i + 1}: {m.title.length > 16 ? m.title.substring(0, 16) + '...' : m.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Evidence Graph Component */}
+              <EvidenceGraph
+                milestone={activeSelectedMilestone}
+                evidenceItems={evidenceItems}
+                aiReview={aiReview}
+                onApprove={handleApproveMilestone}
+                onRequestRevision={handleRequestRevision}
+                canApprove={user?.role === 'client' || user?.role === 'admin'}
+              />
+
+              {/* Attach new proof form (for provider) */}
+              <div className="p-6 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-slate-200">
+                    Submit Additional Proof Artifact for "{activeSelectedMilestone.title}"
+                  </h4>
+                  <span className="text-[11px] font-mono text-slate-500">Milestone ID: {activeSelectedMilestone.id}</span>
+                </div>
+                <form onSubmit={handleAddEvidence} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Title (e.g. Unit Test Run Log or UI Screenshot)"
+                    value={newEvidenceTitle}
+                    onChange={(e) => setNewEvidenceTitle(e.target.value)}
+                    className="px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="URL or Storage Ref (e.g. https://github.com/...)"
+                    value={newEvidenceUrl}
+                    onChange={(e) => setNewEvidenceUrl(e.target.value)}
+                    className="px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                    required
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Notes / description"
+                      value={newEvidenceDesc}
+                      onChange={(e) => setNewEvidenceDesc(e.target.value)}
+                      className="flex-1 px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={submittingEvidence}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition disabled:opacity-50"
+                    >
+                      {submittingEvidence ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODULE 2: WORK DNA ENGINE & EXECUTION PIPELINE                 */}
+      {/* ============================================================== */}
+      {currentTab === 'dna' && (
         <div className="space-y-6 animate-fade-in">
+          {/* Cryptographic Agreement Snapshot Banner if exists */}
+          {latestAgreement && (
+            <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Badge variant="success">Agreement v{latestAgreement.version} Frozen</Badge>
+                  <h3 className="text-sm font-bold text-white">Tamper-Evident Contract Baseline</h3>
+                </div>
+                <div className="font-mono text-xs text-slate-300 flex items-center gap-2 flex-wrap">
+                  <span className="text-slate-400">SHA-256 Fingerprint:</span>
+                  <span className="text-indigo-300 font-bold bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                    {latestAgreement.snapshotHash}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right font-mono text-xs shrink-0">
+                <span className="text-slate-400 block text-[10px]">Agreed Total Budget:</span>
+                <span className="text-base font-bold text-emerald-400">
+                  ${(latestAgreement.totalAmountMinor / 100).toFixed(2)} {latestAgreement.currency}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Interactive Work DNA Pipeline & Deep Analysis Visualizer */}
           <WorkflowVisualizer blueprint={blueprint} project={project} />
         </div>
       )}
 
-      {/* TAB 1: MILESTONES ROADMAP */}
-      {currentTab === 'milestones' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {milestones.map((ms, idx) => {
-              const isPaid = ms.status === 'PAID';
-              const isAwaiting = ms.status === 'AWAITING_CLIENT_DECISION';
-              const isApproved = ms.status === 'APPROVED_FOR_PAYMENT';
-              const amountDollars = (ms.amountMinor / 100).toFixed(2);
-
-              return (
-                <div
-                  key={ms.id}
-                  className={`p-6 rounded-2xl border transition text-left flex flex-col justify-between space-y-4 ${
-                    isPaid
-                      ? 'bg-emerald-950/20 border-emerald-800/60'
-                      : isAwaiting
-                      ? 'bg-slate-900 border-indigo-500/80 shadow-lg shadow-indigo-500/10'
-                      : 'bg-slate-900/70 border-slate-800'
-                  }`}
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-mono text-slate-500">MILESTONE 0{idx + 1}</span>
-                      <Badge
-                        variant={isPaid ? 'success' : isAwaiting ? 'ai' : isApproved ? 'paypal' : 'neutral'}
-                      >
-                        {ms.status.replace(/_/g, ' ')}
-                      </Badge>
-                    </div>
-                    <h3 className="text-base font-bold text-white">{ms.title}</h3>
-                    <p className="text-xs text-slate-400">{ms.description}</p>
-                  </div>
-
-                  {/* Payment reference if paid */}
-                  {isPaid && (
-                    <div className="p-3 bg-emerald-950/40 border border-emerald-700/50 rounded-xl font-mono text-xs text-emerald-300 space-y-1">
-                      <div className="flex justify-between">
-                        <span>PayPal Capture:</span>
-                        <span className="font-bold">{ms.paypalCaptureId}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>Status:</span>
-                        <span>Server Verified</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Amount and Actions */}
-                  <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
-                    <div>
-                      <span className="text-[11px] text-slate-500 block">Authorized Value</span>
-                      <span className="text-xl font-bold font-mono text-white">
-                        ${amountDollars} <span className="text-xs text-slate-400 font-normal">{ms.currency}</span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {ms.status === 'IN_PROGRESS' && user?.role === 'provider' && (
-                        <button
-                          onClick={() => handleSubmitMilestone(ms.id)}
-                          className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition"
-                        >
-                          Submit Proof
-                        </button>
-                      )}
-
-                      {isAwaiting && (
-                        <button
-                          onClick={() => {
-                            setSelectedMilestone(ms);
-                            setTab('evidence');
-                          }}
-                          className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition"
-                        >
-                          Review Evidence
-                        </button>
-                      )}
-
-                      {isApproved && (
-                        (user?.role === 'client' || user?.role === 'admin') ? (
-                          <button
-                            onClick={() => {
-                              setSelectedMilestone(ms);
-                              setIsPayPalModalOpen(true);
-                            }}
-                            className="px-4 py-2 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-lg transition"
-                          >
-                            PayPal Sandbox
-                          </button>
-                        ) : (
-                          <span className="text-[11px] font-mono text-amber-300 bg-amber-950/60 px-2.5 py-1 rounded border border-amber-800/40">
-                            Awaiting Client Release
-                          </span>
-                        )
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: EVIDENCE GRAPH */}
-      {currentTab === 'evidence' && selectedMilestone && (
-        <div className="space-y-8">
-          <EvidenceGraph
-            milestone={selectedMilestone}
-            evidenceItems={evidenceItems}
-            aiReview={aiReview}
-            onApprove={handleApproveMilestone}
-            onRequestRevision={handleRequestRevision}
-            canApprove={user?.role === 'client' || user?.role === 'admin'}
-          />
-
-          {/* Attach new proof form (for provider) */}
-          <div className="p-6 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-4">
-            <h4 className="text-sm font-bold text-slate-200">Submit Additional Proof Artifact</h4>
-            <form onSubmit={handleAddEvidence} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <input
-                type="text"
-                placeholder="Title (e.g. Unit Test Run Log or UI Screenshot)"
-                value={newEvidenceTitle}
-                onChange={(e) => setNewEvidenceTitle(e.target.value)}
-                className="px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                required
-              />
-              <input
-                type="text"
-                placeholder="URL or Storage Ref (e.g. https://github.com/...)"
-                value={newEvidenceUrl}
-                onChange={(e) => setNewEvidenceUrl(e.target.value)}
-                className="px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                required
-              />
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Notes / description"
-                  value={newEvidenceDesc}
-                  onChange={(e) => setNewEvidenceDesc(e.target.value)}
-                  className="flex-1 px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                />
-                <button
-                  type="submit"
-                  disabled={submittingEvidence}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition"
-                >
-                  {submittingEvidence ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: SCOPE DRIFT RADAR */}
+      {/* ============================================================== */}
+      {/* MODULE 3: SCOPE DRIFT RADAR                                    */}
+      {/* ============================================================== */}
       {currentTab === 'drift' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in">
           <div className="bg-gradient-to-r from-slate-900 via-amber-950/20 to-slate-900 border border-slate-800 rounded-2xl p-6">
             <div className="flex items-center gap-2">
               <Radio className="w-5 h-5 text-amber-400" />
@@ -1020,7 +1151,7 @@ export const ProjectDetailPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={driftLoading}
-                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {driftLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   <span>Scan Scope</span>
@@ -1062,31 +1193,40 @@ export const ProjectDetailPage: React.FC = () => {
                 )}
               </div>
             ))}
+            {scopeRequests.length === 0 && (
+              <div className="p-8 bg-slate-900/40 border border-slate-800 rounded-2xl text-center space-y-2">
+                <Radio className="w-6 h-6 text-slate-600 mx-auto" />
+                <h5 className="text-xs font-bold text-slate-300">No Scope Drift Detected</h5>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  All work activities remain aligned with the frozen baseline. Use the scanner above to evaluate any proposed additions.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* TAB 4: WORK BLUEPRINT & AGREEMENT */}
-      {currentTab === 'blueprint' && (
-        <div className="space-y-6">
-          {latestAgreement && (
-            <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge variant="success">Agreement v{latestAgreement.version}</Badge>
-                  <h3 className="text-lg font-bold text-white mt-1">Tamper-Evident Contract Snapshot</h3>
-                </div>
-                <div className="text-right font-mono text-xs">
-                  <span className="text-slate-400 block">Total Budget:</span>
-                  <span className="text-lg font-bold text-emerald-400">
-                    ${(latestAgreement.totalAmountMinor / 100).toFixed(2)} {latestAgreement.currency}
-                  </span>
-                </div>
+      {/* ============================================================== */}
+      {/* MODULE 4: TRUST, REA TOOLKIT & CRYPTOGRAPHIC AUDIT             */}
+      {/* ============================================================== */}
+      {currentTab === 'audit' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Cryptographic Contract Verification */}
+          <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-base font-bold text-white">Cryptographic Trust & Contract Verification</h3>
               </div>
-
+              <Badge variant="success">SHA-256 Verified</Badge>
+            </div>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Every milestone submission, review outcome, scope amendment, and PayPal sandbox release produces an immutable cryptographic hash. The SHA-256 agreement baseline guarantees tamper-evident compliance.
+            </p>
+            {latestAgreement && (
               <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-xl font-mono text-xs space-y-1 text-slate-400">
                 <div className="flex justify-between">
-                  <span>SHA-256 Canonical Fingerprint:</span>
+                  <span>Canonical Fingerprint:</span>
                   <span className="text-indigo-400 font-bold">{latestAgreement.snapshotHash}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1094,118 +1234,116 @@ export const ProjectDetailPage: React.FC = () => {
                   <span className="text-emerald-400 font-bold">MUTUALLY SIGNED</span>
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* Workstreams breakdown */}
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Agreed Workstreams & Deliverables</h4>
-                {latestAgreement.canonicalSnapshot.workstreams.map((ws, i) => (
-                  <div key={ws.id} className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-2">
-                    <h5 className="text-xs font-bold text-indigo-300">{i + 1}. {ws.name}</h5>
-                    <p className="text-xs text-slate-400">{ws.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 5: REA WORKFLOW INSPECTOR */}
-      {currentTab === 'rea' && (
-        <div className="space-y-6">
-          <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-3">
+          {/* REA Reverse-Engineering Workflow Inspector */}
+          <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-4">
             <div className="flex items-center gap-2">
               <GitPullRequest className="w-5 h-5 text-blue-400" />
-              <h3 className="text-lg font-bold text-white">REA Reverse-Engineering Workflow Inspector</h3>
+              <h3 className="text-base font-bold text-white">REA Reverse-Engineering Workflow Inspector</h3>
               <Badge variant="primary">morluto/rea</Badge>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
               In accordance with Section 15 of the Clausora Technical Specification, local reverse engineering reports generated with the REA toolkit can be imported as verifiable work artifacts.
             </p>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-5 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-3">
-              <h4 className="text-sm font-bold text-slate-200">Observed Runtime Behaviors</h4>
-              <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
-                <li>Client JWT Bearer tokens validated on each authenticated endpoint.</li>
-                <li>PayPal sandbox order creation triggered on milestone approval.</li>
-                <li>Server-side capture verification confirms HTTP 200 COMPLETED from Orders v2 API.</li>
-                <li>Audit timeline events logged with immutable SHA-256 hash proofs.</li>
-              </ul>
-            </div>
-
-            <div className="p-5 bg-slate-900/60 border border-slate-800 rounded-2xl space-y-3">
-              <h4 className="text-sm font-bold text-slate-200">Discovered API Endpoints & Functions</h4>
-              <div className="space-y-1.5 font-mono text-xs">
-                <div className="p-2 bg-slate-950 rounded border border-slate-800 text-indigo-300">
-                  POST /api/payments/milestones/:id/create-order
-                </div>
-                <div className="p-2 bg-slate-950 rounded border border-slate-800 text-emerald-300">
-                  POST /api/payments/:id/capture
-                </div>
-                <div className="p-2 bg-slate-950 rounded border border-slate-800 text-purple-300">
-                  POST /api/ai/analyse-evidence
-                </div>
-                <div className="p-2 bg-slate-950 rounded border border-slate-800 text-amber-300">
-                  POST /api/projects/:id/change-requests
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="p-4 bg-slate-950/70 border border-slate-800/80 rounded-xl space-y-2">
+                <h4 className="text-xs font-bold text-slate-200">Observed Runtime Behaviors</h4>
+                <ul className="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
+                  <li>Client JWT Bearer tokens validated on each authenticated endpoint.</li>
+                  <li>PayPal sandbox order creation triggered on milestone approval.</li>
+                  <li>Server-side capture verification confirms HTTP 200 COMPLETED.</li>
+                  <li>Audit timeline events logged with immutable SHA-256 hash proofs.</li>
+                </ul>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* TAB 6: AUDIT TIMELINE */}
-      {currentTab === 'audit' && (
-        <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-6">
-          <div>
-            <h3 className="text-lg font-bold text-white">Cryptographic Audit Trail</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Append-only timeline recording all agreement hashes, evidence submissions, reviews, and PayPal capture events.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {auditPagination.visibleItems.map((ev) => (
-              <div key={ev.id} className="relative pl-6 pb-4 border-l border-slate-800 text-left">
-                <div className="absolute -left-1.5 top-1 w-3 h-3 rounded-full bg-indigo-500 border-2 border-slate-950" />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white">{ev.actorName}</span>
-                    <Badge variant={ev.actorRole === 'ai' ? 'ai' : 'primary'} size="sm">
-                      {ev.actorRole}
-                    </Badge>
+              <div className="p-4 bg-slate-950/70 border border-slate-800/80 rounded-xl space-y-2">
+                <h4 className="text-xs font-bold text-slate-200">Discovered API Endpoints & Functions</h4>
+                <div className="space-y-1 font-mono text-[11px]">
+                  <div className="p-1.5 bg-slate-900 rounded border border-slate-800 text-indigo-300">
+                    POST /api/payments/milestones/:id/create-order
                   </div>
-                  <span className="text-[11px] font-mono text-slate-500">
-                    {new Date(ev.createdAt).toLocaleString()}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300 mt-1">{ev.summary}</p>
-                <div className="text-[10px] font-mono text-slate-500 mt-0.5">
-                  Event ID: {ev.id} • Type: {ev.eventType}
+                  <div className="p-1.5 bg-slate-900 rounded border border-slate-800 text-emerald-300">
+                    POST /api/payments/:id/capture
+                  </div>
+                  <div className="p-1.5 bg-slate-900 rounded border border-slate-800 text-purple-300">
+                    POST /api/ai/analyse-evidence
+                  </div>
+                  <div className="p-1.5 bg-slate-900 rounded border border-slate-800 text-amber-300">
+                    POST /api/projects/:id/change-requests
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
 
-          {/* Audit Events Scroll Pagination Footer */}
-          <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <span className="text-slate-400 font-mono">
-              Page {auditPagination.currentPage} of {auditPagination.totalPages} • Showing{' '}
-              {auditPagination.visibleItems.length} / {auditEvents.length} events
-            </span>
+          {/* Cryptographic Append-Only Audit Trail */}
+          <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <History className="w-4 h-4 text-slate-400" />
+                  <span>Append-Only Cryptographic Audit Trail</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Chronological recording of all agreement snapshots, evidence submissions, reviews, and PayPal capture events.
+                </p>
+              </div>
+              <span className="text-xs font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                {auditEvents.length} Events Logged
+              </span>
+            </div>
 
-            {auditPagination.hasMore ? (
-              <button
-                onClick={() => auditPagination.loadMore()}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-semibold rounded-xl border border-slate-700 transition"
-              >
-                <span>Scroll down or click to load more audit events</span>
-                <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
-              </button>
-            ) : (
-              <span className="text-slate-500 font-mono text-[11px]">All audit events loaded</span>
+            <div className="space-y-4">
+              {auditPagination.visibleItems.map((ev) => (
+                <div key={ev.id} className="relative pl-6 pb-4 border-l border-slate-800 text-left">
+                  <div className="absolute -left-1.5 top-1 w-3 h-3 rounded-full bg-indigo-500 border-2 border-slate-950" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-white">{ev.actorName}</span>
+                      <Badge variant={ev.actorRole === 'ai' ? 'ai' : 'primary'} size="sm">
+                        {ev.actorRole}
+                      </Badge>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-500">
+                      {new Date(ev.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1">{ev.summary}</p>
+                  <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                    Event ID: {ev.id} • Type: {ev.eventType}
+                  </div>
+                </div>
+              ))}
+              {auditEvents.length === 0 && (
+                <div className="p-8 text-center text-xs text-slate-500 font-mono">
+                  No cryptographic audit events recorded yet for this project.
+                </div>
+              )}
+            </div>
+
+            {/* Audit Events Scroll Pagination Footer */}
+            {auditEvents.length > 0 && (
+              <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <span className="text-slate-400 font-mono">
+                  Page {auditPagination.currentPage} of {auditPagination.totalPages} • Showing{' '}
+                  {auditPagination.visibleItems.length} / {auditEvents.length} events
+                </span>
+
+                {auditPagination.hasMore ? (
+                  <button
+                    onClick={() => auditPagination.loadMore()}
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-semibold rounded-xl border border-slate-700 transition"
+                  >
+                    <span>Scroll down or click to load more audit events</span>
+                    <ChevronDown className="w-3.5 h-3.5 animate-bounce" />
+                  </button>
+                ) : (
+                  <span className="text-slate-500 font-mono text-[11px]">All audit events loaded</span>
+                )}
+              </div>
             )}
           </div>
         </div>

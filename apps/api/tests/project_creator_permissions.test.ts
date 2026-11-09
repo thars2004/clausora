@@ -94,3 +94,4 @@ describe('Project Creator Permissions, Acceptance, and DB Preservation', () => {
     assert.equal(project.id, testProjectId);
   });
 });
+

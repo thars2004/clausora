@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { AdminOverviewStats } from '@clausora/shared';
 import { Badge } from '../components/common/Badge';
@@ -7,6 +8,7 @@ import { useToast } from '../context/ToastContext';
 import { useScrollPagination } from '../hooks/useScrollPagination';
 import {
   ShieldCheck,
+  Shield,
   Users,
   CheckSquare,
   CreditCard,
@@ -23,11 +25,24 @@ import {
   ChevronDown,
   Lock,
   UserCheck,
+  ArrowRight,
+  Sparkles,
+  FolderGit2,
 } from 'lucide-react';
 
 export const AdminPortalPage: React.FC = () => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'users' | 'tasks' | 'payments' | 'system'>('users');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab: 'overview' | 'users' | 'tasks' | 'payments' | 'system' =
+    tabParam === 'users' || tabParam === 'tasks' || tabParam === 'payments' || tabParam === 'system'
+      ? tabParam
+      : 'overview';
+
+  const setActiveTab = (tab: 'overview' | 'users' | 'tasks' | 'payments' | 'system') => {
+    setSearchParams({ tab });
+  };
+
   const [stats, setStats] = useState<AdminOverviewStats | null>(null);
   const [usersList, setUsersList] = useState<any[]>([]);
   const [tasksList, setTasksList] = useState<any[]>([]);
@@ -205,6 +220,18 @@ export const AdminPortalPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2 overflow-x-auto text-xs font-semibold">
           <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
+              activeTab === 'overview'
+                ? 'bg-amber-600 text-white shadow'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Master Overview</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('users')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
               activeTab === 'users'
@@ -254,7 +281,7 @@ export const AdminPortalPage: React.FC = () => {
         </div>
 
         {/* Global Filter & Search Bar */}
-        {activeTab !== 'system' && (
+        {activeTab !== 'system' && activeTab !== 'overview' && (
           <div className="relative w-full sm:w-64">
             <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -267,6 +294,293 @@ export const AdminPortalPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* ============================================================== */}
+      {/* TAB 0: MASTER EXECUTIVE OVERVIEW                               */}
+      {/* ============================================================== */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* 4 Executive KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div
+              onClick={() => setActiveTab('users')}
+              className="p-5 bg-slate-900/80 border border-slate-800 hover:border-amber-600/50 rounded-2xl space-y-2 cursor-pointer transition shadow-lg group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Platform Accounts</span>
+                </span>
+                <span className="text-xs text-indigo-400 group-hover:translate-x-1 transition-transform">→</span>
+              </div>
+              <div className="text-2xl font-black text-white font-mono">{usersList.length}</div>
+              <div className="text-[11px] text-slate-400 flex items-center gap-2 pt-1 border-t border-slate-800/80">
+                <span className="text-indigo-300 font-semibold">{usersList.filter((u) => u.role === 'client').length} Clients</span>
+                <span>•</span>
+                <span className="text-purple-300 font-semibold">{usersList.filter((u) => u.role === 'provider').length} Providers</span>
+                <span>•</span>
+                <span className="text-amber-300 font-semibold">{usersList.filter((u) => u.role === 'admin').length} Admins</span>
+              </div>
+            </div>
+
+            <div
+              onClick={() => setActiveTab('tasks')}
+              className="p-5 bg-slate-900/80 border border-slate-800 hover:border-amber-600/50 rounded-2xl space-y-2 cursor-pointer transition shadow-lg group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Global Deliverables</span>
+                </span>
+                <span className="text-xs text-emerald-400 group-hover:translate-x-1 transition-transform">→</span>
+              </div>
+              <div className="text-2xl font-black text-white font-mono">{tasksList.length}</div>
+              <div className="text-[11px] text-slate-400 flex items-center gap-2 pt-1 border-t border-slate-800/80">
+                <span className="text-emerald-300 font-semibold">{tasksList.filter((t) => t.status === 'done').length} Completed</span>
+                <span>•</span>
+                <span className="text-indigo-300 font-semibold">{tasksList.filter((t) => t.status === 'in_progress').length} In Progress</span>
+              </div>
+            </div>
+
+            <div
+              onClick={() => setActiveTab('payments')}
+              className="p-5 bg-slate-900/80 border border-slate-800 hover:border-amber-600/50 rounded-2xl space-y-2 cursor-pointer transition shadow-lg group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+                  <span>PayPal Settlements</span>
+                </span>
+                <span className="text-xs text-blue-400 group-hover:translate-x-1 transition-transform">→</span>
+              </div>
+              <div className="text-2xl font-black text-emerald-400 font-mono">
+                ${(((stats?.settledVolumeMinor || 0) / 100)).toFixed(2)} <span className="text-xs text-slate-400">USD</span>
+              </div>
+              <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/80">
+                <span>Pending Escrow:</span>
+                <span className="font-mono text-amber-300 font-bold">
+                  ${(((stats?.pendingVolumeMinor || 0) / 100)).toFixed(2)} USD
+                </span>
+              </div>
+            </div>
+
+            <div
+              onClick={() => setActiveTab('system')}
+              className="p-5 bg-slate-900/80 border border-slate-800 hover:border-amber-600/50 rounded-2xl space-y-2 cursor-pointer transition shadow-lg group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-purple-400" />
+                  <span>System Integrity</span>
+                </span>
+                <span className="text-xs text-purple-400 group-hover:translate-x-1 transition-transform">→</span>
+              </div>
+              <div className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>MongoDB Atlas Online</span>
+              </div>
+              <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/80">
+                <span>Auth Boundary:</span>
+                <span className="text-indigo-300 font-mono font-semibold">1-Day JWT Live</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Action Hub */}
+          <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>Fast Jump Actions:</span>
+            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setActiveTab('users')}
+                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1.5"
+              >
+                <Users className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Manage Accounts ({usersList.length})</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('tasks')}
+                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1.5"
+              >
+                <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Review Tasks ({tasksList.length})</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('payments')}
+                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1.5"
+              >
+                <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+                <span>Audit PayPal Ledger</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('system')}
+                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1.5"
+              >
+                <Activity className="w-3.5 h-3.5 text-purple-400" />
+                <span>Diagnostics</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 2-Column Overview Stream */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: Recent Registered Accounts */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Users className="w-4 h-4 text-indigo-400" />
+                      <span>Recent Platform Accounts</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Live synced from MongoDB Atlas cluster</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('users')}
+                    className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition"
+                  >
+                    <span>View all ({usersList.length})</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+
+                <div className="divide-y divide-slate-800/80">
+                  {usersList.slice(0, 5).map((u) => {
+                    const roleVariant = u.role === 'client' ? 'primary' : u.role === 'provider' ? 'ai' : 'warning';
+                    return (
+                      <div key={u.id} className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-950/40 transition">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs uppercase shrink-0">
+                            {u.name.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-white flex items-center gap-2">
+                              <span>{u.name}</span>
+                              <Badge variant={roleVariant} size="sm">
+                                {u.role.toUpperCase()}
+                              </Badge>
+                            </div>
+                            <span className="text-[11px] text-slate-400 font-mono">{u.email}</span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => handleOpenEdit(u)}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[11px] font-semibold border border-slate-700 transition"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-950 border-t border-slate-800 text-center">
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className="text-xs text-slate-400 hover:text-white transition font-medium"
+                >
+                  Manage roles and credentials in Users Directory →
+                </button>
+              </div>
+            </div>
+
+            {/* Right: Recent Settlements & Platform Tasks */}
+            <div className="space-y-6">
+              {/* Recent PayPal Transactions */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-blue-400" />
+                      <span>Recent PayPal Transactions</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Sandbox capture and order ledger</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('payments')}
+                    className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition"
+                  >
+                    <span>View all ({paymentsList.length})</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+
+                <div className="divide-y divide-slate-800/80">
+                  {paymentsList.slice(0, 3).map((p) => {
+                    const isCaptured = p.status === 'captured';
+                    return (
+                      <div key={p.id} className="p-3.5 flex items-center justify-between gap-3 text-xs">
+                        <div>
+                          <div className="font-semibold text-white truncate max-w-[200px]">{p.projectTitle}</div>
+                          <div className="text-[11px] font-mono text-slate-400">
+                            Order: <span className="text-indigo-400">{p.paypalOrderId}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-white font-mono">
+                            ${(p.amountMinor / 100).toFixed(2)} {p.currency}
+                          </div>
+                          <Badge variant={isCaptured ? 'success' : 'paypal'} size="sm">
+                            {isCaptured ? 'CAPTURED' : 'ORDER'}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {paymentsList.length === 0 && (
+                    <div className="p-6 text-center text-xs text-slate-500 font-mono">
+                      No PayPal transactions recorded yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Priority Workstream Tasks */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <CheckSquare className="w-4 h-4 text-emerald-400" />
+                      <span>Active Workstream Tasks</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Deliverables across all active projects</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('tasks')}
+                    className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition"
+                  >
+                    <span>View all ({tasksList.length})</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+
+                <div className="divide-y divide-slate-800/80">
+                  {tasksList.slice(0, 3).map((t, idx) => (
+                    <div key={t.id || idx} className="p-3.5 flex items-center justify-between gap-3 text-xs">
+                      <div>
+                        <div className="font-semibold text-white truncate max-w-[240px]">{t.title}</div>
+                        <div className="text-[11px] text-slate-400 truncate max-w-[240px]">{t.projectTitle}</div>
+                      </div>
+                      <Badge variant={t.priority === 'high' ? 'danger' : 'primary'} size="sm">
+                        {t.priority}
+                      </Badge>
+                    </div>
+                  ))}
+                  {tasksList.length === 0 && (
+                    <div className="p-6 text-center text-xs text-slate-500 font-mono">
+                      No deliverables created yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ============================================================== */}
       {/* TAB 1: USERS DIRECTORY (EDIT & DELETE + SCROLL PAGINATION)      */}
