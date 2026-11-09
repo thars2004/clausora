@@ -12,6 +12,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { AdminPortalPage } from './pages/AdminPortalPage';
+import { ProjectsPage } from './pages/ProjectsPage';
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -48,6 +49,7 @@ export const App: React.FC = () => {
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/admin" element={<AdminPortalPage />} />
               <Route path="/new-project" element={<NewProjectPage />} />
+              <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -25,6 +25,7 @@ import {
   History,
   GitPullRequest,
   Shield,
+  ShieldAlert,
   CreditCard,
   Sparkles,
   ExternalLink,
@@ -38,11 +39,13 @@ import {
   Calendar,
   RefreshCw,
   ChevronDown,
+  ArrowUpRight,
 } from 'lucide-react';
 
 export const ProjectDetailPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const currentTab = searchParams.get('tab') || 'milestones';
   const { user } = useAuth();
   const { toast } = useToast();
@@ -57,6 +60,9 @@ export const ProjectDetailPage: React.FC = () => {
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [accessDeniedMessage, setAccessDeniedMessage] = useState('');
+  const [accessibleProjects, setAccessibleProjects] = useState<any[]>([]);
 
   // Active milestone for evidence review / checkout
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
@@ -77,13 +83,26 @@ export const ProjectDetailPage: React.FC = () => {
 
   const fetchProjectData = async (isBackground = false, isUserInitiated = false) => {
     try {
-      const pId = projectId || 'proj_hackathon_demo';
+      let pId = projectId;
+      if (!pId) {
+        const listRes = await api.get('/projects');
+        const list = listRes.data.data?.projects || [];
+        if (list.length > 0) {
+          pId = list[0].id;
+          navigate(`/projects/${pId}`, { replace: true });
+        } else {
+          navigate('/projects', { replace: true });
+          return;
+        }
+      }
+
       const res = await api.get(`/projects/${pId}`);
       const { project: pData, blueprint: bData, milestones: mData, agreements: aData } = res.data.data;
       setProject(pData);
       setBlueprint(bData);
       setMilestones(mData || []);
       setAgreements(aData || []);
+      setAccessDenied(false);
 
       if (isUserInitiated) {
         toast.success(
@@ -136,9 +155,20 @@ export const ProjectDetailPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Failed to load project details:', err);
-      const errMsg = err.response?.data?.message || err.message || 'Failed to load project details from server';
-      if (!isBackground) {
-        toast.error(errMsg, 'Cockpit Sync Error');
+      if (err.response?.status === 403) {
+        setAccessDenied(true);
+        setAccessDeniedMessage(err.response?.data?.message || 'Access Forbidden: You do not have permission to access this project.');
+        try {
+          const listRes = await api.get('/projects');
+          setAccessibleProjects(listRes.data.data?.projects || []);
+        } catch {
+          // ignore
+        }
+      } else {
+        const errMsg = err.response?.data?.message || err.message || 'Failed to load project details from server';
+        if (!isBackground) {
+          toast.error(errMsg, 'Cockpit Sync Error');
+        }
       }
     } finally {
       if (!isBackground) setLoading(false);
@@ -246,6 +276,80 @@ export const ProjectDetailPage: React.FC = () => {
       setDriftLoading(false);
     }
   };
+
+  if (accessDenied) {
+    return (
+      <div className="py-12 max-w-2xl mx-auto space-y-6 text-center animate-fade-in">
+        <div className="p-8 bg-slate-900/90 border border-rose-900/50 rounded-3xl space-y-4 shadow-xl">
+          <div className="w-16 h-16 rounded-2xl bg-rose-950/60 border border-rose-800/40 flex items-center justify-center mx-auto text-rose-400">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-extrabold text-white">Project Access Restricted (403 Forbidden)</h2>
+            <p className="text-xs text-rose-300 font-mono">
+              {accessDeniedMessage}
+            </p>
+            <p className="text-xs text-slate-400 pt-1">
+              Logged in as <strong className="text-slate-200">{user?.name}</strong> ({user?.role} role). You are only authorized to view projects where you are the designated Client owner, an assigned Provider, or Platform Admin.
+            </p>
+          </div>
+
+          {accessibleProjects.length > 0 ? (
+            <div className="pt-4 border-t border-slate-800 space-y-3 text-left">
+              <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Your Accessible Workspaces ({accessibleProjects.length}):
+              </h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {accessibleProjects.map((p) => (
+                  <Link
+                    key={p.id}
+                    to={`/projects/${p.id}`}
+                    onClick={() => {
+                      setAccessDenied(false);
+                      setLoading(true);
+                    }}
+                    className="p-3 bg-slate-950 border border-slate-800 hover:border-indigo-600/50 rounded-xl flex items-center justify-between transition group"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold text-white group-hover:text-indigo-300 transition">
+                        {p.title}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono">
+                        ID: {p.id} • Status: {p.status}
+                      </div>
+                    </div>
+                    <div className="text-xs text-indigo-400 font-medium flex items-center gap-1">
+                      <span>Open Cockpit</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="pt-2 text-xs text-slate-500">
+              You currently have no project workspaces assigned.
+            </div>
+          )}
+
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/projects"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl shadow transition"
+            >
+              Browse All Projects
+            </Link>
+            <Link
+              to="/dashboard"
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs rounded-xl transition"
+            >
+              Go to Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !project) {
     return (

@@ -19,7 +19,7 @@ export const Navbar: React.FC = () => {
   return (
     <header className="h-16 border-b border-slate-800 bg-[#0B0F19]/90 backdrop-blur-md sticky top-0 z-40 px-4 md:px-8 flex items-center justify-between">
       {/* Brand logo & tagline */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-6">
         <Link to="/" className="flex items-center gap-2.5 group">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition">
             <Sparkles className="w-5 h-5 text-white" />
@@ -36,6 +36,37 @@ export const Navbar: React.FC = () => {
             </p>
           </div>
         </Link>
+
+        {user && (
+          <nav className="hidden lg:flex items-center gap-1 text-xs font-semibold">
+            <Link
+              to="/dashboard"
+              className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition"
+            >
+              Dashboard
+            </Link>
+            <Link
+              to="/projects"
+              className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition"
+            >
+              Projects
+            </Link>
+            <Link
+              to="/analytics"
+              className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 transition"
+            >
+              Analytics
+            </Link>
+            {user.role === 'admin' && (
+              <Link
+                to="/admin"
+                className="px-3 py-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-950/40 transition"
+              >
+                Admin
+              </Link>
+            )}
+          </nav>
+        )}
       </div>
 
       {/* Right Controls: Persona Switcher & Account */}

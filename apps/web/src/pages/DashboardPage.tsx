@@ -38,13 +38,18 @@ export const DashboardPage: React.FC = () => {
     try {
       if (!isBackground) setLoading(true);
       const res = await api.get('/projects');
-      setProjects(res.data.data?.projects || []);
+      const fetchedProjects: Project[] = res.data.data?.projects || [];
+      setProjects(fetchedProjects);
 
-      try {
-        const actRes = await api.get('/projects/proj_hackathon_demo/activity');
-        setAuditEvents(actRes.data.data?.events || []);
-      } catch {
-        // fallback
+      if (fetchedProjects.length > 0) {
+        try {
+          const actRes = await api.get(`/projects/${fetchedProjects[0].id}/activity`);
+          setAuditEvents(actRes.data.data?.events || []);
+        } catch {
+          setAuditEvents([]);
+        }
+      } else {
+        setAuditEvents([]);
       }
       setLastSynced(new Date());
       if (!isBackground) {
@@ -160,7 +165,9 @@ export const DashboardPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-slate-100">Projects & Agreements</h3>
-            <span className="text-xs text-slate-400">Real-time status</span>
+            <Link to="/projects" className="text-xs text-indigo-400 hover:text-indigo-300 font-medium">
+              View All Projects ({projects.length}) →
+            </Link>
           </div>
 
           {loading ? (

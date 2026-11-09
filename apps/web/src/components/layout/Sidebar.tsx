@@ -1,6 +1,7 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/client';
 import {
   LayoutDashboard,
   PlusCircle,
@@ -8,19 +9,67 @@ import {
   GitPullRequest,
   CheckCircle,
   Radio,
-  FileSearch,
   History,
   Shield,
   BarChart3,
   Users,
   CheckSquare,
   CreditCard,
-  Layers,
+  Briefcase,
+  ChevronRight,
 } from 'lucide-react';
+
+interface ProjectSummary {
+  id: string;
+  title: string;
+}
 
 export const Sidebar: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const role = user?.role || 'client';
+
+  const [userProjects, setUserProjects] = useState<ProjectSummary[]>([]);
+
+  // Detect if user is currently inside a specific project cockpit
+  const match = location.pathname.match(/\/projects\/([^/?#]+)/);
+  const currentProjectIdFromUrl = match ? match[1] : null;
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!user) return;
+
+    api
+      .get('/projects')
+      .then((res) => {
+        if (!isMounted) return;
+        const list = res.data.data?.projects || [];
+        setUserProjects(list);
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, location.pathname]);
+
+  // Determine active project ID safely
+  // If user is currently viewing a project, use that.
+  // Otherwise, use user's first accessible project.
+  // If user is demo account or admin and has proj_hackathon_demo, fallback gracefully.
+  const activeProjectId =
+    currentProjectIdFromUrl ||
+    (userProjects.length > 0 ? userProjects[0].id : null);
+
+  const activeProject = userProjects.find((p) => p.id === activeProjectId);
+
+  // Fallback target for feature links when no project is accessible
+  const getProjectRoute = (tab?: string) => {
+    if (activeProjectId) {
+      return tab ? `/projects/${activeProjectId}?tab=${tab}` : `/projects/${activeProjectId}`;
+    }
+    return '/projects';
+  };
 
   return (
     <aside className="w-64 border-r border-slate-800 bg-[#0B0F19] p-4 flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)]">
@@ -61,6 +110,28 @@ export const Sidebar: React.FC = () => {
               <span>Dashboard</span>
             </NavLink>
 
+            {/* Dedicated Projects Directory */}
+            <NavLink
+              to="/projects"
+              className={({ isActive }) =>
+                `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                  isActive
+                    ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/30'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`
+              }
+            >
+              <div className="flex items-center gap-3">
+                <Briefcase className="w-4 h-4 shrink-0 text-indigo-400" />
+                <span>Projects</span>
+              </div>
+              {userProjects.length > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">
+                  {userProjects.length}
+                </span>
+              )}
+            </NavLink>
+
             {/* Client / Admin: Create Project */}
             {(role === 'client' || role === 'admin') && (
               <NavLink
@@ -78,11 +149,12 @@ export const Sidebar: React.FC = () => {
               </NavLink>
             )}
 
+            {/* Dynamic Project Cockpit */}
             <NavLink
-              to="/projects/proj_hackathon_demo"
+              to={getProjectRoute()}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition ${
-                  isActive
+                  isActive && location.pathname.startsWith('/projects/')
                     ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/30'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`
@@ -162,14 +234,21 @@ export const Sidebar: React.FC = () => {
           </div>
         )}
 
-        {/* 3. Role-Based Feature Modules */}
+        {/* 3. Role-Based Feature Modules for Active Workspace */}
         <div>
-          <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-3">
-            {role === 'provider' ? 'Provider Tools' : role === 'admin' ? 'Project Modules' : 'Client Controls'}
-          </span>
+          <div className="flex items-center justify-between px-3">
+            <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+              {role === 'provider' ? 'Provider Tools' : role === 'admin' ? 'Project Modules' : 'Client Controls'}
+            </span>
+            {activeProject && (
+              <span className="text-[9px] font-mono text-indigo-400 truncate max-w-[80px]" title={activeProject.title}>
+                {activeProject.title}
+              </span>
+            )}
+          </div>
           <div className="mt-2 space-y-1">
             <NavLink
-              to="/projects/proj_hackathon_demo?tab=evidence"
+              to={getProjectRoute('evidence')}
               className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
             >
               <div className="flex items-center gap-2.5">
@@ -182,7 +261,7 @@ export const Sidebar: React.FC = () => {
             </NavLink>
 
             <NavLink
-              to="/projects/proj_hackathon_demo?tab=drift"
+              to={getProjectRoute('drift')}
               className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
             >
               <div className="flex items-center gap-2.5">
@@ -195,7 +274,7 @@ export const Sidebar: React.FC = () => {
             </NavLink>
 
             <NavLink
-              to="/projects/proj_hackathon_demo?tab=rea"
+              to={getProjectRoute('rea')}
               className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
             >
               <div className="flex items-center gap-2.5">
@@ -208,7 +287,7 @@ export const Sidebar: React.FC = () => {
             </NavLink>
 
             <NavLink
-              to="/projects/proj_hackathon_demo?tab=audit"
+              to={getProjectRoute('audit')}
               className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-xl transition"
             >
               <div className="flex items-center gap-2.5">

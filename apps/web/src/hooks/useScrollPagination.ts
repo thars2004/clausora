@@ -53,3 +53,4 @@ export function useScrollPagination<T>(
     totalPages,
   };
 }
+

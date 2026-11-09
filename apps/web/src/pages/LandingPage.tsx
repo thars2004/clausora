@@ -56,13 +56,23 @@ export const LandingPage: React.FC = () => {
 
         {/* Quick Launch Buttons */}
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-          <button
-            onClick={() => handleLaunchDemo('client')}
-            className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition group"
-          >
-            <span>Explore Hackathon Demo (Client)</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
-          </button>
+          {user ? (
+            <Link
+              to="/projects"
+              className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition group"
+            >
+              <span>View My Projects ({user.name})</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+            </Link>
+          ) : (
+            <button
+              onClick={() => handleLaunchDemo('client')}
+              className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition group"
+            >
+              <span>Explore Hackathon Demo (Client)</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+            </button>
+          )}
 
           <Link
             to="/new-project"
