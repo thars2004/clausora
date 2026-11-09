@@ -49,6 +49,7 @@ import {
   Clock,
   UserCheck,
   CheckSquare,
+  Zap,
 } from 'lucide-react';
 
 export const ProjectDetailPage: React.FC = () => {
@@ -200,6 +201,45 @@ export const ProjectDetailPage: React.FC = () => {
       await fetchProjectData();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to approve milestone.', 'Approval Error');
+    }
+  };
+
+  const handleOpenDirectPaymentModal = () => {
+    // 1. Pick first unpaid or partially paid milestone
+    const unpaidMs = milestones.find(
+      (m) => m.status !== 'PAID' && (!m.paidMinor || m.paidMinor < m.amountMinor)
+    );
+    if (unpaidMs) {
+      setSelectedMilestone(unpaidMs);
+      setIsPayPalModalOpen(true);
+      return;
+    }
+    if (milestones.length > 0) {
+      setSelectedMilestone(milestones[0]);
+      setIsPayPalModalOpen(true);
+      return;
+    }
+
+    // 2. Fallback milestone for project escrow allocation
+    if (project) {
+      const defaultMs: Milestone = {
+        id: `ms_${project.id}_1`,
+        projectId: project.id,
+        agreementId: project.currentAgreementId || `agr_${project.id}`,
+        title: `${project.title} — Escrow Allocation`,
+        description: 'Project escrow allocation and milestone payment release',
+        amountMinor: project.totalAmountMinor || 50000,
+        paidMinor: 0,
+        currency: project.currency || 'USD',
+        dueDate: new Date().toISOString().split('T')[0],
+        taskIds: [],
+        acceptanceCriteria: [],
+        status: 'IN_PROGRESS',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setSelectedMilestone(defaultMs);
+      setIsPayPalModalOpen(true);
     }
   };
 
@@ -706,6 +746,17 @@ export const ProjectDetailPage: React.FC = () => {
               <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
               <span>Payment Profile</span>
             </button>
+
+            {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+              <button
+                onClick={handleOpenDirectPaymentModal}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-900/40 hover:scale-[1.02]"
+                title="Open payment modal to enter amount or split payment"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-300" />
+                <span>Make a Payment</span>
+              </button>
+            )}
 
             <button
               onClick={handleManualSync}
@@ -1484,9 +1535,21 @@ export const ProjectDetailPage: React.FC = () => {
                   Directly release escrow payments to providers upon verified deliverable approval. All transactions execute via PayPal Orders v2 Sandbox.
                 </p>
               </div>
-              <span className="text-xs font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-800/60 px-3 py-1 rounded-xl">
-                ${settledDollars} of ${agreedBudgetDollars} Released
-              </span>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="text-xs font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-800/60 px-3 py-1 rounded-xl">
+                  ${settledDollars} of ${agreedBudgetDollars} Released
+                </span>
+                {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+                  <button
+                    onClick={handleOpenDirectPaymentModal}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-900/30 transition hover:scale-[1.02]"
+                    title="Open payment modal to enter amount or split payment"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Make a Payment</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {milestones.length > 0 ? (
@@ -1651,12 +1714,23 @@ export const ProjectDetailPage: React.FC = () => {
                 })}
               </div>
             ) : (
-              <div className="p-8 bg-slate-950/60 border border-slate-800 rounded-2xl text-center space-y-3">
-                <CreditCard className="w-8 h-8 text-slate-600 mx-auto" />
-                <h4 className="text-sm font-bold text-slate-300">No Payment Tasks Initialized Yet</h4>
-                <p className="text-xs text-slate-400 max-w-md mx-auto">
-                  Tasks and payment milestones are formed from the agreed Work DNA blueprint.
-                </p>
+              <div className="p-8 bg-slate-950/60 border border-slate-800 rounded-2xl text-center space-y-4">
+                <CreditCard className="w-10 h-10 text-emerald-400 mx-auto animate-pulse" />
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-slate-200">Ready for Payment & Escrow Allocation</h4>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    Deposit project escrow, release a milestone split payment, or initialize simulated sandbox checkout now.
+                  </p>
+                </div>
+                {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+                  <button
+                    onClick={handleOpenDirectPaymentModal}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-xl shadow-emerald-900/40 transition hover:scale-105"
+                  >
+                    <Zap className="w-4 h-4 text-amber-300" />
+                    <span>Make a Payment (${agreedBudgetDollars} USD)</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
