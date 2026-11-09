@@ -187,5 +187,51 @@ describe('Project Creator Permissions, Acceptance, and DB Preservation', () => {
 
     assert.equal(updated.settledAmountMinor, 125000);
   });
+
+  test('supports split task payments and calculates remaining balance accurately', async () => {
+    const splitMsId = 'ms_split_test_' + Date.now();
+    await dbStore.saveMilestone({
+      id: splitMsId,
+      projectId: testProjectId,
+      agreementId: 'agr_split',
+      title: 'Split Deliverable Task',
+      description: 'Task with split payments',
+      amountMinor: 100000,
+      paidMinor: 0,
+      currency: 'USD',
+      status: 'IN_PROGRESS',
+      dueDate: '2026-12-30',
+      acceptanceCriteria: [],
+      taskIds: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const ms = dbStore.milestones.get(splitMsId)!;
+    assert.equal(ms.paidMinor, 0);
+
+    // Pay 40% split ($400.00)
+    const splitPayment1 = 40000;
+    ms.paidMinor = (ms.paidMinor || 0) + splitPayment1;
+    ms.status = 'PARTIALLY_PAID';
+    await dbStore.saveMilestone(ms);
+
+    const afterSplit1 = dbStore.milestones.get(splitMsId)!;
+    assert.equal(afterSplit1.paidMinor, 40000);
+    assert.equal(afterSplit1.status, 'PARTIALLY_PAID');
+    assert.equal(afterSplit1.amountMinor - (afterSplit1.paidMinor || 0), 60000);
+
+    // Pay remaining 60% ($600.00)
+    const splitPayment2 = 60000;
+    ms.paidMinor = (ms.paidMinor || 0) + splitPayment2;
+    if (ms.paidMinor >= ms.amountMinor) {
+      ms.status = 'PAID';
+    }
+    await dbStore.saveMilestone(ms);
+
+    const afterSplit2 = dbStore.milestones.get(splitMsId)!;
+    assert.equal(afterSplit2.paidMinor, 100000);
+    assert.equal(afterSplit2.status, 'PAID');
+  });
 });
 

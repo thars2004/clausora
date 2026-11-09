@@ -9,6 +9,140 @@ import { MilestoneModel, ProjectModel } from '../database/models';
 
 const router = Router();
 
+// POST /api/payments/milestones/:milestoneId/demo-pay - Instant simulated sandbox payment / split payout
+router.post(
+  '/milestones/:milestoneId/demo-pay',
+  authMiddleware,
+  async (req: AuthRequest, res: Response, next) => {
+    try {
+      const { milestoneId } = req.params;
+      const milestone = dbStore.milestones.get(milestoneId);
+
+      if (!milestone) {
+        return res.status(404).json({ success: false, message: 'Milestone or task not found' });
+      }
+
+      const project = dbStore.projects.get(milestone.projectId);
+      const isOwner = project && (project.ownerId === req.user!.id || project.createdBy === req.user!.id);
+      if (req.user!.role !== 'admin' && req.user!.role !== 'client' && !isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'Forbidden: Only the client owner, project creator, or platform admin can pay for tasks.',
+        });
+      }
+
+      const alreadyPaid = milestone.paidMinor || (milestone.status === 'PAID' ? milestone.amountMinor : 0);
+      const remainingMinor = Math.max(0, milestone.amountMinor - alreadyPaid);
+
+      if (remainingMinor <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'This task deliverable is already fully paid and settled.',
+        });
+      }
+
+      const requestedMinor = req.body.amountMinor ? Number(req.body.amountMinor) : remainingMinor;
+      if (isNaN(requestedMinor) || requestedMinor <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Payment amount must be greater than zero.',
+        });
+      }
+
+      const paymentMinor = Math.min(requestedMinor, remainingMinor);
+      const newPaidMinor = alreadyPaid + paymentMinor;
+
+      const captureId = 'CAP_DEMO_' + Math.random().toString(36).substring(2, 9).toUpperCase();
+      const paymentId = 'pay_demo_' + Math.random().toString(36).substring(2, 9);
+      const idempotencyKey = `ord_demo_${milestoneId}_${Date.now()}`;
+
+      const paymentRecord: PaymentRecord = {
+        id: paymentId,
+        projectId: milestone.projectId,
+        milestoneId,
+        payerId: req.user!.id,
+        amountMinor: paymentMinor,
+        currency: milestone.currency,
+        paypalOrderId: `ORDER_DEMO_${Date.now()}`,
+        paypalCaptureId: captureId,
+        status: 'captured',
+        idempotencyKey,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      await dbStore.savePayment(paymentRecord);
+
+      milestone.paidMinor = newPaidMinor;
+      milestone.paypalCaptureId = captureId;
+      if (newPaidMinor >= milestone.amountMinor) {
+        milestone.status = 'PAID';
+      } else {
+        milestone.status = 'PARTIALLY_PAID';
+      }
+      milestone.updatedAt = new Date().toISOString();
+      await dbStore.saveMilestone(milestone);
+
+      // Re-calculate Project overall settled payment in MongoDB Atlas
+      let allProjMilestones = Array.from(dbStore.milestones.values()).filter(
+        (m) => m.projectId === milestone.projectId
+      );
+      if (isDbConnected()) {
+        try {
+          const dbMs: any = await MilestoneModel.find({ projectId: milestone.projectId }).lean();
+          if (dbMs && dbMs.length > 0) {
+            allProjMilestones = dbMs;
+          }
+        } catch {
+          // ignore
+        }
+      }
+      const totalSettledMinor = allProjMilestones
+        .reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0);
+
+      await dbStore.updateProject(milestone.projectId, {
+        settledAmountMinor: totalSettledMinor,
+      });
+
+      dbStore.addAuditEvent({
+        projectId: milestone.projectId,
+        actorId: req.user!.id,
+        actorName: req.user!.name,
+        actorRole: req.user!.role,
+        eventType: 'PAYPAL_PAYMENT_CAPTURED',
+        entityType: 'payment',
+        entityId: paymentId,
+        summary: `Captured split payment of $${(paymentMinor / 100).toFixed(2)} ${milestone.currency} for "${milestone.title}". Balance remaining: $${((milestone.amountMinor - newPaidMinor) / 100).toFixed(2)}. Capture Reference: ${captureId}.`,
+        metadata: { captureId, amountMinor: paymentMinor, newPaidMinor, totalMinor: milestone.amountMinor },
+      });
+
+      await notificationService.send({
+        userId: milestone.approvedBy || req.user!.id,
+        projectId: milestone.projectId,
+        type: 'PAYMENT_CONFIRMED',
+        title: `Payment Released for "${milestone.title}"`,
+        body: `Sandbox payment confirmed ($${(paymentMinor / 100).toFixed(2)} ${milestone.currency}). Capture Reference: ${captureId}.`,
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          payment: paymentRecord,
+          milestone,
+          captureId,
+          amountPaidMinor: paymentMinor,
+          newPaidMinor,
+          remainingMinor: milestone.amountMinor - newPaidMinor,
+          totalSettledMinor,
+        },
+        message: `Successfully released $${(paymentMinor / 100).toFixed(2)} ${milestone.currency} for "${milestone.title}".`,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // POST /api/payments/milestones/:milestoneId/create-order
 router.post(
   '/milestones/:milestoneId/create-order',
@@ -31,23 +165,18 @@ router.post(
         });
       }
 
-      // Ensure milestone is approved for payment
-      if (milestone.status !== 'APPROVED_FOR_PAYMENT') {
+      // Check if previous completed capture exists for full amount
+      const alreadyPaid = milestone.paidMinor || 0;
+      const remainingMinor = Math.max(0, milestone.amountMinor - alreadyPaid);
+      if (remainingMinor <= 0) {
         return res.status(409).json({
           success: false,
-          message: `Milestone must be in APPROVED_FOR_PAYMENT state to initiate checkout. Current status: ${milestone.status}`,
+          message: 'This milestone has already been captured and paid in full.',
         });
       }
 
-      // Check if previous completed capture exists
-      for (const p of dbStore.payments.values()) {
-        if (p.milestoneId === milestoneId && p.status === 'captured') {
-          return res.status(409).json({
-            success: false,
-            message: 'This milestone has already been captured and paid.',
-          });
-        }
-      }
+      const requestedMinor = req.body?.amountMinor ? Number(req.body.amountMinor) : remainingMinor;
+      const orderAmountMinor = Math.min(requestedMinor > 0 ? requestedMinor : remainingMinor, remainingMinor);
 
       // Generate idempotency key
       const idempotencyKey = `ord_${milestoneId}_${Date.now()}`;
@@ -55,9 +184,9 @@ router.post(
       // Create PayPal sandbox order
       const order = await payPalClient.createOrder({
         referenceId: milestone.id,
-        amountMinor: milestone.amountMinor,
+        amountMinor: orderAmountMinor,
         currency: milestone.currency,
-        description: `Clausora Milestone: ${milestone.title}`,
+        description: `Clausora Milestone: ${milestone.title} (Split Amount)`,
       });
 
       const paymentId = 'pay_' + Math.random().toString(36).substring(2, 9);
@@ -68,7 +197,7 @@ router.post(
         projectId: milestone.projectId,
         milestoneId,
         payerId: req.user!.id,
-        amountMinor: milestone.amountMinor,
+        amountMinor: orderAmountMinor,
         currency: milestone.currency,
         paypalOrderId: order.id,
         status: 'order_created',
@@ -94,8 +223,8 @@ router.post(
         eventType: 'PAYPAL_ORDER_CREATED',
         entityType: 'payment',
         entityId: paymentId,
-        summary: `Created PayPal Sandbox Order ${order.id} for $${(milestone.amountMinor / 100).toFixed(2)} ${milestone.currency}.`,
-        metadata: { paypalOrderId: order.id, amountMinor: milestone.amountMinor },
+        summary: `Created PayPal Sandbox Order ${order.id} for $${(orderAmountMinor / 100).toFixed(2)} ${milestone.currency}.`,
+        metadata: { paypalOrderId: order.id, amountMinor: orderAmountMinor },
       });
 
       return res.status(201).json({
@@ -152,8 +281,15 @@ router.post(
         payment.updatedAt = new Date().toISOString();
         await dbStore.savePayment(payment);
 
-        // Transition milestone to PAID
-        milestone.status = 'PAID';
+        // Transition milestone to PAID or PARTIALLY_PAID
+        const previousPaid = milestone.paidMinor || 0;
+        const newPaidMinor = previousPaid + (payment.amountMinor || 0);
+        milestone.paidMinor = newPaidMinor;
+        if (newPaidMinor >= milestone.amountMinor) {
+          milestone.status = 'PAID';
+        } else {
+          milestone.status = 'PARTIALLY_PAID';
+        }
         milestone.paypalCaptureId = captureId;
         milestone.updatedAt = new Date().toISOString();
         await dbStore.saveMilestone(milestone);
@@ -173,8 +309,7 @@ router.post(
           }
         }
         const totalSettledMinor = allProjMilestones
-          .filter((m) => m.status === 'PAID' || m.id === milestone.id)
-          .reduce((sum, m) => sum + (m.amountMinor || 0), 0);
+          .reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0);
 
         await dbStore.updateProject(milestone.projectId, {
           settledAmountMinor: totalSettledMinor,

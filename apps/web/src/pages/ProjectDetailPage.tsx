@@ -566,14 +566,15 @@ export const ProjectDetailPage: React.FC = () => {
 
   const canEditOrDelete = isCreator || user?.role === 'admin';
 
-  // Live calculated payment metrics from actual project milestones
+  // Live calculated payment metrics from actual project milestones (including split payouts)
   const settledMinor = milestones
-    .filter((m) => m.status === 'PAID')
-    .reduce((sum, m) => sum + (m.amountMinor || 0), 0);
+    .reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0);
   const settledDollars = (settledMinor / 100).toFixed(2);
   const agreedBudgetMinor = project.totalAmountMinor || blueprint?.totalBudgetMinor || 0;
   const agreedBudgetDollars = (agreedBudgetMinor / 100).toFixed(2);
-  const paidMilestonesCount = milestones.filter((m) => m.status === 'PAID').length;
+  const paidMilestonesCount = milestones.filter(
+    (m) => m.status === 'PAID' || (m.paidMinor && m.paidMinor >= m.amountMinor)
+  ).length;
 
   return (
     <div className="space-y-6 pb-20 animate-fade-in">
@@ -987,11 +988,17 @@ export const ProjectDetailPage: React.FC = () => {
             {milestones.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {milestones.map((ms, idx) => {
-                  const isPaid = ms.status === 'PAID';
+                  const isPaid = ms.status === 'PAID' || (ms.paidMinor && ms.paidMinor >= ms.amountMinor);
+                  const isPartiallyPaid = (ms.paidMinor && ms.paidMinor > 0 && ms.paidMinor < ms.amountMinor);
                   const isAwaiting = ms.status === 'AWAITING_CLIENT_DECISION';
                   const isApproved = ms.status === 'APPROVED_FOR_PAYMENT';
                   const isSelected = activeSelectedMilestone?.id === ms.id;
-                  const amountDollars = (ms.amountMinor / 100).toFixed(2);
+                  const totalDollars = (ms.amountMinor / 100).toFixed(2);
+                  const paidMinor = ms.paidMinor || (ms.status === 'PAID' ? ms.amountMinor : 0);
+                  const paidDollars = (paidMinor / 100).toFixed(2);
+                  const remainingMinor = Math.max(0, ms.amountMinor - paidMinor);
+                  const remainingDollars = (remainingMinor / 100).toFixed(2);
+                  const percentPaid = ms.amountMinor > 0 ? Math.min(100, Math.round((paidMinor / ms.amountMinor) * 100)) : 0;
 
                   return (
                     <div
@@ -999,6 +1006,8 @@ export const ProjectDetailPage: React.FC = () => {
                       className={`p-6 rounded-2xl border transition text-left flex flex-col justify-between space-y-4 ${
                         isPaid
                           ? 'bg-emerald-950/20 border-emerald-800/60'
+                          : isPartiallyPaid
+                          ? 'bg-amber-950/20 border-amber-700/60'
                           : isAwaiting
                           ? 'bg-slate-900 border-indigo-500/80 shadow-lg shadow-indigo-500/10'
                           : isSelected
@@ -1010,13 +1019,41 @@ export const ProjectDetailPage: React.FC = () => {
                         <div className="flex items-center justify-between">
                           <span className="text-[11px] font-mono text-slate-500">MILESTONE 0{idx + 1}</span>
                           <Badge
-                            variant={isPaid ? 'success' : isAwaiting ? 'ai' : isApproved ? 'paypal' : 'neutral'}
+                            variant={
+                              isPaid
+                                ? 'success'
+                                : isPartiallyPaid
+                                ? 'warning'
+                                : isAwaiting
+                                ? 'ai'
+                                : isApproved
+                                ? 'paypal'
+                                : 'neutral'
+                            }
                           >
-                            {ms.status.replace(/_/g, ' ')}
+                            {isPartiallyPaid
+                              ? `PARTIALLY PAID (${percentPaid}%)`
+                              : ms.status.replace(/_/g, ' ')}
                           </Badge>
                         </div>
                         <h3 className="text-base font-bold text-white">{ms.title}</h3>
                         <p className="text-xs text-slate-400">{ms.description}</p>
+
+                        {/* Split Progress Bar */}
+                        {ms.amountMinor > 0 && (
+                          <div className="space-y-1 pt-1">
+                            <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-300"
+                                style={{ width: `${percentPaid}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                              <span>Paid: <strong className="text-emerald-400">${paidDollars}</strong></span>
+                              <span>Remaining: <strong className="text-white">${remainingDollars}</strong></span>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Payment reference if paid */}
@@ -1024,7 +1061,7 @@ export const ProjectDetailPage: React.FC = () => {
                         <div className="p-3 bg-emerald-950/40 border border-emerald-700/50 rounded-xl font-mono text-xs text-emerald-300 space-y-1">
                           <div className="flex justify-between">
                             <span>PayPal Capture:</span>
-                            <span className="font-bold">{ms.paypalCaptureId}</span>
+                            <span className="font-bold">{ms.paypalCaptureId || 'VERIFIED'}</span>
                           </div>
                           <div className="flex justify-between text-slate-400">
                             <span>Status:</span>
@@ -1038,7 +1075,7 @@ export const ProjectDetailPage: React.FC = () => {
                         <div>
                           <span className="text-[11px] text-slate-500 block">Authorized Value</span>
                           <span className="text-xl font-bold font-mono text-white">
-                            ${amountDollars} <span className="text-xs text-slate-400 font-normal">{ms.currency}</span>
+                            ${totalDollars} <span className="text-xs text-slate-400 font-normal">{ms.currency}</span>
                           </span>
                         </div>
 
@@ -1054,6 +1091,21 @@ export const ProjectDetailPage: React.FC = () => {
                             {isSelected ? '✓ Selected' : 'View Proof'}
                           </button>
 
+                          {/* Pay / Split Payment Button for All Created Tasks */}
+                          {!isPaid && (user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+                            <button
+                              onClick={() => {
+                                setSelectedMilestone(ms);
+                                setIsPayPalModalOpen(true);
+                              }}
+                              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5"
+                              title="Enter custom or split payout amount"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>Pay / Split</span>
+                            </button>
+                          )}
+
                           {ms.status === 'IN_PROGRESS' && user?.role === 'provider' && (
                             <button
                               onClick={() => {
@@ -1068,12 +1120,6 @@ export const ProjectDetailPage: React.FC = () => {
 
                           {isAwaiting && (
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <button
-                                onClick={() => setSelectedMilestone(ms)}
-                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition"
-                              >
-                                Review Evidence
-                              </button>
                               {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
                                 <button
                                   onClick={() => handleDirectMilestoneApprove(ms.id)}
@@ -1446,10 +1492,16 @@ export const ProjectDetailPage: React.FC = () => {
             {milestones.length > 0 ? (
               <div className="space-y-4">
                 {milestones.map((ms, idx) => {
-                  const isPaid = ms.status === 'PAID';
+                  const isPaid = ms.status === 'PAID' || (ms.paidMinor && ms.paidMinor >= ms.amountMinor);
+                  const isPartiallyPaid = (ms.paidMinor && ms.paidMinor > 0 && ms.paidMinor < ms.amountMinor);
                   const isApproved = ms.status === 'APPROVED_FOR_PAYMENT';
                   const isAwaiting = ms.status === 'AWAITING_CLIENT_DECISION';
-                  const msDollars = (ms.amountMinor / 100).toFixed(2);
+                  const totalMsDollars = (ms.amountMinor / 100).toFixed(2);
+                  const paidMsMinor = ms.paidMinor || (ms.status === 'PAID' ? ms.amountMinor : 0);
+                  const paidMsDollars = (paidMsMinor / 100).toFixed(2);
+                  const remainingMsMinor = Math.max(0, ms.amountMinor - paidMsMinor);
+                  const remainingMsDollars = (remainingMsMinor / 100).toFixed(2);
+                  const percentPaid = ms.amountMinor > 0 ? Math.min(100, Math.round((paidMsMinor / ms.amountMinor) * 100)) : 0;
 
                   return (
                     <div
@@ -1457,6 +1509,8 @@ export const ProjectDetailPage: React.FC = () => {
                       className={`p-5 rounded-2xl border transition flex flex-col md:flex-row md:items-center justify-between gap-4 ${
                         isPaid
                           ? 'bg-emerald-950/20 border-emerald-800/60'
+                          : isPartiallyPaid
+                          ? 'bg-amber-950/20 border-amber-700/60 shadow-lg shadow-amber-950/20'
                           : isApproved
                           ? 'bg-blue-950/30 border-[#0070BA]/60 shadow-lg shadow-blue-900/20'
                           : isAwaiting
@@ -1464,36 +1518,84 @@ export const ProjectDetailPage: React.FC = () => {
                           : 'bg-slate-950/60 border-slate-800'
                       }`}
                     >
-                      <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="space-y-2 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">
                             TASK 0{idx + 1}
                           </span>
                           <Badge
-                            variant={isPaid ? 'success' : isApproved ? 'paypal' : isAwaiting ? 'ai' : 'neutral'}
+                            variant={
+                              isPaid
+                                ? 'success'
+                                : isPartiallyPaid
+                                ? 'warning'
+                                : isApproved
+                                ? 'paypal'
+                                : isAwaiting
+                                ? 'ai'
+                                : 'neutral'
+                            }
                           >
-                            {ms.status.replace(/_/g, ' ')}
+                            {isPartiallyPaid
+                              ? `PARTIALLY PAID (${percentPaid}%)`
+                              : ms.status.replace(/_/g, ' ')}
                           </Badge>
                           {isPaid && (
                             <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800/60">
                               Capture ID: {ms.paypalCaptureId || 'VERIFIED'}
                             </span>
                           )}
+                          {isPartiallyPaid && (
+                            <span className="text-[10px] font-mono text-amber-300 bg-amber-950 px-2 py-0.5 rounded border border-amber-800/60">
+                              ${paidMsDollars} of ${totalMsDollars} Paid
+                            </span>
+                          )}
                         </div>
 
                         <h4 className="text-sm font-bold text-white truncate">{ms.title}</h4>
                         <p className="text-xs text-slate-400 line-clamp-1">{ms.description}</p>
+
+                        {/* Split Payment Progress Bar */}
+                        {ms.amountMinor > 0 && (
+                          <div className="w-full max-w-md space-y-1 pt-1">
+                            <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-300"
+                                style={{ width: `${percentPaid}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                              <span>Paid: <strong className="text-emerald-400">${paidMsDollars}</strong></span>
+                              <span>Remaining: <strong className="text-white">${remainingMsDollars}</strong></span>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-5 justify-between md:justify-end shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-800">
                         <div className="text-right font-mono">
                           <span className="text-[10px] text-slate-500 block uppercase">Allocated Escrow</span>
                           <span className="text-lg font-bold text-white">
-                            ${msDollars} <span className="text-xs text-slate-400 font-normal">{ms.currency}</span>
+                            ${totalMsDollars} <span className="text-xs text-slate-400 font-normal">{ms.currency}</span>
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Pay / Split Payment Button for All Created Tasks */}
+                          {!isPaid && (user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+                            <button
+                              onClick={() => {
+                                setSelectedMilestone(ms);
+                                setIsPayPalModalOpen(true);
+                              }}
+                              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition hover:scale-[1.02]"
+                              title="Enter custom or split payout amount"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>Pay / Split Amount</span>
+                            </button>
+                          )}
+
                           {isApproved && (
                             (user?.role === 'client' || user?.role === 'admin' || isOwner) ? (
                               <button
@@ -1501,10 +1603,10 @@ export const ProjectDetailPage: React.FC = () => {
                                   setSelectedMilestone(ms);
                                   setIsPayPalModalOpen(true);
                                 }}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-900/40 transition animate-bounce"
+                                className="flex items-center gap-1.5 px-4 py-2 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-900/40 transition"
                               >
-                                <CreditCard className="w-4 h-4" />
-                                <span>Release PayPal Payout</span>
+                                <CreditCard className="w-3.5 h-3.5" />
+                                <span>PayPal Sandbox</span>
                               </button>
                             ) : (
                               <span className="text-xs font-mono text-amber-300 bg-amber-950/80 px-3 py-1.5 rounded-xl border border-amber-800/50">
@@ -1520,17 +1622,17 @@ export const ProjectDetailPage: React.FC = () => {
                                   setSelectedMilestone(ms);
                                   setTab('milestones');
                                 }}
-                                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition"
+                                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition"
                               >
                                 Review Proof
                               </button>
                               {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
                                 <button
                                   onClick={() => handleDirectMilestoneApprove(ms.id)}
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/30 transition"
+                                  className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/30 transition"
                                 >
                                   <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>Approve for Payout</span>
+                                  <span>Approve Deliverable</span>
                                 </button>
                               )}
                             </div>
@@ -1541,12 +1643,6 @@ export const ProjectDetailPage: React.FC = () => {
                               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                               <span>Paid & Released</span>
                             </div>
-                          )}
-
-                          {!isPaid && !isApproved && !isAwaiting && (
-                            <span className="text-xs font-mono text-slate-400 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
-                              In Execution (Escrow Locked)
-                            </span>
                           )}
                         </div>
                       </div>

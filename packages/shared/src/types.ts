@@ -340,6 +340,7 @@ export type MilestoneStatus =
   | 'PAYPAL_ORDER_CREATED'
   | 'PAYER_APPROVED'
   | 'PAYMENT_CAPTURED'
+  | 'PARTIALLY_PAID'
   | 'PAID'
   | 'CANCELLED'
   | 'DISPUTED';
@@ -351,6 +352,7 @@ export interface Milestone {
   title: string;
   description: string;
   amountMinor: number; // integer minor units
+  paidMinor?: number; // integer minor units paid so far
   currency: string; // e.g. USD
   dueDate: string;
   taskIds: string[];

@@ -44,8 +44,8 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const allMilestones = Array.from(dbStore.milestones.values());
   userProjects.forEach((p) => {
     const paidForProj = allMilestones
-      .filter((m) => m.projectId === p.id && m.status === 'PAID')
-      .reduce((sum, m) => sum + (m.amountMinor || 0), 0);
+      .filter((m) => m.projectId === p.id)
+      .reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0);
     p.settledAmountMinor = paidForProj > 0 ? paidForProj : (p.settledAmountMinor || 0);
   });
 
@@ -273,8 +273,7 @@ router.get('/:projectId', authMiddleware, async (req: AuthRequest, res: Response
 
   // Compute live settled amount
   const settledMinor = milestones
-    .filter((m) => m.status === 'PAID')
-    .reduce((sum, m) => sum + (m.amountMinor || 0), 0);
+    .reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0);
   project.settledAmountMinor = settledMinor;
 
   return res.json({
