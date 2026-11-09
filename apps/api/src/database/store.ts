@@ -98,9 +98,12 @@ class ClausoraLiveStore {
   async saveUser(user: User & { passwordHash: string }): Promise<void> {
     this.users.set(user.id, user);
     if (isDbConnected()) {
-      UserModel.findOneAndUpdate({ id: user.id }, user, { upsert: true }).catch((err) =>
-        console.warn('Atlas UserModel save error:', err.message)
-      );
+      try {
+        await UserModel.findOneAndUpdate({ id: user.id }, user, { upsert: true, new: true });
+        console.log(`✅ [MongoDB Atlas] User saved: ${user.name} (${user.email}, ${user.role})`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas UserModel save error:', err.message);
+      }
     }
   }
 
@@ -108,9 +111,12 @@ class ClausoraLiveStore {
   async saveProject(project: Project & { ownerId: string; providerIds: string[]; sourceAssets: string[] }): Promise<void> {
     this.projects.set(project.id, project);
     if (isDbConnected()) {
-      ProjectModel.findOneAndUpdate({ id: project.id }, project, { upsert: true }).catch((err) =>
-        console.warn('Atlas ProjectModel save error:', err.message)
-      );
+      try {
+        await ProjectModel.findOneAndUpdate({ id: project.id }, project, { upsert: true, new: true });
+        console.log(`✅ [MongoDB Atlas] Project saved: ${project.title} (${project.id})`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas ProjectModel save error:', err.message);
+      }
     }
   }
 
@@ -118,9 +124,12 @@ class ClausoraLiveStore {
   async saveMilestone(milestone: Milestone): Promise<void> {
     this.milestones.set(milestone.id, milestone);
     if (isDbConnected()) {
-      MilestoneModel.findOneAndUpdate({ id: milestone.id }, milestone, { upsert: true }).catch((err) =>
-        console.warn('Atlas MilestoneModel save error:', err.message)
-      );
+      try {
+        await MilestoneModel.findOneAndUpdate({ id: milestone.id }, milestone, { upsert: true, new: true });
+        console.log(`✅ [MongoDB Atlas] Milestone saved: ${milestone.title} (${milestone.id})`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas MilestoneModel save error:', err.message);
+      }
     }
   }
 
@@ -128,9 +137,12 @@ class ClausoraLiveStore {
   async saveAgreement(agreement: Agreement): Promise<void> {
     this.agreements.set(agreement.id, agreement);
     if (isDbConnected()) {
-      AgreementModel.findOneAndUpdate({ id: agreement.id }, agreement, { upsert: true }).catch((err) =>
-        console.warn('Atlas AgreementModel save error:', err.message)
-      );
+      try {
+        await AgreementModel.findOneAndUpdate({ id: agreement.id }, agreement, { upsert: true, new: true });
+        console.log(`✅ [MongoDB Atlas] Agreement saved: v${agreement.version} (${agreement.id})`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas AgreementModel save error:', err.message);
+      }
     }
   }
 
@@ -138,9 +150,12 @@ class ClausoraLiveStore {
   async saveBlueprint(blueprint: WorkBlueprint): Promise<void> {
     this.blueprints.set(blueprint.id, blueprint);
     if (isDbConnected()) {
-      WorkBlueprintModel.findOneAndUpdate({ id: blueprint.id }, blueprint, { upsert: true }).catch((err) =>
-        console.warn('Atlas WorkBlueprintModel save error:', err.message)
-      );
+      try {
+        await WorkBlueprintModel.findOneAndUpdate({ id: blueprint.id }, blueprint, { upsert: true, new: true });
+        console.log(`✅ [MongoDB Atlas] Blueprint saved: ${blueprint.projectTitle} (${blueprint.id})`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas WorkBlueprintModel save error:', err.message);
+      }
     }
   }
 
@@ -148,9 +163,12 @@ class ClausoraLiveStore {
   async saveEvidence(evidence: EvidenceItem): Promise<void> {
     this.evidence.set(evidence.id, evidence);
     if (isDbConnected()) {
-      EvidenceModel.findOneAndUpdate({ id: evidence.id }, evidence, { upsert: true }).catch((err) =>
-        console.warn('Atlas EvidenceModel save error:', err.message)
-      );
+      try {
+        await EvidenceModel.findOneAndUpdate({ id: evidence.id }, evidence, { upsert: true, new: true });
+        console.log(`✅ [MongoDB Atlas] Evidence saved: ${evidence.title} (${evidence.id})`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas EvidenceModel save error:', err.message);
+      }
     }
   }
 
@@ -158,9 +176,12 @@ class ClausoraLiveStore {
   async saveAiReview(review: AiReview): Promise<void> {
     this.aiReviews.set(review.id, review);
     if (isDbConnected()) {
-      AiReviewModel.findOneAndUpdate({ id: review.id }, review, { upsert: true }).catch((err) =>
-        console.warn('Atlas AiReviewModel save error:', err.message)
-      );
+      try {
+        await AiReviewModel.findOneAndUpdate({ id: review.id }, review, { upsert: true, new: true });
+        console.log(`✅ [MongoDB Atlas] AI Review saved: ${review.id}`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas AiReviewModel save error:', err.message);
+      }
     }
   }
 
@@ -168,9 +189,12 @@ class ClausoraLiveStore {
   async saveScopeChange(req: ScopeChangeRequest): Promise<void> {
     this.scopeChangeRequests.set(req.id, req);
     if (isDbConnected()) {
-      ScopeChangeRequestModel.findOneAndUpdate({ id: req.id }, req, { upsert: true }).catch((err) =>
-        console.warn('Atlas ScopeChangeRequestModel save error:', err.message)
-      );
+      try {
+        await ScopeChangeRequestModel.findOneAndUpdate({ id: req.id }, req, { upsert: true, new: true });
+        console.log(`✅ [MongoDB Atlas] Scope Change saved: ${req.id}`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas ScopeChangeRequestModel save error:', err.message);
+      }
     }
   }
 
@@ -178,9 +202,12 @@ class ClausoraLiveStore {
   async savePayment(payment: PaymentRecord): Promise<void> {
     this.payments.set(payment.id, payment);
     if (isDbConnected()) {
-      PaymentModel.findOneAndUpdate({ id: payment.id }, payment, { upsert: true }).catch((err) =>
-        console.warn('Atlas PaymentModel save error:', err.message)
-      );
+      try {
+        await PaymentModel.findOneAndUpdate({ id: payment.id }, payment, { upsert: true, new: true });
+        console.log(`✅ [MongoDB Atlas] Payment saved: ${payment.id}`);
+      } catch (err: any) {
+        console.warn('⚠️ Atlas PaymentModel save error:', err.message);
+      }
     }
   }
 

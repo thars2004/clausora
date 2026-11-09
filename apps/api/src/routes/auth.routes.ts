@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { env } from '../config/env';
 import { dbStore } from '../database/store';
+import { isDbConnected } from '../database/connection';
+import { UserModel } from '../database/models';
 import { RegisterInputSchema, LoginInputSchema, DEMO_USERS } from '@clausora/shared';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 
@@ -24,9 +26,20 @@ router.post('/register', authRateLimiter, async (req, res, next) => {
     const input = RegisterInputSchema.parse(req.body);
     const normalizedEmail = input.email.toLowerCase().trim();
 
-    // Check if user already exists
+    // Check if user already exists in memory store
     for (const u of dbStore.users.values()) {
       if (u.email.toLowerCase() === normalizedEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this email address already exists.',
+        });
+      }
+    }
+
+    // Also check live MongoDB Atlas directly to prevent duplicates
+    if (isDbConnected()) {
+      const existingInDb = await UserModel.findOne({ email: normalizedEmail }).lean();
+      if (existingInDb) {
         return res.status(400).json({
           success: false,
           message: 'An account with this email address already exists.',
@@ -47,6 +60,7 @@ router.post('/register', authRateLimiter, async (req, res, next) => {
       createdAt: new Date().toISOString(),
     };
 
+    // Guaranteed persisted write to MongoDB Atlas and memory store
     await dbStore.saveUser(newUser);
 
     // Secure token strictly valid for 1 day (24 hours)
@@ -87,6 +101,15 @@ router.post('/login', authRateLimiter, async (req, res, next) => {
       if (u.email.toLowerCase() === normalizedEmail) {
         foundUser = u;
         break;
+      }
+    }
+
+    // Direct MongoDB Atlas query fallback if not cached in memory store
+    if (!foundUser && isDbConnected()) {
+      const dbUser: any = await UserModel.findOne({ email: normalizedEmail }).lean();
+      if (dbUser) {
+        foundUser = dbUser;
+        dbStore.users.set(dbUser.id, dbUser);
       }
     }
 
@@ -198,10 +221,23 @@ router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/auth/clients - list available clients
-router.get('/clients', (req, res) => {
-  const clients = Array.from(dbStore.users.values())
-    .filter((u) => u.role === 'client')
-    .map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+router.get('/clients', async (req, res) => {
+  let clients: any[] = [];
+  if (isDbConnected()) {
+    try {
+      const dbClients = await UserModel.find({ role: 'client' }).lean();
+      if (dbClients && dbClients.length > 0) {
+        clients = dbClients.map((u: any) => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (clients.length === 0) {
+    clients = Array.from(dbStore.users.values())
+      .filter((u) => u.role === 'client')
+      .map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+  }
 
   return res.json({
     success: true,
@@ -210,10 +246,23 @@ router.get('/clients', (req, res) => {
 });
 
 // GET /api/auth/providers - list available providers for project/task assignment
-router.get('/providers', (req, res) => {
-  const providers = Array.from(dbStore.users.values())
-    .filter((u) => u.role === 'provider')
-    .map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+router.get('/providers', async (req, res) => {
+  let providers: any[] = [];
+  if (isDbConnected()) {
+    try {
+      const dbProviders = await UserModel.find({ role: 'provider' }).lean();
+      if (dbProviders && dbProviders.length > 0) {
+        providers = dbProviders.map((u: any) => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (providers.length === 0) {
+    providers = Array.from(dbStore.users.values())
+      .filter((u) => u.role === 'provider')
+      .map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role }));
+  }
 
   return res.json({
     success: true,

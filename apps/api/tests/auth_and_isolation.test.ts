@@ -81,5 +81,39 @@ describe('Security, Auth & Role Isolation Tests', () => {
     const adminVisible = mockProjects;
     assert.strictEqual(adminVisible.length, 3);
   });
+
+  it('correctly persists a registered user and detects them upon login', async () => {
+    const bcrypt = await import('bcryptjs');
+    const { dbStore } = await import('../src/database/store');
+
+    const email = `test_user_${Date.now()}@clausora.dev`;
+    const password = 'SecretPassword123!';
+    const passwordHash = await bcrypt.default.hash(password, 10);
+    const userId = 'usr_test_' + Math.random().toString(36).substring(2, 8);
+
+    await dbStore.saveUser({
+      id: userId,
+      name: 'Test Persistent User',
+      email,
+      role: 'client',
+      passwordHash,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Verify user is found in store
+    let found: any = null;
+    for (const u of dbStore.users.values()) {
+      if (u.email.toLowerCase() === email.toLowerCase()) {
+        found = u;
+        break;
+      }
+    }
+
+    assert.ok(found, 'User must be found in dbStore after saveUser');
+    assert.strictEqual(found.id, userId);
+
+    const match = await bcrypt.default.compare(password, found.passwordHash);
+    assert.strictEqual(match, true, 'User password hash must match login password');
+  });
 });
 

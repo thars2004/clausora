@@ -79,3 +79,4 @@ flowchart LR
 6. `apps/web/src/components/workflow/WorkflowVisualizer.tsx`: Expand to visualize requirements, multi-dimensional analysis, subtasks, testable criteria, and quality scores.
 7. `apps/web/src/pages/NewProjectPage.tsx` & `ProjectDetailPage.tsx`: Render the new tabs, quality meters, and clarification modal.
 8. `apps/api/tests/work_dna_engine.test.ts`: Comprehensive test suite testing all phases, edge cases, multilingual processing, financial guardrails, and circular dependency checks.
+
