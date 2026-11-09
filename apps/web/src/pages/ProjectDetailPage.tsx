@@ -1385,350 +1385,161 @@ export const ProjectDetailPage: React.FC = () => {
       )}
 
       {/* ============================================================== */}
-      {/* MODULE: PAYMENT PROFILE, ESCROW & TASK SETTLEMENTS             */}
+      {/* MODULE: PAYMENT & ESCROW SETTLEMENTS                           */}
       {/* ============================================================== */}
       {currentTab === 'payment' && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Financial Status Summary Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-2">
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
-                <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Total Project Value</span>
+        <div className="space-y-4 animate-fade-in">
+          {/* Minimal 3-Metric Financial Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl">
+              <span className="text-[10px] text-slate-500 uppercase font-mono font-bold block">
+                Total Budget
               </span>
-              <div className="text-2xl font-bold font-mono text-white">
+              <div className="text-xl font-bold font-mono text-white mt-1">
                 ${agreedBudgetDollars} <span className="text-xs text-slate-400 font-normal">{project.currency || 'USD'}</span>
               </div>
-              <p className="text-[11px] text-slate-400">Total agreed milestone allocation</p>
             </div>
 
-            <div className="p-5 bg-slate-900/80 border border-emerald-800/60 rounded-2xl space-y-2 bg-emerald-950/20">
-              <span className="text-[11px] text-emerald-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
-                <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Released Payments</span>
+            <div className="p-4 bg-slate-900 border border-emerald-900/40 rounded-2xl bg-emerald-950/10">
+              <span className="text-[10px] text-emerald-400 uppercase font-mono font-bold block">
+                Released / Paid
               </span>
-              <div className="text-2xl font-bold font-mono text-emerald-400">
+              <div className="text-xl font-bold font-mono text-emerald-400 mt-1">
                 ${settledDollars} <span className="text-xs text-slate-400 font-normal">{project.currency || 'USD'}</span>
               </div>
-              <p className="text-[11px] text-emerald-300">
-                {paidMilestonesCount} of {milestones.length} deliverables paid via PayPal Sandbox
-              </p>
             </div>
 
-            <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-2">
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Active Escrow Pool</span>
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl">
+              <span className="text-[10px] text-indigo-400 uppercase font-mono font-bold block">
+                Remaining Due
               </span>
-              <div className="text-2xl font-bold font-mono text-white">
+              <div className="text-xl font-bold font-mono text-white mt-1">
                 ${((Math.max(0, agreedBudgetMinor - settledMinor)) / 100).toFixed(2)}{' '}
                 <span className="text-xs text-slate-400 font-normal">{project.currency || 'USD'}</span>
               </div>
-              <p className="text-[11px] text-slate-400">Locked in escrow for pending tasks</p>
-            </div>
-
-            <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-2">
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />
-                <span>Release Policy</span>
-              </span>
-              <div className="text-xs font-mono font-bold text-purple-300 pt-1">
-                Deterministic Human Authorization
-              </div>
-              <p className="text-[11px] text-slate-400">PayPal Sandbox Orders v2</p>
             </div>
           </div>
 
-          {/* Payment & Escrow Profile Configuration Card */}
-          <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-3xl space-y-5 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-emerald-400" />
-                  <h3 className="text-base font-bold text-white">Project Payment Profile & Escrow Configuration</h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50">
-                    Live Atlas Synced
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Authorized payer account, PayPal Sandbox merchant facilitator, and legal billing specifications.
-                </p>
-              </div>
-
-              <button
-                onClick={openPaymentDetailsModal}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition shrink-0"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                <span>Configure Payment Profile</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-4 bg-slate-950/80 border border-slate-800/80 rounded-2xl space-y-1">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Authorized Payer (PayPal)</span>
-                <p className="text-xs font-mono font-bold text-white truncate" title={project.paymentDetails?.payerEmail || user?.email || 'Not configured'}>
-                  {project.paymentDetails?.payerEmail || user?.email || 'Not configured'}
-                </p>
-                <span className="text-[10px] text-emerald-400">Verified Payer Account</span>
-              </div>
-
-              <div className="p-4 bg-slate-950/80 border border-slate-800/80 rounded-2xl space-y-1">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Merchant Facilitator ID</span>
-                <p className="text-xs font-mono font-bold text-white truncate">
-                  {project.paymentDetails?.paypalMerchantId || 'SANDBOX_MERCHANT_CLAU_2026'}
-                </p>
-                <span className="text-[10px] text-slate-500">PayPal Orders v2 Routing</span>
-              </div>
-
-              <div className="p-4 bg-slate-950/80 border border-slate-800/80 rounded-2xl space-y-1">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Billing Legal Entity</span>
-                <p className="text-xs font-bold text-white truncate">
-                  {project.paymentDetails?.billingName || user?.name || 'Not specified'}
-                </p>
-                <span className="text-[10px] text-slate-500">Tax ID: {project.paymentDetails?.taxId || 'N/A'}</span>
-              </div>
-
-              <div className="p-4 bg-slate-950/80 border border-slate-800/80 rounded-2xl space-y-1">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Settlement Gateway</span>
-                <p className="text-xs font-bold text-emerald-300 flex items-center gap-1.5 capitalize">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>{project.paymentDetails?.paymentMethod?.replace('_', ' ') || 'PayPal Sandbox'}</span>
-                </p>
-                <span className="text-[10px] text-emerald-400/80">Escrow Verification Active</span>
-              </div>
-            </div>
-
-            {project.paymentDetails?.billingAddress && (
-              <div className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl text-xs space-y-0.5">
-                <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Registered Billing Address:</span>
-                <p className="text-slate-300 font-medium">{project.paymentDetails.billingAddress}</p>
-              </div>
-            )}
-
-            <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl space-y-1 text-xs">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-indigo-400 flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5" />
-                <span>Escrow Release Policy & Conditions:</span>
-              </span>
-              <p className="text-slate-300 leading-relaxed">
-                {project.paymentDetails?.escrowTerms ||
-                  'Funds are securely authorized and held in escrow. Payouts are only captured and released to the provider when the client inspects and approves the verified milestone deliverable.'}
-              </p>
-              {project.paymentDetails?.payoutNotes && (
-                <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
-                  <span className="text-slate-500">Special Instructions / Memo:</span> {project.paymentDetails.payoutNotes}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Interactive Pay Created Tasks & Milestones Hub */}
-          <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-3xl space-y-5 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CheckSquare className="w-5 h-5 text-indigo-400" />
-                  <h3 className="text-base font-bold text-white">Pay Created Tasks & Milestone Releases</h3>
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Directly release escrow payments to providers upon verified deliverable approval. All transactions execute via PayPal Orders v2 Sandbox.
-                </p>
-              </div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="text-xs font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-800/60 px-3 py-1 rounded-xl">
-                  ${settledDollars} of ${agreedBudgetDollars} Released
+          {/* Minimal Payer Info Strip */}
+          <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3">
+              <CreditCard className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-slate-400">Payer:</span>
+                <span className="font-mono font-semibold text-white">
+                  {project.paymentDetails?.payerEmail || user?.email || 'Default Sandbox Payer'}
                 </span>
-                {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
-                  <button
-                    onClick={handleOpenDirectPaymentModal}
-                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-900/30 transition hover:scale-[1.02]"
-                    title="Open payment modal to enter amount or split payment"
-                  >
-                    <Zap className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Make a Payment</span>
-                  </button>
-                )}
+                <span className="text-slate-600">•</span>
+                <span className="text-slate-400">Gateway:</span>
+                <span className="text-emerald-400 font-semibold">PayPal Sandbox</span>
               </div>
+            </div>
+
+            <button
+              onClick={openPaymentDetailsModal}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs transition self-start sm:self-auto"
+            >
+              <Pencil className="w-3 h-3" />
+              <span>Edit Details</span>
+            </button>
+          </div>
+
+          {/* Minimal Tasks Payments List */}
+          <div className="p-5 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-3.5 shadow-lg">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-indigo-400" />
+                <span>Task Payments</span>
+              </h3>
+              {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+                <button
+                  onClick={handleOpenDirectPaymentModal}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition"
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Make a Payment</span>
+                </button>
+              )}
             </div>
 
             {milestones.length > 0 ? (
-              <div className="space-y-4">
+              <div className="divide-y divide-slate-800/80">
                 {milestones.map((ms, idx) => {
                   const isPaid = ms.status === 'PAID' || (ms.paidMinor && ms.paidMinor >= ms.amountMinor);
                   const isPartiallyPaid = (ms.paidMinor && ms.paidMinor > 0 && ms.paidMinor < ms.amountMinor);
-                  const isApproved = ms.status === 'APPROVED_FOR_PAYMENT';
-                  const isAwaiting = ms.status === 'AWAITING_CLIENT_DECISION';
                   const totalMsDollars = (ms.amountMinor / 100).toFixed(2);
                   const paidMsMinor = ms.paidMinor || (ms.status === 'PAID' ? ms.amountMinor : 0);
                   const paidMsDollars = (paidMsMinor / 100).toFixed(2);
                   const remainingMsMinor = Math.max(0, ms.amountMinor - paidMsMinor);
                   const remainingMsDollars = (remainingMsMinor / 100).toFixed(2);
-                  const percentPaid = ms.amountMinor > 0 ? Math.min(100, Math.round((paidMsMinor / ms.amountMinor) * 100)) : 0;
 
                   return (
                     <div
                       key={ms.id}
-                      className={`p-5 rounded-2xl border transition flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                        isPaid
-                          ? 'bg-emerald-950/20 border-emerald-800/60'
-                          : isPartiallyPaid
-                          ? 'bg-amber-950/20 border-amber-700/60 shadow-lg shadow-amber-950/20'
-                          : isApproved
-                          ? 'bg-blue-950/30 border-[#0070BA]/60 shadow-lg shadow-blue-900/20'
-                          : isAwaiting
-                          ? 'bg-slate-950/80 border-indigo-500/50'
-                          : 'bg-slate-950/60 border-slate-800'
-                      }`}
+                      className="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
-                      <div className="space-y-2 flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-mono text-slate-500 uppercase font-bold">
-                            TASK 0{idx + 1}
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-slate-500 font-bold uppercase">
+                            0{idx + 1}
                           </span>
+                          <h4 className="text-xs font-semibold text-white truncate">{ms.title}</h4>
                           <Badge
                             variant={
                               isPaid
                                 ? 'success'
                                 : isPartiallyPaid
                                 ? 'warning'
-                                : isApproved
+                                : ms.status === 'APPROVED_FOR_PAYMENT'
                                 ? 'paypal'
-                                : isAwaiting
-                                ? 'ai'
                                 : 'neutral'
                             }
+                            size="sm"
                           >
-                            {isPartiallyPaid
-                              ? `PARTIALLY PAID (${percentPaid}%)`
-                              : ms.status.replace(/_/g, ' ')}
+                            {isPaid ? 'PAID' : isPartiallyPaid ? 'PARTIAL' : ms.status.replace(/_/g, ' ')}
                           </Badge>
-                          {isPaid && (
-                            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800/60">
-                              Capture ID: {ms.paypalCaptureId || 'VERIFIED'}
-                            </span>
-                          )}
-                          {isPartiallyPaid && (
-                            <span className="text-[10px] font-mono text-amber-300 bg-amber-950 px-2 py-0.5 rounded border border-amber-800/60">
-                              ${paidMsDollars} of ${totalMsDollars} Paid
-                            </span>
-                          )}
                         </div>
-
-                        <h4 className="text-sm font-bold text-white truncate">{ms.title}</h4>
-                        <p className="text-xs text-slate-400 line-clamp-1">{ms.description}</p>
-
-                        {/* Split Payment Progress Bar */}
-                        {ms.amountMinor > 0 && (
-                          <div className="w-full max-w-md space-y-1 pt-1">
-                            <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-300"
-                                style={{ width: `${percentPaid}%` }}
-                              />
-                            </div>
-                            <div className="flex justify-between text-[10px] font-mono text-slate-400">
-                              <span>Paid: <strong className="text-emerald-400">${paidMsDollars}</strong></span>
-                              <span>Remaining: <strong className="text-white">${remainingMsDollars}</strong></span>
-                            </div>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-3 text-[11px] font-mono text-slate-400">
+                          <span>Budget: <strong className="text-slate-300">${totalMsDollars}</strong></span>
+                          <span>Paid: <strong className="text-emerald-400">${paidMsDollars}</strong></span>
+                          <span>Due: <strong className="text-white">${remainingMsDollars}</strong></span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-5 justify-between md:justify-end shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-800">
-                        <div className="text-right font-mono">
-                          <span className="text-[10px] text-slate-500 block uppercase">Allocated Escrow</span>
-                          <span className="text-lg font-bold text-white">
-                            ${totalMsDollars} <span className="text-xs text-slate-400 font-normal">{ms.currency}</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isPaid ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-800/60">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Paid</span>
                           </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {/* Pay / Split Payment Button for All Created Tasks */}
-                          {!isPaid && (user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+                        ) : (
+                          (user?.role === 'client' || user?.role === 'admin' || isOwner) && (
                             <button
                               onClick={() => {
                                 setSelectedMilestone(ms);
                                 setIsPayPalModalOpen(true);
                               }}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition hover:scale-[1.02]"
-                              title="Enter custom or split payout amount"
+                              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition"
                             >
-                              <CreditCard className="w-3.5 h-3.5" />
-                              <span>Pay / Split Amount</span>
+                              Pay
                             </button>
-                          )}
-
-                          {isApproved && (
-                            (user?.role === 'client' || user?.role === 'admin' || isOwner) ? (
-                              <button
-                                onClick={() => {
-                                  setSelectedMilestone(ms);
-                                  setIsPayPalModalOpen(true);
-                                }}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-900/40 transition"
-                              >
-                                <CreditCard className="w-3.5 h-3.5" />
-                                <span>PayPal Sandbox</span>
-                              </button>
-                            ) : (
-                              <span className="text-xs font-mono text-amber-300 bg-amber-950/80 px-3 py-1.5 rounded-xl border border-amber-800/50">
-                                Awaiting Client Release
-                              </span>
-                            )
-                          )}
-
-                          {isAwaiting && (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  setSelectedMilestone(ms);
-                                  setTab('milestones');
-                                }}
-                                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition"
-                              >
-                                Review Proof
-                              </button>
-                              {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
-                                <button
-                                  onClick={() => handleDirectMilestoneApprove(ms.id)}
-                                  className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/30 transition"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>Approve Deliverable</span>
-                                </button>
-                              )}
-                            </div>
-                          )}
-
-                          {isPaid && (
-                            <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-950/80 border border-emerald-700/60 text-xs font-semibold text-emerald-300">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                              <span>Paid & Released</span>
-                            </div>
-                          )}
-                        </div>
+                          )
+                        )}
                       </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="p-8 bg-slate-950/60 border border-slate-800 rounded-2xl text-center space-y-4">
-                <CreditCard className="w-10 h-10 text-emerald-400 mx-auto animate-pulse" />
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-slate-200">Ready for Payment & Escrow Allocation</h4>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    Deposit project escrow, release a milestone split payment, or initialize simulated sandbox checkout now.
-                  </p>
-                </div>
+              <div className="p-6 text-center text-xs text-slate-400 space-y-2">
+                <p>No tasks initialized yet.</p>
                 {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
                   <button
                     onClick={handleOpenDirectPaymentModal}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-xl shadow-emerald-900/40 transition hover:scale-105"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition"
                   >
-                    <Zap className="w-4 h-4 text-amber-300" />
-                    <span>Make a Payment (${agreedBudgetDollars} USD)</span>
+                    <Zap className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Pay Escrow (${agreedBudgetDollars} USD)</span>
                   </button>
                 )}
               </div>
