@@ -28,6 +28,8 @@ interface ProjectItem {
   title: string;
   description: string;
   ownerId: string;
+  ownerName?: string;
+  clientName?: string;
   providerIds: string[];
   status: string;
   totalAmountMinor?: number;
@@ -109,15 +111,27 @@ export const ProjectsPage: React.FC = () => {
 
   const getRoleLabel = (p: ProjectItem) => {
     if (user?.role === 'admin') {
-      return { label: 'Admin Access', color: 'bg-amber-950/80 text-amber-300 border-amber-800/50' };
+      return {
+        label: p.ownerName ? `Client: ${p.ownerName}` : 'Admin Access',
+        color: 'bg-amber-950/80 text-amber-300 border-amber-800/50',
+      };
     }
     if (p.ownerId === user?.id) {
-      return { label: 'Owner (Client)', color: 'bg-indigo-950/80 text-indigo-300 border-indigo-800/50' };
+      return {
+        label: `Owner: ${user?.name || 'You'}`,
+        color: 'bg-indigo-950/80 text-indigo-300 border-indigo-800/50',
+      };
     }
     if (p.providerIds && p.providerIds.includes(user?.id || '')) {
-      return { label: 'Assigned Provider', color: 'bg-purple-950/80 text-purple-300 border-purple-800/50' };
+      return {
+        label: p.ownerName ? `Client: ${p.ownerName}` : 'Assigned Provider',
+        color: 'bg-purple-950/80 text-purple-300 border-purple-800/50',
+      };
     }
-    return { label: 'Collaborator', color: 'bg-slate-800 text-slate-300 border-slate-700' };
+    return {
+      label: p.ownerName ? `Client: ${p.ownerName}` : 'Collaborator',
+      color: 'bg-slate-800 text-slate-300 border-slate-700',
+    };
   };
 
   return (
@@ -129,7 +143,7 @@ export const ProjectsPage: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Project Workspaces</h1>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-700/40 text-[11px] text-emerald-300 font-mono">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Live Atlas DB Sync</span>
+              <span>Active & Synced</span>
             </div>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -142,10 +156,10 @@ export const ProjectsPage: React.FC = () => {
             onClick={handleManualSync}
             disabled={syncing}
             className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-xl shadow transition disabled:opacity-60"
-            title="Refresh projects list from MongoDB Atlas"
+            title="Refresh projects list"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-indigo-400' : ''}`} />
-            <span>{syncing ? 'Syncing...' : 'Sync DB'}</span>
+            <span>{syncing ? 'Syncing...' : 'Sync Projects'}</span>
           </button>
 
           {(user?.role === 'client' || user?.role === 'admin') && (
@@ -199,7 +213,7 @@ export const ProjectsPage: React.FC = () => {
       {loading ? (
         <div className="py-24 flex flex-col items-center justify-center space-y-4">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-          <p className="text-xs text-slate-400">Loading your project workspaces from MongoDB Atlas...</p>
+          <p className="text-xs text-slate-400">Loading your project workspaces...</p>
         </div>
       ) : projects.length === 0 ? (
         /* Empty State when user has no projects */

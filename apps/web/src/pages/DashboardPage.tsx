@@ -53,7 +53,7 @@ export const DashboardPage: React.FC = () => {
       }
       setLastSynced(new Date());
       if (isUserInitiated) {
-        toast.info(res.data.message || `Loaded ${res.data.data?.projects?.length || 0} projects from live Atlas database`, 'Dashboard Synced');
+        toast.info(res.data.message || `Loaded ${res.data.data?.projects?.length || 0} active projects`, 'Dashboard Synced');
       }
     } catch (err: any) {
       console.error('Failed to fetch dashboard data:', err);
@@ -96,7 +96,7 @@ export const DashboardPage: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Work Intelligence Dashboard</h1>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-700/40 text-[11px] text-emerald-300 font-mono">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Live Atlas DB Sync</span>
+              <span>Active & Synced</span>
             </div>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -108,10 +108,10 @@ export const DashboardPage: React.FC = () => {
             onClick={handleManualSync}
             disabled={syncing}
             className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-xl shadow transition disabled:opacity-60"
-            title="Refresh from MongoDB Atlas"
+            title="Refresh dashboard metrics"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-indigo-400' : ''}`} />
-            <span>{syncing ? 'Syncing...' : 'Sync DB'}</span>
+            <span>{syncing ? 'Syncing...' : 'Sync Dashboard'}</span>
           </button>
           <Link
             to="/new-project"

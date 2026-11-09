@@ -113,7 +113,7 @@ export const AdminPortalPage: React.FC = () => {
 
       const res = await api.put(`/admin/users/${editingUser.id}`, payload);
       toast.success(
-        res.data.message || `User "${editName}" updated successfully in MongoDB Atlas.`,
+        res.data.message || `User "${editName}" updated successfully.`,
         'User Management'
       );
       setEditingUser(null);
@@ -127,7 +127,7 @@ export const AdminPortalPage: React.FC = () => {
 
   const handleDeleteUser = async (user: any) => {
     const confirmed = window.confirm(
-      `Are you sure you want to permanently delete user "${user.name}" (${user.email})?\n\nThis will remove their account from MongoDB Atlas.`
+      `Are you sure you want to permanently delete user "${user.name}" (${user.email})?\n\nThis will remove their account permanently.`
     );
     if (!confirmed) return;
 
@@ -193,7 +193,7 @@ export const AdminPortalPage: React.FC = () => {
             <Badge variant="warning">Superuser Access</Badge>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/50 text-[10px] text-emerald-300 font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Live Atlas Persisted</span>
+              <span>Active & Verified</span>
             </div>
           </div>
           <p className="text-xs text-slate-400 max-w-xl">
@@ -377,7 +377,7 @@ export const AdminPortalPage: React.FC = () => {
               </div>
               <div className="text-sm font-bold text-emerald-400 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>MongoDB Atlas Online</span>
+                <span>Cloud Cluster Online</span>
               </div>
               <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/80">
                 <span>Auth Boundary:</span>
@@ -435,7 +435,7 @@ export const AdminPortalPage: React.FC = () => {
                       <Users className="w-4 h-4 text-indigo-400" />
                       <span>Recent Platform Accounts</span>
                     </h3>
-                    <p className="text-[11px] text-slate-400">Live synced from MongoDB Atlas cluster</p>
+                    <p className="text-[11px] text-slate-400">Live synced from secure cloud infrastructure</p>
                   </div>
                   <button
                     onClick={() => setActiveTab('users')}
@@ -591,7 +591,7 @@ export const AdminPortalPage: React.FC = () => {
             <div>
               <h3 className="text-sm font-bold text-white">Registered Platform Accounts</h3>
               <p className="text-[11px] text-slate-400">
-                Manage roles, update credentials, or delete users directly from live MongoDB Atlas.
+                Manage roles, update credentials, or manage accounts securely.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -891,7 +891,7 @@ export const AdminPortalPage: React.FC = () => {
             <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs font-mono">
               <div className="flex justify-between">
                 <span className="text-slate-400">Database:</span>
-                <span className="text-emerald-400 font-bold">MongoDB Atlas Live Cluster</span>
+                <span className="text-emerald-400 font-bold">Cloud Cluster (Encrypted & Replicated)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Model:</span>
@@ -984,7 +984,7 @@ export const AdminPortalPage: React.FC = () => {
                 className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-amber-600/20 transition flex items-center gap-1.5 disabled:opacity-50"
               >
                 {savingUser && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                <span>Save to MongoDB Atlas</span>
+                <span>Save Changes</span>
               </button>
             </div>
           </form>

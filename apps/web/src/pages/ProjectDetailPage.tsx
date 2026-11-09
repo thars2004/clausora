@@ -184,7 +184,7 @@ export const ProjectDetailPage: React.FC = () => {
         },
       };
       const res = await api.put(`/projects/${project.id}`, payload);
-      toast.success(res.data.message || 'Payment and escrow details saved to live MongoDB Atlas.', 'Payment Details');
+      toast.success(res.data.message || 'Payment and escrow details saved successfully.', 'Payment Details');
       setIsPaymentDetailsModalOpen(false);
       await fetchProjectData();
     } catch (err: any) {
@@ -280,8 +280,8 @@ export const ProjectDetailPage: React.FC = () => {
 
       if (isUserInitiated) {
         toast.success(
-          res.data.message || `Project Cockpit synchronized with Live Atlas DB: "${pData.title}"`,
-          'Cockpit Synced'
+          res.data.message || `Project Workspace synchronized: "${pData.title}"`,
+          'Workspace Synced'
         );
       }
 
@@ -589,7 +589,7 @@ export const ProjectDetailPage: React.FC = () => {
     return (
       <div className="py-24 flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-        <p className="text-xs text-slate-400">Loading project cockpit & cryptographic state from MongoDB Atlas...</p>
+        <p className="text-xs text-slate-400">Loading project workspace & verified state...</p>
       </div>
     );
   }
@@ -607,8 +607,9 @@ export const ProjectDetailPage: React.FC = () => {
   const canEditOrDelete = isCreator || user?.role === 'admin';
 
   // Live calculated payment metrics from actual project milestones (including split payouts)
-  const settledMinor = milestones
+  const settledMinorFromMilestones = milestones
     .reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0);
+  const settledMinor = Math.max(settledMinorFromMilestones, project?.settledAmountMinor || 0);
   const settledDollars = (settledMinor / 100).toFixed(2);
   const agreedBudgetMinor = project.totalAmountMinor || blueprint?.totalBudgetMinor || 0;
   const agreedBudgetDollars = (agreedBudgetMinor / 100).toFixed(2);
@@ -635,13 +636,15 @@ export const ProjectDetailPage: React.FC = () => {
           <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
             {user?.role === 'admin'
               ? '🛡️ Platform Admin'
+              : isOwner
+              ? `👑 ${user?.name || 'Client Owner'}`
               : isCreator
-              ? '👑 You Created This Project'
+              ? `👑 ${user?.name || 'Project Creator'}`
               : '🤝 Assigned Counterpart'}
           </span>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-700/40 text-[11px] text-emerald-300 font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Live Atlas DB</span>
+            <span>Active & Verified</span>
           </div>
         </div>
       </div>
@@ -710,8 +713,14 @@ export const ProjectDetailPage: React.FC = () => {
               >
                 {project.status === 'awaiting_approval' ? 'Awaiting Acceptance' : project.status}
               </Badge>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-                Created by {isClientCreator ? 'Client' : isProviderCreator ? 'Provider' : 'Admin'}
+              <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-300 flex items-center gap-1.5">
+                <span className="text-slate-400 font-normal">Owner:</span>
+                <strong className="text-white font-semibold">
+                  {project.ownerName || project.clientName || project.paymentDetails?.billingName || (isOwner ? user?.name : 'Client')}
+                </strong>
+                <span className="text-[10px] text-slate-400 font-normal">
+                  ({isClientCreator ? 'Client' : isProviderCreator ? 'Provider' : 'Admin'})
+                </span>
               </span>
             </div>
 
@@ -762,10 +771,10 @@ export const ProjectDetailPage: React.FC = () => {
               onClick={handleManualSync}
               disabled={syncing}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition shadow disabled:opacity-60"
-              title="Synchronize cockpit data from MongoDB Atlas"
+              title="Synchronize project workspace data"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-indigo-400' : ''}`} />
-              <span>{syncing ? 'Syncing...' : 'Sync Atlas'}</span>
+              <span>{syncing ? 'Syncing...' : 'Sync Data'}</span>
             </button>
 
             {canEditOrDelete && (
@@ -1232,7 +1241,7 @@ export const ProjectDetailPage: React.FC = () => {
                   <CreditCard className="w-4 h-4 text-emerald-400" />
                   <h4 className="text-sm font-bold text-white">Payment & Escrow Specifications</h4>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50">
-                    Live Atlas Synced
+                    Escrow Verified
                   </span>
                 </div>
                 <p className="text-xs text-slate-400">
@@ -1944,7 +1953,7 @@ export const ProjectDetailPage: React.FC = () => {
           isOpen={isPaymentDetailsModalOpen}
           onClose={() => setIsPaymentDetailsModalOpen(false)}
           title="Payment & Escrow Specifications"
-          subtitle="Configure PayPal sandbox billing and milestone escrow policies stored directly in MongoDB Atlas."
+          subtitle="Configure PayPal sandbox billing and milestone escrow policies."
           maxWidth="lg"
         >
           <form onSubmit={handleSavePaymentDetails} className="space-y-4">

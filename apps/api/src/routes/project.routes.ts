@@ -40,13 +40,18 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     userProjects = allProjects.filter((p) => p.providerIds && p.providerIds.includes(userId));
   }
 
-  // Populate accurate settledAmountMinor from milestones
+  // Populate accurate settledAmountMinor and client/owner names
   const allMilestones = Array.from(dbStore.milestones.values());
   userProjects.forEach((p) => {
     const paidForProj = allMilestones
       .filter((m) => m.projectId === p.id)
       .reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0);
     p.settledAmountMinor = paidForProj > 0 ? paidForProj : (p.settledAmountMinor || 0);
+
+    const ownerUser = dbStore.findUserById(p.ownerId);
+    const resolvedName = ownerUser?.name || p.paymentDetails?.billingName || (p.ownerId === req.user?.id ? req.user?.name : 'Client');
+    p.ownerName = resolvedName;
+    p.clientName = resolvedName;
   });
 
   return res.json({
@@ -427,6 +432,12 @@ router.get('/:projectId', authMiddleware, async (req: AuthRequest, res: Response
   const settledMinor = milestones
     .reduce((sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)), 0);
   project.settledAmountMinor = settledMinor;
+
+  // Resolve client & owner name
+  const ownerUser = dbStore.findUserById(project.ownerId);
+  const resolvedName = ownerUser?.name || project.paymentDetails?.billingName || (project.ownerId === req.user?.id ? req.user?.name : 'Client');
+  project.ownerName = resolvedName;
+  project.clientName = resolvedName;
 
   return res.json({
     success: true,

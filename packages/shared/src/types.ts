@@ -34,6 +34,8 @@ export interface Project {
   title: string;
   description: string;
   ownerId: string;
+  ownerName?: string;
+  clientName?: string;
   providerIds: string[];
   createdBy?: string;
   creatorRole?: UserRole;

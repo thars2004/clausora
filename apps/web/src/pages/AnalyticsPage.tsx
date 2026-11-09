@@ -57,7 +57,7 @@ export const AnalyticsPage: React.FC = () => {
       const res = await api.get('/admin/analytics');
       setData(res.data.data?.analytics || null);
       if (isManual) {
-        toast.success('Live analytics data synced from MongoDB Atlas.', 'Atlas Synced');
+        toast.success('Live analytics data synced successfully.', 'Analytics Synced');
       }
     } catch (err: any) {
       console.error('Failed to load analytics:', err);
@@ -76,7 +76,7 @@ export const AnalyticsPage: React.FC = () => {
     return (
       <div className="py-24 flex flex-col items-center justify-center space-y-4">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-        <p className="text-xs text-slate-400">Loading comprehensive analytics data from MongoDB Atlas...</p>
+        <p className="text-xs text-slate-400">Loading comprehensive analytics data...</p>
       </div>
     );
   }
@@ -274,7 +274,7 @@ export const AnalyticsPage: React.FC = () => {
             <Activity className="w-4 h-4 text-indigo-400" />
             <span>Platform Intelligence & Settlement Observability</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-emerald-400 font-mono text-[11px]">Live Atlas DB</span>
+            <span className="text-emerald-400 font-mono text-[11px]">Realtime Verified</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Financial & Deliverables Analytics
@@ -325,7 +325,7 @@ export const AnalyticsPage: React.FC = () => {
             onClick={() => fetchAnalytics(true)}
             disabled={refreshing}
             className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-300 hover:text-white transition disabled:opacity-50"
-            title="Refresh from MongoDB Atlas"
+            title="Refresh analytics data"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-indigo-400' : ''}`} />
           </button>
