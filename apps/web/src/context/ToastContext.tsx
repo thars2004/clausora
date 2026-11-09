@@ -34,6 +34,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const showToast = useCallback(
     (message: string, type: ToastType = 'info', title?: string, durationMs: number = 4500) => {
+      // Prevent duplicate toasts with the same message and type within 2.5 seconds
+      let added = false;
       const id = 'toast_' + Math.random().toString(36).substring(2, 9);
       const newToast: ToastMessage = {
         id,
@@ -43,7 +45,17 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         timestamp: new Date(),
       };
 
-      setToasts((prev) => [...prev, newToast]);
+      setToasts((prev) => {
+        const now = Date.now();
+        const hasRecentDuplicate = prev.some(
+          (t) => t.message === message && t.type === type && now - t.timestamp.getTime() < 2500
+        );
+        if (hasRecentDuplicate) {
+          return prev;
+        }
+        added = true;
+        return [...prev, newToast];
+      });
 
       if (durationMs > 0) {
         setTimeout(() => {

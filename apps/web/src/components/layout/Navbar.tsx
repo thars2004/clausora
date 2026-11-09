@@ -114,11 +114,15 @@ export const Navbar: React.FC = () => {
               <div className="text-[10px] font-mono text-slate-400 capitalize">{user.role} role</div>
             </div>
             <button
-              onClick={() => logout().then(() => navigate('/'))}
+              onClick={async () => {
+                await logout();
+                navigate('/login');
+              }}
               title="Logout"
-              className="p-2 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition"
+              className="p-2 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition flex items-center gap-1.5 text-xs"
             >
               <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         ) : (

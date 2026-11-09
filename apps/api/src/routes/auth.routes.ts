@@ -98,7 +98,7 @@ router.post('/login', authRateLimiter, async (req, res, next) => {
 
     let foundUser: any = null;
     for (const u of dbStore.users.values()) {
-      if (u.email.toLowerCase() === normalizedEmail) {
+      if (u.email && u.email.toLowerCase().trim() === normalizedEmail) {
         foundUser = u;
         break;
       }
@@ -106,7 +106,10 @@ router.post('/login', authRateLimiter, async (req, res, next) => {
 
     // Direct MongoDB Atlas query fallback if not cached in memory store
     if (!foundUser && isDbConnected()) {
-      const dbUser: any = await UserModel.findOne({ email: normalizedEmail }).lean();
+      const escaped = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const dbUser: any = await UserModel.findOne({
+        email: { $regex: new RegExp(`^${escaped}$`, 'i') },
+      }).lean();
       if (dbUser) {
         foundUser = dbUser;
         dbStore.users.set(dbUser.id, dbUser);
@@ -114,14 +117,23 @@ router.post('/login', authRateLimiter, async (req, res, next) => {
     }
 
     if (!foundUser) {
+      console.warn(`[Auth Login] User not found for email: ${normalizedEmail}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password credentials.',
       });
     }
 
-    const validPass = await bcrypt.compare(input.password, foundUser.passwordHash);
+    let validPass = false;
+    if (foundUser.passwordHash) {
+      validPass = await bcrypt.compare(input.password, foundUser.passwordHash);
+      if (!validPass && input.password.trim() !== input.password) {
+        validPass = await bcrypt.compare(input.password.trim(), foundUser.passwordHash);
+      }
+    }
+
     if (!validPass) {
+      console.warn(`[Auth Login] Password mismatch for email: ${normalizedEmail}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password credentials.',

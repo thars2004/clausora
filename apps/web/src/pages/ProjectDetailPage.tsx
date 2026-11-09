@@ -40,6 +40,7 @@ import {
   RefreshCw,
   ChevronDown,
   ArrowUpRight,
+  FolderGit2,
 } from 'lucide-react';
 
 export const ProjectDetailPage: React.FC = () => {
@@ -58,6 +59,8 @@ export const ProjectDetailPage: React.FC = () => {
   const [aiReview, setAiReview] = useState<AiReview | null>(null);
   const [scopeRequests, setScopeRequests] = useState<ScopeChangeRequest[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [allUserProjects, setAllUserProjects] = useState<Project[]>([]);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
@@ -103,6 +106,15 @@ export const ProjectDetailPage: React.FC = () => {
       setMilestones(mData || []);
       setAgreements(aData || []);
       setAccessDenied(false);
+
+      // Fetch all projects accessible to current user for the cockpit switcher
+      try {
+        const listRes = await api.get('/projects');
+        const list = listRes.data.data?.projects || [];
+        setAllUserProjects(list);
+      } catch {
+        // ignore
+      }
 
       if (isUserInitiated) {
         toast.success(
@@ -364,12 +376,125 @@ export const ProjectDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-20 animate-fade-in">
+      {/* Workspace Switcher Strip */}
+      {allUserProjects.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-900/90 border border-slate-800 rounded-2xl">
+          <div className="flex items-center gap-2 overflow-x-auto py-0.5">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0 pl-1">
+              <FolderGit2 className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Your Projects:</span>
+            </span>
+
+            {allUserProjects.map((p) => {
+              const isCurrent = p.id === project.id;
+              return (
+                <Link
+                  key={p.id}
+                  to={`/projects/${p.id}`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition ${
+                    isCurrent
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 border border-indigo-500'
+                      : 'bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {isCurrent && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-200" />}
+                  <span className="truncate max-w-[160px] sm:max-w-[200px]">{p.title}</span>
+                  <span
+                    className={`text-[9px] font-mono px-1.5 py-0.2 rounded uppercase ${
+                      isCurrent ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {p.status}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <Link
+              to="/projects"
+              className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-950/60 border border-indigo-800/40 hover:bg-indigo-900/60 transition"
+            >
+              <span>All Projects ({allUserProjects.length})</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </Link>
+            {(user?.role === 'client' || user?.role === 'admin') && (
+              <Link
+                to="/new-project"
+                className="text-[11px] text-white font-medium flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition"
+              >
+                <Plus className="w-3 h-3" />
+                <span>New</span>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Project Header Banner */}
       <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-extrabold text-white">{project.title}</h1>
             <Badge variant="primary">{project.status}</Badge>
+
+            {/* Quick Switch Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowProjectDropdown(!showProjectDropdown)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition"
+              >
+                <FolderGit2 className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Workspaces ({allUserProjects.length})</span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
+
+              {showProjectDropdown && (
+                <div className="absolute left-0 mt-2 w-72 sm:w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 space-y-1">
+                  <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-slate-400 flex items-center justify-between border-b border-slate-800">
+                    <span>Select Workspace</span>
+                    <span className="font-mono">{allUserProjects.length} total</span>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto space-y-1 py-1">
+                    {allUserProjects.map((p) => {
+                      const isCurrent = p.id === project.id;
+                      return (
+                        <Link
+                          key={p.id}
+                          to={`/projects/${p.id}`}
+                          onClick={() => setShowProjectDropdown(false)}
+                          className={`block p-2.5 rounded-xl text-left transition ${
+                            isCurrent
+                              ? 'bg-indigo-600/20 border border-indigo-500/50 text-indigo-300'
+                              : 'hover:bg-slate-800/80 text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-xs font-semibold">
+                            <span className="truncate max-w-[200px]">{p.title}</span>
+                            <span className="text-[10px] font-mono capitalize text-slate-400">{p.status}</span>
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-500 mt-0.5 truncate">
+                            ID: {p.id}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  <div className="pt-1.5 border-t border-slate-800 flex items-center justify-between px-2 text-[11px]">
+                    <Link
+                      to="/projects"
+                      onClick={() => setShowProjectDropdown(false)}
+                      className="text-indigo-400 hover:underline font-medium"
+                    >
+                      Manage All Projects →
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-700/40 text-[10px] text-emerald-300 font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>Live Atlas DB</span>

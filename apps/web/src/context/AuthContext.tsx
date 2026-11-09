@@ -32,15 +32,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (err) {
           localStorage.removeItem('clausora_token');
           localStorage.removeItem('clausora_user');
+          delete api.defaults.headers.common['Authorization'];
           setUser(null);
         }
       } else {
-        // Auto-seed initial client for immediate preview if not logged in
-        try {
-          await switchPersona('client');
-        } catch {
-          // ignore
-        }
+        setUser(null);
       }
       setLoading(false);
     }
@@ -48,19 +44,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, pass: string) => {
-    const res = await api.post('/auth/login', { email, password: pass });
+    const res = await api.post('/auth/login', { email: email.trim(), password: pass });
     const { user: userData, token } = res.data.data;
     setUser(userData);
     localStorage.setItem('clausora_token', token);
     localStorage.setItem('clausora_user', JSON.stringify(userData));
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   };
 
   const register = async (name: string, email: string, pass: string, role: UserRole) => {
-    const res = await api.post('/auth/register', { name, email, password: pass, role });
+    const res = await api.post('/auth/register', { name: name.trim(), email: email.trim(), password: pass, role });
     const { user: userData, token } = res.data.data;
     setUser(userData);
     localStorage.setItem('clausora_token', token);
     localStorage.setItem('clausora_user', JSON.stringify(userData));
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   };
 
   const logout = async () => {
@@ -72,6 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     localStorage.removeItem('clausora_token');
     localStorage.removeItem('clausora_user');
+    delete api.defaults.headers.common['Authorization'];
   };
 
   const switchPersona = async (persona: 'client' | 'provider' | 'admin') => {

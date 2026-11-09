@@ -34,7 +34,7 @@ export const DashboardPage: React.FC = () => {
     totalCount: totalProjectsCount,
   } = useScrollPagination(projects, { pageSize: 6 });
 
-  async function fetchData(isBackground = false) {
+  async function fetchData(isBackground = false, isUserInitiated = false) {
     try {
       if (!isBackground) setLoading(true);
       const res = await api.get('/projects');
@@ -52,13 +52,13 @@ export const DashboardPage: React.FC = () => {
         setAuditEvents([]);
       }
       setLastSynced(new Date());
-      if (!isBackground) {
-        toast.info(res.data.message || `Loaded ${res.data.data?.projects?.length || 0} projects from live Atlas database`);
+      if (isUserInitiated) {
+        toast.info(res.data.message || `Loaded ${res.data.data?.projects?.length || 0} projects from live Atlas database`, 'Dashboard Synced');
       }
     } catch (err: any) {
       console.error('Failed to fetch dashboard data:', err);
-      if (!isBackground) {
-        toast.error(err.response?.data?.message || 'Failed to sync live project data');
+      if (isUserInitiated) {
+        toast.error(err.response?.data?.message || 'Failed to sync live project data', 'Sync Error');
       }
     } finally {
       if (!isBackground) setLoading(false);
@@ -66,11 +66,11 @@ export const DashboardPage: React.FC = () => {
   }
 
   useEffect(() => {
-    fetchData();
+    fetchData(false, false);
 
     // 10-second live polling interval for real-time live database synchronization
     const timer = setInterval(() => {
-      fetchData(true);
+      fetchData(true, false);
     }, 10000);
 
     return () => {
@@ -80,7 +80,7 @@ export const DashboardPage: React.FC = () => {
 
   const handleManualSync = async () => {
     setSyncing(true);
-    await fetchData(false);
+    await fetchData(false, true);
     setSyncing(false);
   };
 

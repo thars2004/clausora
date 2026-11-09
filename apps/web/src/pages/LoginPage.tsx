@@ -42,6 +42,20 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const fillCredentials = (role: 'client' | 'provider' | 'admin') => {
+    if (role === 'client') {
+      setEmail(DEMO_USERS.CLIENT.email);
+      setPassword(DEMO_USERS.CLIENT.password);
+    } else if (role === 'provider') {
+      setEmail(DEMO_USERS.PROVIDER.email);
+      setPassword(DEMO_USERS.PROVIDER.password);
+    } else {
+      setEmail(DEMO_USERS.ADMIN.email);
+      setPassword(DEMO_USERS.ADMIN.password);
+    }
+    setError('');
+  };
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="w-full max-w-md p-8 bg-[#111827] border border-slate-800 rounded-3xl shadow-2xl space-y-6">
@@ -85,6 +99,34 @@ export const LoginPage: React.FC = () => {
               className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
               required
             />
+          </div>
+
+          {/* Quick autofill pills */}
+          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+            <span>Fill credentials:</span>
+            <div className="flex gap-1.5 font-mono">
+              <button
+                type="button"
+                onClick={() => fillCredentials('client')}
+                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded transition text-[10px]"
+              >
+                Client
+              </button>
+              <button
+                type="button"
+                onClick={() => fillCredentials('provider')}
+                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-purple-300 rounded transition text-[10px]"
+              >
+                Provider
+              </button>
+              <button
+                type="button"
+                onClick={() => fillCredentials('admin')}
+                className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded transition text-[10px]"
+              >
+                Admin
+              </button>
+            </div>
           </div>
 
           <button
