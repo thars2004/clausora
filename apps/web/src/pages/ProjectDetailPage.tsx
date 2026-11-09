@@ -564,6 +564,14 @@ export const ProjectDetailPage: React.FC = () => {
 
   const canEditOrDelete = isCreator || user?.role === 'admin';
 
+  // Live calculated payment metrics from actual project milestones
+  const settledMinor = milestones
+    .filter((m) => m.status === 'PAID')
+    .reduce((sum, m) => sum + (m.amountMinor || 0), 0);
+  const settledDollars = (settledMinor / 100).toFixed(2);
+  const agreedBudgetMinor = project.totalAmountMinor || blueprint?.totalBudgetMinor || 0;
+  const paidMilestonesCount = milestones.filter((m) => m.status === 'PAID').length;
+
   return (
     <div className="space-y-6 pb-20 animate-fade-in">
       {/* Top Breadcrumbs & Identity Bar */}
@@ -786,14 +794,23 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
 
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-1">
-            <span className="text-[11px] text-slate-400 flex items-center gap-1.5 uppercase tracking-wider font-medium">
-              <CreditCard className="w-3.5 h-3.5 text-blue-400" />
-              <span>PayPal Releases</span>
-            </span>
-            <div className="text-xl font-bold text-emerald-400 font-mono">
-              $400.00 <span className="text-xs text-slate-400 font-normal">USD</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 flex items-center gap-1.5 uppercase tracking-wider font-medium">
+                <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
+                <span>PayPal Settled</span>
+              </span>
+              <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/40 font-semibold">
+                {paidMilestonesCount} of {milestones.length} Paid
+              </span>
             </div>
-            <p className="text-[10px] text-emerald-400/80">Sandbox capture verified</p>
+            <div className="text-xl font-bold text-emerald-400 font-mono">
+              ${settledDollars} <span className="text-xs text-slate-400 font-normal">{project.currency || 'USD'}</span>
+            </div>
+            <p className="text-[10px] text-emerald-400/80">
+              {agreedBudgetMinor > 0
+                ? `${Math.round((settledMinor / agreedBudgetMinor) * 100)}% of total budget released`
+                : 'Sandbox capture verified'}
+            </p>
           </div>
 
           <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-1">

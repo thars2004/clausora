@@ -143,5 +143,49 @@ describe('Project Creator Permissions, Acceptance, and DB Preservation', () => {
     assert.equal(updated.paymentDetails.paymentMethod, 'paypal_sandbox');
     assert.equal(updated.paymentDetails.escrowTerms, 'Funds released upon client verification of milestone acceptance criteria.');
   });
+
+  test('updates project settledAmountMinor when milestone payments are marked PAID', async () => {
+    const ms1Id = 'ms_test_paid_1_' + Date.now();
+    const ms2Id = 'ms_test_paid_2_' + Date.now();
+
+    await dbStore.saveMilestone({
+      id: ms1Id,
+      projectId: testProjectId,
+      agreementId: 'agr_1',
+      title: 'Milestone 1',
+      description: 'First deliverable',
+      amountMinor: 50000,
+      currency: 'USD',
+      status: 'PAID',
+      dueDate: '2026-12-01',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    await dbStore.saveMilestone({
+      id: ms2Id,
+      projectId: testProjectId,
+      agreementId: 'agr_1',
+      title: 'Milestone 2',
+      description: 'Second deliverable',
+      amountMinor: 75000,
+      currency: 'USD',
+      status: 'PAID',
+      dueDate: '2026-12-15',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const projectMilestones = Array.from(dbStore.milestones.values()).filter(
+      (m) => m.projectId === testProjectId && m.status === 'PAID'
+    );
+    const totalSettled = projectMilestones.reduce((sum, m) => sum + (m.amountMinor || 0), 0);
+
+    const updated = await dbStore.updateProject(testProjectId, {
+      settledAmountMinor: totalSettled,
+    });
+
+    assert.equal(updated.settledAmountMinor, 125000);
+  });
 });
 

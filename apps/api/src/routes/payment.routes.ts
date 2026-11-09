@@ -4,6 +4,8 @@ import { dbStore } from '../database/store';
 import { payPalClient } from '../services/paypal/paypal.client';
 import { PaymentRecord, MilestoneStatus } from '@clausora/shared';
 import { notificationService } from '../services/notifications/notification.service';
+import { isDbConnected } from '../database/connection';
+import { MilestoneModel, ProjectModel } from '../database/models';
 
 const router = Router();
 
@@ -155,6 +157,28 @@ router.post(
         milestone.paypalCaptureId = captureId;
         milestone.updatedAt = new Date().toISOString();
         await dbStore.saveMilestone(milestone);
+
+        // Update Project overall settled payment in MongoDB Atlas
+        let allProjMilestones = Array.from(dbStore.milestones.values()).filter(
+          (m) => m.projectId === milestone.projectId
+        );
+        if (isDbConnected()) {
+          try {
+            const dbMs: any = await MilestoneModel.find({ projectId: milestone.projectId }).lean();
+            if (dbMs && dbMs.length > 0) {
+              allProjMilestones = dbMs;
+            }
+          } catch {
+            // ignore
+          }
+        }
+        const totalSettledMinor = allProjMilestones
+          .filter((m) => m.status === 'PAID' || m.id === milestone.id)
+          .reduce((sum, m) => sum + (m.amountMinor || 0), 0);
+
+        await dbStore.updateProject(milestone.projectId, {
+          settledAmountMinor: totalSettledMinor,
+        });
 
         dbStore.addAuditEvent({
           projectId: milestone.projectId,

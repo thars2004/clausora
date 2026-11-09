@@ -44,6 +44,7 @@ export interface Project {
   currentAgreementId: string;
   deadline?: string;
   totalAmountMinor?: number;
+  settledAmountMinor?: number;
   currency?: string;
   paymentDetails?: ProjectPaymentDetails;
   workflowDiagram?: string;

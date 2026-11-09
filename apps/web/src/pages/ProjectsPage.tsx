@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Clock,
   Filter,
+  CreditCard,
 } from 'lucide-react';
 
 interface ProjectItem {
@@ -30,6 +31,7 @@ interface ProjectItem {
   providerIds: string[];
   status: string;
   totalAmountMinor?: number;
+  settledAmountMinor?: number;
   deadline?: string;
   currency?: string;
   currentAgreementId?: string;
@@ -283,14 +285,21 @@ export const ProjectsPage: React.FC = () => {
 
                   {/* Financial & Delivery Details */}
                   <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-3 text-slate-400 font-mono text-[11px]">
+                    <div className="flex items-center gap-3 text-slate-400 font-mono text-[11px] flex-wrap">
                       {p.totalAmountMinor ? (
-                        <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                          <DollarSign className="w-3.5 h-3.5" />
-                          ${(p.totalAmountMinor / 100).toFixed(2)} {p.currency || 'USD'}
+                        <span className="text-slate-200 font-semibold flex items-center gap-1">
+                          <DollarSign className="w-3.5 h-3.5 text-slate-400" />
+                          <span>${(p.totalAmountMinor / 100).toFixed(2)} {p.currency || 'USD'}</span>
                         </span>
                       ) : (
                         <span className="text-slate-500">Budget: Pending</span>
+                      )}
+
+                      {p.settledAmountMinor !== undefined && p.settledAmountMinor > 0 && (
+                        <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>Paid: ${(p.settledAmountMinor / 100).toFixed(2)}</span>
+                        </span>
                       )}
 
                       {p.deadline && (

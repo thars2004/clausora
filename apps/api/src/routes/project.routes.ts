@@ -40,6 +40,15 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     userProjects = allProjects.filter((p) => p.providerIds && p.providerIds.includes(userId));
   }
 
+  // Populate accurate settledAmountMinor from milestones
+  const allMilestones = Array.from(dbStore.milestones.values());
+  userProjects.forEach((p) => {
+    const paidForProj = allMilestones
+      .filter((m) => m.projectId === p.id && m.status === 'PAID')
+      .reduce((sum, m) => sum + (m.amountMinor || 0), 0);
+    p.settledAmountMinor = paidForProj > 0 ? paidForProj : (p.settledAmountMinor || 0);
+  });
+
   return res.json({
     success: true,
     data: { projects: userProjects },
@@ -261,6 +270,12 @@ router.get('/:projectId', authMiddleware, async (req: AuthRequest, res: Response
       // ignore
     }
   }
+
+  // Compute live settled amount
+  const settledMinor = milestones
+    .filter((m) => m.status === 'PAID')
+    .reduce((sum, m) => sum + (m.amountMinor || 0), 0);
+  project.settledAmountMinor = settledMinor;
 
   return res.json({
     success: true,

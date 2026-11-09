@@ -39,6 +39,7 @@ const ProjectSchema = new Schema(
     currentAgreementId: { type: String, default: '' },
     deadline: { type: String },
     totalAmountMinor: { type: Number },
+    settledAmountMinor: { type: Number, default: 0 },
     currency: { type: String, default: 'USD' },
     paymentDetails: { type: Schema.Types.Mixed, default: {} },
     workflowDiagram: { type: String },

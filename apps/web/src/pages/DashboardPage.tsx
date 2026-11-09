@@ -84,6 +84,9 @@ export const DashboardPage: React.FC = () => {
     setSyncing(false);
   };
 
+  const totalSettledMinor = projects.reduce((sum, p) => sum + (p.settledAmountMinor || 0), 0);
+  const totalSettledDollars = (totalSettledMinor / 100).toFixed(2);
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header & Quick Action */}
@@ -136,7 +139,9 @@ export const DashboardPage: React.FC = () => {
             <span className="text-xs font-medium uppercase tracking-wider">Milestones Released</span>
             <CreditCard className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl font-bold text-emerald-400 font-mono">$400.00 <span className="text-xs text-slate-400 font-normal">USD</span></div>
+          <div className="text-2xl font-bold text-emerald-400 font-mono">
+            ${totalSettledDollars} <span className="text-xs text-slate-400 font-normal">USD</span>
+          </div>
           <p className="text-[11px] text-emerald-400/80">Verified on PayPal Sandbox</p>
         </div>
 
