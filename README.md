@@ -155,15 +155,17 @@ All tests run natively using Node.js test runner with zero extra test-harness ov
 
 ---
 
-## 👥 Hackathon Judge & Evaluator Credentials
+## 👥 3-Role Architecture & Credentials (1-Click Fast Pass)
 
-Clausora includes 1-click **Fast-Pass buttons** directly on the Login page and top Navbar so evaluators can switch personas without typing passwords:
+Clausora includes 1-click **Fast-Pass buttons** directly on the Login page, Landing page, and Navbar to instantly switch roles with secure 1-day JWT tokens:
 
-| Persona | Role | Email | Password |
-|---|---|---|---|
-| **Sarah Chen** | Client / Approver | `client@clausora.dev` | `ClausoraClient2026!` |
-| **Alex Rivera** | Service Provider / Developer | `provider@clausora.dev` | `ClausoraDev2026!` |
-| **Evaluator** | Judge / Reviewer | `judge@paypalhackathon.com` | `JudgeDemo2026!` |
+| Persona | Role | Email | Password | Scope & Authority |
+|---|---|---|---|---|
+| **Sarah Chen** | `client` | `client@clausora.dev` | `Password123!` | Approves deliverables, requests revisions, initiates PayPal Sandbox payments for owned projects. |
+| **Alex Rivera** | `provider` | `provider@clausora.dev` | `Password123!` | Submits deliverable evidence, code artifacts, and inspects assigned tasks. |
+| **Marcus Vance** | `admin` | `admin@clausora.dev` | `Password123!` | System-wide admin portal: user roster, global tasks master, PayPal settlement ledger, live telemetry. |
+
+> **Security & Tenant Isolation Guarantee**: Clients strictly see and manage only their own projects. Providers strictly see and submit to their assigned tasks. Platform administrators have comprehensive monitoring access across all tenants. All data is continuously synchronized with **MongoDB Atlas**.
 
 ---
 
