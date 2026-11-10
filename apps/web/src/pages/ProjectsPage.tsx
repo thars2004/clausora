@@ -193,7 +193,7 @@ export const ProjectsPage: React.FC = () => {
           <span className="text-[11px] text-slate-400 mr-1 flex items-center gap-1">
             <Filter className="w-3 h-3 text-slate-500" /> Status:
           </span>
-          {['all', 'active', 'draft', 'completed'].map((st) => (
+          {['all', 'active', 'awaiting_approval', 'draft', 'completed'].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
@@ -203,7 +203,7 @@ export const ProjectsPage: React.FC = () => {
                   : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
             >
-              {st}
+              {st === 'awaiting_approval' ? 'Awaiting Acceptance' : st}
             </button>
           ))}
         </div>
@@ -282,8 +282,17 @@ export const ProjectsPage: React.FC = () => {
                           >
                             {roleInfo.label}
                           </span>
-                          <Badge variant={p.status === 'active' ? 'primary' : 'neutral'} size="sm">
-                            {p.status}
+                          <Badge
+                            variant={
+                              p.status === 'active'
+                                ? 'primary'
+                                : p.status === 'awaiting_approval'
+                                ? 'warning'
+                                : 'neutral'
+                            }
+                            size="sm"
+                          >
+                            {p.status === 'awaiting_approval' ? 'Awaiting Acceptance' : p.status}
                           </Badge>
                           <span className="text-[10px] font-mono text-slate-500">
                             ID: {p.id}

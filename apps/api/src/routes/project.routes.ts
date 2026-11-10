@@ -6,9 +6,11 @@ import { ProjectModel, WorkBlueprintModel, MilestoneModel, AgreementModel } from
 import { CreateProjectInputSchema, Project } from '@clausora/shared';
 import { hfClient } from '../services/ai/huggingface.client';
 import { storageService } from '../services/storage/storage.service';
+import { NotificationService } from '../services/notifications/notification.service';
 import multer from 'multer';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const notificationService = new NotificationService();
 const router = Router();
 
 // GET /api/projects - role-isolated project listing with live Atlas DB sync
@@ -625,7 +627,7 @@ router.get('/:projectId/activity', authMiddleware, (req: AuthRequest, res: Respo
   });
 });
 
-// POST /api/projects/:projectId/accept - Counterpart accepts the project proposal
+// POST /api/projects/:projectId/accept - Opponent counterpart accepts and activates the project proposal
 router.post('/:projectId/accept', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { projectId } = req.params;
   const userId = req.user!.id;
@@ -639,24 +641,65 @@ router.post('/:projectId/accept', authMiddleware, async (req: AuthRequest, res: 
     return res.status(404).json({ success: false, message: 'Project not found.' });
   }
 
-  // Permission check:
-  // Task owner (client), project creator, assigned provider, or admin can accept and activate the project proposal
-  const isOwner = project.ownerId === userId;
-  const isCreator = project.createdBy === userId;
-  const isAssignedProvider = project.providerIds && (project.providerIds.includes(userId) || project.providerIds.length === 0);
-  const canAccept = userRole === 'admin' || isOwner || isCreator || isAssignedProvider || userRole === 'client' || userRole === 'provider';
+  if (project.status === 'active') {
+    return res.status(400).json({
+      success: false,
+      message: 'This project proposal has already been accepted and is currently active.',
+    });
+  }
 
-  if (!canAccept) {
+  // Strict Bilateral Rule:
+  // If the project is created by 1 user, the OPPONENT client or provider must review, approve, and activate the project.
+  // The creator CANNOT approve their own proposal!
+  const isCreator = project.createdBy === userId;
+
+  if (isCreator && userRole !== 'admin') {
+    const isClientCreator = project.creatorRole === 'client' || (!project.creatorRole && project.ownerId === project.createdBy);
+    const counterpartRole = isClientCreator ? 'assigned Provider' : 'Client owner';
     return res.status(403).json({
       success: false,
-      message: 'Forbidden: Only the task owner, assigned provider, or platform admin has authorization to accept this project proposal.',
+      message: `Forbidden: As the creator of this project proposal, you cannot self-approve. The opponent ${counterpartRole} must review and accept the project to activate it.`,
     });
+  }
+
+  // Determine authorized opponent counterpart
+  const isCreatedByClient = project.creatorRole === 'client' || (!project.creatorRole && project.createdBy === project.ownerId);
+  const isCreatedByProvider = project.creatorRole === 'provider' || (!isCreatedByClient && project.createdBy !== project.ownerId);
+
+  let isAuthorizedOpponent = false;
+  if (userRole === 'admin') {
+    isAuthorizedOpponent = true;
+  } else if (isCreatedByClient) {
+    // Project was created by Client -> Opponent MUST be Provider
+    isAuthorizedOpponent =
+      userRole === 'provider' ||
+      (project.providerIds && (project.providerIds.includes(userId) || project.providerIds.length === 0)) ||
+      project.assignedProviderId === userId;
+  } else if (isCreatedByProvider) {
+    // Project was created by Provider -> Opponent MUST be Client Owner
+    isAuthorizedOpponent =
+      (userRole === 'client' && (project.ownerId === userId || !project.ownerId)) ||
+      project.ownerId === userId;
+  }
+
+  if (!isAuthorizedOpponent) {
+    const requiredRole = isCreatedByClient ? 'assigned Provider' : 'Client owner';
+    return res.status(403).json({
+      success: false,
+      message: `Forbidden: Only the opponent ${requiredRole} has authorization to accept and activate this project proposal.`,
+    });
+  }
+
+  const providerIds = project.providerIds || [];
+  if (userRole === 'provider' && !providerIds.includes(userId)) {
+    providerIds.push(userId);
   }
 
   const updated = await dbStore.updateProject(projectId, {
     status: 'active',
     acceptedBy: userId,
     acceptedAt: new Date().toISOString(),
+    providerIds,
   });
 
   dbStore.addAuditEvent({
@@ -667,13 +710,96 @@ router.post('/:projectId/accept', authMiddleware, async (req: AuthRequest, res: 
     eventType: 'PROJECT_ACCEPTED',
     entityType: 'project',
     entityId: projectId,
-    summary: `Project "${project.title}" was officially accepted and activated by ${req.user!.name} (${userRole}).`,
+    summary: `Project "${project.title}" was approved and activated by opponent counterpart ${req.user!.name} (${userRole}).`,
   });
+
+  // Notify creator that their proposal was accepted
+  const recipientId = project.createdBy || project.ownerId;
+  if (recipientId && recipientId !== userId) {
+    await notificationService.send({
+      userId: recipientId,
+      projectId,
+      type: 'PROJECT_ACCEPTED' as any,
+      title: 'Project Proposal Accepted!',
+      body: `${req.user!.name} (${userRole}) has accepted and activated "${project.title}". Work and escrow releases are now active.`,
+    });
+  }
 
   return res.json({
     success: true,
     data: { project: updated },
     message: `Project proposal successfully accepted! Status is now ACTIVE.`,
+  });
+});
+
+// POST /api/projects/:projectId/close - Close project after full payment settlement
+router.post('/:projectId/close', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { projectId } = req.params;
+  const userId = req.user!.id;
+  const userRole = req.user!.role;
+
+  let project: any = dbStore.projects.get(projectId);
+  if (!project && isDbConnected()) {
+    project = await ProjectModel.findOne({ id: projectId }).lean();
+  }
+  if (!project) {
+    return res.status(404).json({ success: false, message: 'Project not found.' });
+  }
+
+  // Permission: Client owner, creator, assigned provider or admin can close
+  const isCreatorOrOwner = project.createdBy === userId || project.ownerId === userId;
+  const isAssignedProvider = project.providerIds && project.providerIds.includes(userId);
+  if (!isCreatorOrOwner && !isAssignedProvider && userRole !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Forbidden: You do not have permission to close this project.',
+    });
+  }
+
+  if (project.status === 'completed') {
+    return res.status(400).json({
+      success: false,
+      message: 'Project is already closed and finalized.',
+    });
+  }
+
+  // Verify full payment condition
+  const allMilestones = Array.from(dbStore.milestones.values()).filter((m) => m.projectId === projectId);
+  const totalSettledMinor = allMilestones.reduce(
+    (sum, m) => sum + (m.paidMinor || (m.status === 'PAID' ? m.amountMinor : 0)),
+    0
+  );
+  const totalBudgetMinor = project.totalAmountMinor || 0;
+  const isFullyPaid =
+    (totalBudgetMinor > 0 && totalSettledMinor >= totalBudgetMinor) ||
+    (allMilestones.length > 0 && allMilestones.every((m) => m.status === 'PAID' || (m.paidMinor && m.paidMinor >= m.amountMinor)));
+
+  if (!isFullyPaid && userRole !== 'admin') {
+    return res.status(400).json({
+      success: false,
+      message: `Cannot close project: Full payment settlement required before closure. Settled: $${(totalSettledMinor / 100).toFixed(2)} USD of $${(totalBudgetMinor / 100).toFixed(2)} USD.`,
+    });
+  }
+
+  const updated = await dbStore.updateProject(projectId, {
+    status: 'completed',
+  });
+
+  dbStore.addAuditEvent({
+    projectId,
+    actorId: userId,
+    actorName: req.user!.name,
+    actorRole: userRole,
+    eventType: 'PROJECT_COMPLETED',
+    entityType: 'project',
+    entityId: projectId,
+    summary: `Project "${project.title}" closed and marked COMPLETED by ${req.user!.name} (${userRole}) following full escrow payment settlement.`,
+  });
+
+  return res.json({
+    success: true,
+    data: { project: updated },
+    message: `Project "${project.title}" has been successfully closed and finalized.`,
   });
 });
 
@@ -806,6 +932,9 @@ router.post('/:projectId/tasks', authMiddleware, async (req: AuthRequest, res: R
       version: 1,
       projectTitle: project.title,
       projectSummary: project.description,
+      detectedProjectType: 'web_app',
+      missingInformation: [],
+      aiModel: 'meta-llama/Llama-3-70b-instruct',
       assumptions: [],
       risks: [],
       clarifyingQuestions: [],
@@ -989,6 +1118,22 @@ router.patch('/:projectId/tasks/:taskId', authMiddleware, async (req: AuthReques
     return res.status(404).json({ success: false, message: 'Project not found.' });
   }
 
+  if (project.status === 'awaiting_approval') {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot update task progress: Project proposal is awaiting counterpart acceptance. The project must be approved and activated before task progress can be recorded.',
+      reason: 'Project proposal must be accepted and activated first before task progress can be updated.',
+    });
+  }
+
+  if (project.status === 'completed' || (project.status as string) === 'closed') {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot modify task: Project is completed and closed. All task statuses and workstreams are permanently locked for audit integrity.',
+      reason: 'Closed project tasks are immutable.',
+    });
+  }
+
   const blueprints = Array.from(dbStore.blueprints.values()).filter((b) => b.projectId === projectId);
   const blueprint = blueprints[blueprints.length - 1];
   if (!blueprint) {
@@ -1010,13 +1155,22 @@ router.patch('/:projectId/tasks/:taskId', authMiddleware, async (req: AuthReques
     return res.status(404).json({ success: false, message: `Task ${taskId} not found in project blueprint.` });
   }
 
-  if (newStatus) {
-    foundTask.status = newStatus;
-  }
-
   // Find corresponding milestone
   const milestones = Array.from(dbStore.milestones.values()).filter((m) => m.projectId === projectId);
   const affectedMilestone = milestones.find((m) => m.taskIds && m.taskIds.includes(taskId));
+
+  // If milestone is already PAID, protect against reversion
+  if (affectedMilestone && affectedMilestone.status === 'PAID' && newStatus !== 'done') {
+    return res.status(409).json({
+      success: false,
+      message: `Cannot revert task '${foundTask.title}' to '${newStatus}': Associated milestone deliverable '${affectedMilestone.title}' has already been paid and settled via PayPal Sandbox.`,
+      reason: `Associated milestone deliverable '${affectedMilestone.title}' is already PAID and settled. Tasks cannot be reverted away from done.`,
+    });
+  }
+
+  if (newStatus) {
+    foundTask.status = newStatus;
+  }
 
   if (affectedMilestone) {
     // If task is submitted, milestone transitions to SUBMITTED if not already paid

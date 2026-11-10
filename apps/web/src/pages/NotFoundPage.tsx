@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Logo } from '../components/common/Logo';
 import {
   Sparkles,
   Compass,
@@ -25,16 +26,8 @@ export const NotFoundPage: React.FC = () => {
 
       {/* Top Brand Bar */}
       <header className="w-full max-w-5xl flex items-center justify-between py-4">
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-lg text-white tracking-tight">CLAUSORA</span>
-            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 font-semibold">
-              AI + PayPal
-            </span>
-          </div>
+        <Link to="/" className="flex items-center">
+          <Logo showTagline={false} />
         </Link>
 
         <div className="flex items-center gap-2 text-xs">

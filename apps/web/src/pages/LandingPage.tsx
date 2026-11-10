@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Badge } from '../components/common/Badge';
+import { Logo } from '../components/common/Logo';
 import {
   Sparkles,
   ArrowRight,
@@ -42,16 +43,8 @@ export const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex flex-col selection:bg-indigo-600 selection:text-white">
       {/* Sleek Landing Header */}
       <header className="h-16 border-b border-slate-800/80 bg-[#0B0F19]/80 backdrop-blur-md sticky top-0 z-40 px-4 md:px-8 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-lg text-white tracking-tight">CLAUSORA</span>
-            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 font-semibold">
-              AI + PayPal
-            </span>
-          </div>
+        <Link to="/" className="flex items-center">
+          <Logo showTagline={false} />
         </Link>
 
         <div className="flex items-center gap-3">

@@ -59,9 +59,9 @@ export const Modal: React.FC<ModalProps> = ({
         className={`relative w-full my-auto ${maxWidthClass} bg-[#111827] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden transition-all`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-900/60 sticky top-0 z-10">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800/80 bg-slate-900/60 sticky top-0 z-10">
           <div>
-            <h3 className="text-lg font-semibold text-slate-100">{title}</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-slate-100">{title}</h3>
             {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
           </div>
           <button
@@ -73,7 +73,7 @@ export const Modal: React.FC<ModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6 max-h-[calc(85vh-5rem)] overflow-y-auto">{children}</div>
+        <div className="p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto">{children}</div>
       </div>
     </div>
   );

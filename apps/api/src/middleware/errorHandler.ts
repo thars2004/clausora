@@ -23,12 +23,14 @@ export function errorHandler(
 
   const statusCode = err.status || err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
+  const reason = err.reason || message;
 
   console.error(`[Error] [${requestId}] ${req.method} ${req.url}:`, err);
 
   return res.status(statusCode).json({
     success: false,
     message,
+    reason,
     requestId,
   });
 }

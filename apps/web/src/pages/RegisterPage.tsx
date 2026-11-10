@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '@clausora/shared';
-import { Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { LogoIcon } from '../components/common/Logo';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -32,9 +33,9 @@ export const RegisterPage: React.FC = () => {
     <div className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="w-full max-w-md p-8 bg-[#111827] border border-slate-800 rounded-3xl shadow-2xl space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 bg-indigo-600/20 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto border border-indigo-500/30">
-            <Sparkles className="w-6 h-6" />
-          </div>
+          <Link to="/" className="inline-block group">
+            <LogoIcon className="w-14 h-14 mx-auto group-hover:scale-105 transition duration-200 drop-shadow-xl" />
+          </Link>
           <h2 className="text-2xl font-extrabold text-white">Create Clausora Account</h2>
           <p className="text-xs text-slate-400">
             Turn briefs into verifiable deliverables and milestone payouts.

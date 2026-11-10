@@ -109,6 +109,10 @@ export const ProjectDetailPage: React.FC = () => {
   const [accessDeniedMessage, setAccessDeniedMessage] = useState('');
   const [accessibleProjects, setAccessibleProjects] = useState<any[]>([]);
 
+  // Close project state
+  const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+  const [closingProject, setClosingProject] = useState(false);
+
   // Active milestone for evidence review / checkout
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
   const activeSelectedMilestone = selectedMilestone || (milestones.length > 0 ? milestones[0] : null);
@@ -499,7 +503,8 @@ export const ProjectDetailPage: React.FC = () => {
       );
       await fetchProjectData();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to update task progress.', 'Update Error');
+      const reason = err.response?.data?.reason || err.response?.data?.message || 'Failed to update task progress.';
+      toast.error(reason, 'Status Change Blocked');
     }
   };
 
@@ -510,7 +515,8 @@ export const ProjectDetailPage: React.FC = () => {
       toast.info(res.data.message || 'Milestone submitted for Work DNA review and client decision.', 'Milestone Submitted');
       await fetchProjectData();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to submit milestone for review.', 'Submission Error');
+      const reason = err.response?.data?.reason || err.response?.data?.message || 'Failed to submit milestone for review.';
+      toast.error(reason, 'Submission Blocked');
     }
   };
 
@@ -523,21 +529,8 @@ export const ProjectDetailPage: React.FC = () => {
       await fetchProjectData();
       setIsPayPalModalOpen(true);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to approve milestone.', 'Approval Error');
-    }
-  };
-
-  // Client requests revision
-  const handleRequestRevision = async () => {
-    if (!selectedMilestone) return;
-    const notes = prompt('Enter revision feedback for provider:');
-    if (!notes) return;
-    try {
-      const res = await api.post(`/milestones/${selectedMilestone.id}/request-revision`, { revisionNotes: notes });
-      toast.warning(res.data.message || 'Milestone revision requested. Provider notified.', 'Revision Requested');
-      await fetchProjectData();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to request revision.', 'Revision Error');
+      const reason = err.response?.data?.reason || err.response?.data?.message || 'Failed to approve milestone.';
+      toast.error(reason, 'Approval Blocked');
     }
   };
 
@@ -572,6 +565,22 @@ export const ProjectDetailPage: React.FC = () => {
       toast.error(err.response?.data?.message || 'Failed to accept project proposal.', 'Acceptance Error');
     } finally {
       setAcceptingProject(false);
+    }
+  };
+
+  // Close project handler after full payment settlement
+  const handleCloseProject = async () => {
+    if (!project) return;
+    setClosingProject(true);
+    try {
+      const res = await api.post(`/projects/${project.id}/close`);
+      toast.success(res.data.message || 'Project successfully closed and finalized!', 'Project Closed');
+      await fetchProjectData(false, false);
+      setIsCloseModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to close project.', 'Closure Error');
+    } finally {
+      setClosingProject(false);
     }
   };
 
@@ -710,12 +719,19 @@ export const ProjectDetailPage: React.FC = () => {
   const latestAgreement = agreements[agreements.length - 1];
 
   const isPendingAcceptance = project.status === 'awaiting_approval' || project.status === 'draft';
-  const isClientCreator = project.creatorRole === 'client' || (!project.creatorRole && project.ownerId === project.createdBy);
-  const isProviderCreator = project.creatorRole === 'provider';
   const isOwner = project.ownerId === user?.id;
-  const isCreator = project.createdBy === user?.id || isOwner;
-  const isAssignedProvider = project.providerIds?.includes(user?.id || '') || (user?.role === 'provider');
-  const canAcceptProject = isPendingAcceptance && (user?.role === 'admin' || isOwner || isCreator || isAssignedProvider || user?.role === 'client');
+  const isCreator = project.createdBy === user?.id || (!project.createdBy && isOwner);
+  const isClientCreator = project.creatorRole === 'client' || (!project.creatorRole && project.ownerId === project.createdBy);
+  const isProviderCreator = project.creatorRole === 'provider' || (!isClientCreator && project.createdBy !== project.ownerId);
+
+  // Strictly enforce bilateral counterpart rule:
+  // The creator CANNOT approve their own proposal!
+  // Opponent must review and activate:
+  // - If client-created: assigned provider must accept
+  // - If provider-created: client owner must accept
+  const isOpponentProvider = isClientCreator && !isCreator && (user?.role === 'provider' || project.providerIds?.includes(user?.id || '') || project.assignedProviderId === user?.id);
+  const isOpponentClient = isProviderCreator && !isCreator && (isOwner || user?.role === 'client');
+  const canAcceptProject = isPendingAcceptance && !isCreator && (user?.role === 'admin' || isOpponentProvider || isOpponentClient);
 
   const canEditOrDelete = isCreator || user?.role === 'admin';
 
@@ -729,6 +745,11 @@ export const ProjectDetailPage: React.FC = () => {
   const paidMilestonesCount = milestones.filter(
     (m) => m.status === 'PAID' || (m.paidMinor && m.paidMinor >= m.amountMinor)
   ).length;
+
+  const isProjectClosed = project?.status === 'completed' || (project?.status as string) === 'closed';
+  const isFullyPaid =
+    (agreedBudgetMinor > 0 && settledMinor >= agreedBudgetMinor) ||
+    (milestones.length > 0 && milestones.every((m) => m.status === 'PAID' || (m.paidMinor && m.paidMinor >= m.amountMinor)));
 
   return (
     <div className="space-y-6 pb-20 animate-fade-in">
@@ -763,115 +784,141 @@ export const ProjectDetailPage: React.FC = () => {
       </div>
 
       {/* Project Hero Banner */}
-      <div className="bg-[#111827] border border-slate-800 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{project.title}</h1>
-              <Badge
-                variant={
-                  project.status === 'active'
-                    ? 'success'
-                    : project.status === 'awaiting_approval'
-                    ? 'warning'
-                    : 'primary'
-                }
-              >
-                {project.status === 'awaiting_approval' ? 'Awaiting Acceptance' : project.status}
-              </Badge>
-              <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-300 flex items-center gap-1.5">
-                <span className="text-slate-400 font-normal">Owner:</span>
-                <strong className="text-white font-semibold">
-                  {project.ownerName || project.clientName || project.paymentDetails?.billingName || (isOwner ? user?.name : 'Client')}
-                </strong>
-                <span className="text-[10px] text-slate-400 font-normal">
-                  ({isClientCreator ? 'Client' : isProviderCreator ? 'Provider' : 'Client'})
-                </span>
-              </span>
-              <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-lg bg-purple-950/60 border border-purple-800/50 text-purple-200 flex items-center gap-1.5">
-                <span className="text-purple-400 font-normal">Assigned Provider:</span>
-                <strong className="text-white font-semibold">
-                  {project.assignedProviderName || 'Alex Rivera (Rivera Tech)'}
-                </strong>
-                <span className="text-[10px] text-purple-400 font-normal">(Provider)</span>
-              </span>
+      <div className="bg-[#111827] border border-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl relative overflow-hidden">
+        {/* Title & Status Badge Header */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+            {project.title}
+          </h1>
+          <Badge
+            variant={
+              project.status === 'active'
+                ? 'success'
+                : project.status === 'awaiting_approval'
+                ? 'warning'
+                : project.status === 'completed'
+                ? 'success'
+                : 'primary'
+            }
+          >
+            {project.status === 'awaiting_approval' ? 'Awaiting Acceptance' : project.status}
+          </Badge>
+        </div>
+
+        {/* Action Buttons Row (Placed directly below title) */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {isPendingAcceptance && canAcceptProject && (
+            <button
+              onClick={handleAcceptProject}
+              disabled={acceptingProject}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/30 disabled:opacity-50"
+              title="Approve and activate this project"
+            >
+              {acceptingProject ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ThumbsUp className="w-3.5 h-3.5" />}
+              <span>Approve & Activate</span>
+            </button>
+          )}
+
+          {isFullyPaid && !isProjectClosed && (
+            <button
+              onClick={() => setIsCloseModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-900/40 border border-emerald-400/40 hover:scale-[1.02]"
+              title="All milestone payments settled. Close and finalize this project."
+            >
+              <CheckCircle2 className="w-4 h-4 text-white" />
+              <span>Close Project</span>
+            </button>
+          )}
+
+          {isProjectClosed && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-600/50 text-emerald-300 text-xs font-bold font-mono">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Project Completed & Closed</span>
             </div>
+          )}
 
-            <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
-              {project.description || 'No detailed scope description provided.'}
-            </p>
+          <button
+            onClick={() => setTab('payment')}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition border ${
+              currentTab === 'payment'
+                ? 'bg-[#0070BA] text-white border-blue-400 shadow-md shadow-blue-900/30'
+                : 'bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/40 text-blue-300'
+            }`}
+            title="Open Payment Profile & Escrow releases tab"
+          >
+            <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+            <span>Payment Profile</span>
+          </button>
+
+          {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+            <button
+              onClick={handleOpenDirectPaymentModal}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold transition shadow-lg shadow-purple-900/40 border border-purple-400/30 hover:scale-[1.02]"
+              title="Open payment modal to enter amount or full payout"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-300" />
+              <span>Make a Payment</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleManualSync}
+            disabled={syncing}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition shadow disabled:opacity-60"
+            title="Synchronize project workspace data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-indigo-400' : ''}`} />
+            <span>{syncing ? 'Syncing...' : 'Sync Data'}</span>
+          </button>
+
+          {canEditOrDelete && (
+            <>
+              <button
+                onClick={openEditModal}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+                title="Edit project details"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>Edit</span>
+              </button>
+
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 text-xs font-semibold text-rose-300 transition"
+                title="Delete project"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Stakeholder Identity Badges & Scope Description */}
+        <div className="pt-2 border-t border-slate-800/80 space-y-2">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-slate-300 flex items-center gap-1.5">
+              <span className="text-slate-400 font-normal">Owner:</span>
+              <strong className="text-white font-semibold">
+                {project.ownerName || project.clientName || project.paymentDetails?.billingName || (isOwner ? user?.name : 'Client')}
+              </strong>
+              <span className="text-[10px] text-slate-400 font-normal">
+                ({isClientCreator ? 'Client' : isProviderCreator ? 'Provider' : 'Client'})
+              </span>
+            </span>
+
+            <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-purple-950/60 border border-purple-800/50 text-purple-200 flex items-center gap-1.5">
+              <span className="text-purple-400 font-normal">Assigned Provider:</span>
+              <strong className="text-white font-semibold">
+                {project.assignedProviderName || 'Alex Rivera (Rivera Tech)'}
+              </strong>
+              <span className="text-[10px] text-purple-400 font-normal">(Provider)</span>
+            </span>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 flex-wrap shrink-0">
-            {isPendingAcceptance && canAcceptProject && (
-              <button
-                onClick={handleAcceptProject}
-                disabled={acceptingProject}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/30 disabled:opacity-50"
-                title="Approve and activate this project"
-              >
-                {acceptingProject ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ThumbsUp className="w-3.5 h-3.5" />}
-                <span>Approve & Activate</span>
-              </button>
-            )}
-
-            <button
-              onClick={() => setTab('payment')}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition border ${
-                currentTab === 'payment'
-                  ? 'bg-[#0070BA] text-white border-blue-400 shadow-md shadow-blue-900/30'
-                  : 'bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/40 text-blue-300'
-              }`}
-              title="Open Payment Profile & Escrow releases tab"
-            >
-              <CreditCard className="w-3.5 h-3.5 text-blue-400" />
-              <span>Payment Profile</span>
-            </button>
-
-            {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
-              <button
-                onClick={handleOpenDirectPaymentModal}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold transition shadow-lg shadow-purple-900/40 border border-purple-400/30 hover:scale-[1.02]"
-                title="Open payment modal to enter amount or full payout"
-              >
-                <Zap className="w-3.5 h-3.5 text-amber-300" />
-                <span>Make a Payment</span>
-              </button>
-            )}
-
-            <button
-              onClick={handleManualSync}
-              disabled={syncing}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition shadow disabled:opacity-60"
-              title="Synchronize project workspace data"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin text-indigo-400' : ''}`} />
-              <span>{syncing ? 'Syncing...' : 'Sync Data'}</span>
-            </button>
-
-            {canEditOrDelete && (
-              <>
-                <button
-                  onClick={openEditModal}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
-                  title="Edit project details"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  <span>Edit</span>
-                </button>
-
-                <button
-                  onClick={() => setIsDeleteModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 text-xs font-semibold text-rose-300 transition"
-                  title="Delete project"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete</span>
-                </button>
-              </>
-            )}
-          </div>
+          <p className="text-xs sm:text-sm text-slate-300 max-w-4xl leading-relaxed">
+            {project.description || 'No detailed scope description provided.'}
+          </p>
         </div>
 
         {/* Dynamic Acceptance Banner */}
@@ -885,38 +932,67 @@ export const ProjectDetailPage: React.FC = () => {
                     <h4 className="text-sm font-bold text-white">Project Proposal Awaiting Your Acceptance</h4>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
-                    {isOwner
-                      ? 'You are the project owner. Review the proposed deliverables and blueprint below. Click to approve and activate the project.'
-                      : isClientCreator
-                      ? 'The Client created this project and proposed the deliverables. Review the scope and click below to accept and activate the project.'
-                      : 'The Provider submitted this project proposal. Accept the proposal to authorize deliverables and enable PayPal milestone releases.'}
+                    {isOpponentClient
+                      ? 'The Provider submitted this project proposal. Review the deliverables and blueprint below, then click to approve and activate the project.'
+                      : 'The Client created this project and proposed the deliverables. Review the scope and click below to accept and activate the project as the assigned Provider.'}
                   </p>
                 </div>
                 <button
                   onClick={handleAcceptProject}
                   disabled={acceptingProject}
-                  className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition shrink-0 disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition shrink-0 disabled:opacity-50 hover:scale-[1.02]"
                 >
                   {acceptingProject ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />}
                   <span>Accept & Activate Project</span>
                 </button>
               </div>
             ) : (
-              <div className="p-4 bg-slate-900/90 border border-amber-700/50 rounded-2xl flex items-center justify-between gap-4">
+              <div className="p-4 bg-slate-900/90 border border-amber-700/50 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
                 <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-amber-400 shrink-0" />
+                  <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 shrink-0">
+                    <Clock className="w-5 h-5 text-amber-400" />
+                  </div>
                   <div>
-                    <h5 className="text-xs font-bold text-amber-300">Proposal Pending Counterpart Review</h5>
-                    <p className="text-[11px] text-slate-400">
-                      You created this project proposal. Waiting for the {isClientCreator ? 'assigned Provider' : 'Client owner'} to accept the terms before work begins.
+                    <h5 className="text-xs font-bold text-amber-300">Proposal Pending Counterpart Review & Acceptance</h5>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      You created this project proposal. To preserve bilateral integrity, the opponent {isClientCreator ? 'assigned Provider' : 'Client owner'} must review and accept the scope to activate the project.
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-amber-950/80 text-amber-400 border border-amber-800/50 uppercase font-semibold shrink-0">
-                  Pending Acceptance
+                <span className="text-[10px] font-mono px-3 py-1.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-700/60 uppercase font-bold tracking-wider shrink-0 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  Awaiting Opponent Acceptance
                 </span>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Full Settlement Ready-to-Close Banner */}
+        {isFullyPaid && !isProjectClosed && (
+          <div className="pt-2">
+            <div className="p-5 bg-gradient-to-r from-emerald-950/60 via-teal-950/50 to-slate-900 border border-emerald-500/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                  <h4 className="text-sm font-bold text-white">Full Escrow Payment Settled (100%)</h4>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold uppercase">
+                    Ready to Close
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
+                  All project milestones have been fully paid (${settledDollars} USD). Every deliverable proof has been inspected and settled. You can now officially close and finalize this project.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCloseModalOpen(true)}
+                disabled={closingProject}
+                className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition shrink-0 hover:scale-[1.02]"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Close Project</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -1077,22 +1153,6 @@ export const ProjectDetailPage: React.FC = () => {
             <Shield className="w-4 h-4" />
             <span>Trust & Security Audit ({auditEvents.length})</span>
           </button>
-        </div>
-
-        {/* Quick Dropdown Module Switcher */}
-        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-          <span className="text-[11px] text-slate-500 font-mono hidden md:inline">Module:</span>
-          <select
-            value={currentTab}
-            onChange={(e) => setTab(e.target.value)}
-            className="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 font-medium focus:outline-none focus:border-indigo-500"
-          >
-            <option value="milestones">📋 Milestones Roadmap ({milestones.length})</option>
-            <option value="payment">💳 Payment Profile & Escrow (${settledDollars} / ${agreedBudgetDollars})</option>
-            <option value="dna">🧬 Work DNA Pipeline</option>
-            <option value="drift">📡 Scope Drift Radar ({scopeRequests.length})</option>
-            <option value="audit">🛡️ Trust & Security Audit ({auditEvents.length})</option>
-          </select>
         </div>
       </div>
 
@@ -1414,7 +1474,6 @@ export const ProjectDetailPage: React.FC = () => {
                 evidenceItems={evidenceItems}
                 aiReview={aiReview}
                 onApprove={handleApproveMilestone}
-                onRequestRevision={handleRequestRevision}
                 canApprove={user?.role === 'client' || user?.role === 'admin' || isOwner}
               />
 
@@ -1471,6 +1530,19 @@ export const ProjectDetailPage: React.FC = () => {
       {/* ============================================================== */}
       {currentTab === 'payment' && (
         <div className="space-y-4 animate-fade-in">
+          {/* Pending Acceptance Notice */}
+          {isPendingAcceptance && (
+            <div className="p-4 bg-amber-950/40 border border-amber-600/50 rounded-2xl flex items-center gap-3 text-amber-300 text-xs shadow-md">
+              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <span className="font-bold block text-amber-200">Escrow Payouts Locked: Proposal Pending Counterpart Acceptance</span>
+                <span className="text-[11px] text-amber-300/80 mt-0.5 block">
+                  This project proposal must be reviewed and accepted by the opponent {isClientCreator ? 'assigned Provider' : 'Client owner'} before escrow funds and PayPal checkout can be authorized.
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Minimal 3-Metric Financial Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl">
@@ -1720,9 +1792,22 @@ export const ProjectDetailPage: React.FC = () => {
                                   </span>
                                   <select
                                     value={t.status || 'todo'}
+                                    disabled={isProjectClosed || ms.status === 'PAID' || isPendingAcceptance}
                                     onChange={(e) => handleUpdateTaskStatus(t.id, e.target.value)}
-                                    className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-teal-300 font-semibold focus:outline-none cursor-pointer hover:border-slate-500 transition"
-                                    title="Update task progress (synchronizes milestone)"
+                                    className={`text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-teal-300 font-semibold focus:outline-none transition ${
+                                      isProjectClosed || ms.status === 'PAID' || isPendingAcceptance
+                                        ? 'opacity-60 cursor-not-allowed text-slate-500'
+                                        : 'cursor-pointer hover:border-slate-500'
+                                    }`}
+                                    title={
+                                      isProjectClosed
+                                        ? 'Status locked: Project is completed and closed.'
+                                        : ms.status === 'PAID'
+                                        ? 'Status locked: Associated deliverable milestone is already paid and settled.'
+                                        : isPendingAcceptance
+                                        ? 'Status locked: Project proposal must be accepted and activated first.'
+                                        : 'Update task progress (synchronizes milestone)'
+                                    }
                                   >
                                     <option value="todo">Todo (0%)</option>
                                     <option value="in_progress">In Progress (50%)</option>
@@ -2098,6 +2183,7 @@ export const ProjectDetailPage: React.FC = () => {
             selectedMilestone.status === 'PAID'
           }
           assignedProviderName={project?.assignedProviderName}
+          projectStatus={project?.status}
           onPaymentSuccess={fetchProjectData}
         />
       )}
@@ -2584,6 +2670,62 @@ export const ProjectDetailPage: React.FC = () => {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Close Project Confirmation Modal */}
+      {isCloseModalOpen && (
+        <Modal
+          isOpen={isCloseModalOpen}
+          onClose={() => setIsCloseModalOpen(false)}
+          title="Close & Finalize Project"
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <div className="p-4 bg-emerald-950/40 border border-emerald-700/50 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Escrow Settlement Complete</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                This project has achieved 100% payment release (${settledDollars} USD). Closing the project will transition its status to <strong className="text-white">COMPLETED</strong>, record a tamper-evident audit event, and archive active workstreams.
+              </p>
+            </div>
+
+            <div className="text-xs text-slate-400 space-y-1.5 p-3 bg-slate-900/60 border border-slate-800 rounded-xl">
+              <p className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Milestone proof artifacts remain permanently available for audit.</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>PayPal transaction captures and settlement split logs will be preserved.</span>
+              </p>
+              <p className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span>Project will be moved from active sidebar navigation into historical records.</span>
+              </p>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsCloseModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCloseProject}
+                disabled={closingProject}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 disabled:opacity-50"
+              >
+                {closingProject ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                <span>Confirm & Close Project</span>
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

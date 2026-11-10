@@ -19,7 +19,6 @@ interface EvidenceGraphProps {
   evidenceItems: EvidenceItem[];
   aiReview: AiReview | null;
   onApprove: () => void;
-  onRequestRevision: () => void;
   canApprove: boolean;
 }
 
@@ -28,7 +27,6 @@ export const EvidenceGraph: React.FC<EvidenceGraphProps> = ({
   evidenceItems,
   aiReview,
   onApprove,
-  onRequestRevision,
   canApprove,
 }) => {
   const [selectedCritId, setSelectedCritId] = useState<string>(
@@ -57,12 +55,6 @@ export const EvidenceGraph: React.FC<EvidenceGraphProps> = ({
 
         {/* Action Controls for Client */}
         <div className="flex items-center gap-2.5">
-          <button
-            onClick={onRequestRevision}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition"
-          >
-            Request Revision
-          </button>
           <button
             onClick={onApprove}
             disabled={!canApprove || milestone.status === 'PAID'}

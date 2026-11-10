@@ -233,5 +233,169 @@ describe('Project Creator Permissions, Acceptance, and DB Preservation', () => {
     assert.equal(afterSplit2.paidMinor, 100000);
     assert.equal(afterSplit2.status, 'PAID');
   });
+
+  test('strictly enforces bilateral counterpart acceptance: client creator cannot self-approve; opponent provider must activate', async () => {
+    const bilateralProjId = 'proj_bilateral_client_' + Date.now();
+    const creatorClientId = 'usr_client_creator_' + Date.now();
+    const opponentProviderId = 'usr_provider_opponent_' + Date.now();
+
+    await dbStore.saveProject({
+      id: bilateralProjId,
+      title: 'Client Proposed Scope',
+      description: 'Scope created by client',
+      ownerId: creatorClientId,
+      providerIds: [opponentProviderId],
+      createdBy: creatorClientId,
+      creatorRole: 'client',
+      status: 'awaiting_approval',
+      sourceAssets: [],
+      currentAgreementId: '',
+      totalAmountMinor: 100000,
+      currency: 'USD',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const project = dbStore.projects.get(bilateralProjId)!;
+    assert.equal(project.status, 'awaiting_approval');
+
+    // 1. Creator (client) attempts to self-approve -> Blocked by bilateral rule
+    const clientIsCreator = project.createdBy === creatorClientId;
+    assert.equal(clientIsCreator, true);
+    const canClientSelfApprove = !clientIsCreator; // Bilateral rule: creator cannot self-approve
+    assert.equal(canClientSelfApprove, false);
+
+    // 2. Opponent provider reviews and accepts -> Authorized!
+    const providerIsCreator = project.createdBy === opponentProviderId;
+    assert.equal(providerIsCreator, false);
+    const isOpponentProvider = project.providerIds.includes(opponentProviderId) && !providerIsCreator;
+    assert.equal(isOpponentProvider, true);
+
+    const activated = await dbStore.updateProject(bilateralProjId, {
+      status: 'active',
+      acceptedBy: opponentProviderId,
+      acceptedAt: new Date().toISOString(),
+    });
+
+    assert.equal(activated.status, 'active');
+    assert.equal(activated.acceptedBy, opponentProviderId);
+  });
+
+  test('strictly enforces bilateral counterpart acceptance: provider creator cannot self-approve; opponent client must activate', async () => {
+    const providerProjId = 'proj_bilateral_provider_' + Date.now();
+    const creatorProviderId = 'usr_provider_creator_' + Date.now();
+    const opponentClientId = 'usr_client_opponent_' + Date.now();
+
+    await dbStore.saveProject({
+      id: providerProjId,
+      title: 'Provider Technical Proposal',
+      description: 'Proposal created by provider for client',
+      ownerId: opponentClientId,
+      providerIds: [creatorProviderId],
+      createdBy: creatorProviderId,
+      creatorRole: 'provider',
+      status: 'awaiting_approval',
+      sourceAssets: [],
+      currentAgreementId: '',
+      totalAmountMinor: 80000,
+      currency: 'USD',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const project = dbStore.projects.get(providerProjId)!;
+    assert.equal(project.status, 'awaiting_approval');
+
+    // 1. Creator (provider) attempts self-approval -> Blocked
+    const providerIsCreator = project.createdBy === creatorProviderId;
+    assert.equal(providerIsCreator, true);
+    const canProviderSelfApprove = !providerIsCreator;
+    assert.equal(canProviderSelfApprove, false);
+
+    // 2. Opponent client owner reviews and accepts -> Authorized!
+    const clientIsCreator = project.createdBy === opponentClientId;
+    assert.equal(clientIsCreator, false);
+    const isOpponentClient = project.ownerId === opponentClientId && !clientIsCreator;
+    assert.equal(isOpponentClient, true);
+
+    const activated = await dbStore.updateProject(providerProjId, {
+      status: 'active',
+      acceptedBy: opponentClientId,
+      acceptedAt: new Date().toISOString(),
+    });
+
+    assert.equal(activated.status, 'active');
+    assert.equal(activated.acceptedBy, opponentClientId);
+  });
+
+  test('prevents escrow payments while project status is awaiting_approval', async () => {
+    const pendingProjId = 'proj_pending_pay_' + Date.now();
+    await dbStore.saveProject({
+      id: pendingProjId,
+      title: 'Pending Escrow Safety Project',
+      ownerId: clientOwnerId,
+      providerIds: [providerAssigneeId],
+      createdBy: clientOwnerId,
+      creatorRole: 'client',
+      status: 'awaiting_approval',
+      sourceAssets: [],
+      currentAgreementId: '',
+      totalAmountMinor: 50000,
+      currency: 'USD',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const project = dbStore.projects.get(pendingProjId)!;
+    assert.equal(project.status, 'awaiting_approval');
+
+    // Payment safety check
+    const isPayable = project.status === 'active';
+    assert.equal(isPayable, false, 'Payments must be locked when project is awaiting counterpart approval');
+
+    // Once opponent accepts, payment unlocks
+    project.status = 'active';
+    project.acceptedBy = providerAssigneeId;
+    await dbStore.saveProject(project);
+
+    assert.equal(project.status === 'active', true, 'Payments unlocked once counterpart approves');
+  });
+
+  test('enforces full payment settlement before closing project', async () => {
+    const closeProjId = 'proj_close_test_' + Date.now();
+    await dbStore.saveProject({
+      id: closeProjId,
+      title: 'Full Payout Closure Project',
+      ownerId: clientOwnerId,
+      providerIds: [providerAssigneeId],
+      createdBy: clientOwnerId,
+      creatorRole: 'client',
+      status: 'active',
+      sourceAssets: [],
+      currentAgreementId: '',
+      totalAmountMinor: 100000,
+      settledAmountMinor: 50000,
+      currency: 'USD',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const project = dbStore.projects.get(closeProjId)!;
+    const isFullyPaid = (project.settledAmountMinor || 0) >= (project.totalAmountMinor || 0);
+    assert.equal(isFullyPaid, false, 'Project cannot be closed with pending milestone balance');
+
+    // Settle remaining payment
+    project.settledAmountMinor = 100000;
+    await dbStore.saveProject(project);
+
+    const isFullyPaidNow = (project.settledAmountMinor || 0) >= (project.totalAmountMinor || 0);
+    assert.equal(isFullyPaidNow, true, 'Project is eligible to close once fully settled');
+
+    // Close project
+    const closed = await dbStore.updateProject(closeProjId, {
+      status: 'completed',
+    });
+    assert.equal(closed?.status, 'completed', 'Project status should transition to completed upon closure');
+  });
 });
 

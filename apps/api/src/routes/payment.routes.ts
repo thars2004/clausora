@@ -89,6 +89,13 @@ router.post(
         });
       }
 
+      if (project && project.status !== 'active') {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot process payment: Project is currently "${project.status}". The opponent counterpart must review and activate the project before escrow funds can be released.`,
+        });
+      }
+
       // Enforce: Assigned provider must submit work proof before escrow payment can be released
       const milestoneEvidence = Array.from(dbStore.evidence.values()).filter(
         (e) => e.milestoneId === milestone.id
@@ -278,6 +285,13 @@ router.post(
         return res.status(409).json({
           success: false,
           message: 'This project has already been captured and paid in full.',
+        });
+      }
+
+      if (project && project.status !== 'active') {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot process payment: Project is currently "${project.status}". The opponent counterpart must review and activate the project before PayPal checkout can be authorized.`,
         });
       }
 

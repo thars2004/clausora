@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, Loader2, AlertCircle, Shield, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertCircle, Shield, ArrowLeft } from 'lucide-react';
+import { LogoIcon } from '../components/common/Logo';
 import { DEMO_USERS } from '@clausora/shared';
 
 export const LoginPage: React.FC = () => {
@@ -106,9 +107,7 @@ export const LoginPage: React.FC = () => {
       <div className="w-full max-w-md p-8 bg-[#111827]/90 border border-slate-800 rounded-3xl shadow-2xl space-y-6 backdrop-blur-sm">
         <div className="text-center space-y-2">
           <Link to="/" className="inline-block group">
-            <div className="w-12 h-12 bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 text-white rounded-2xl flex items-center justify-center mx-auto border border-indigo-500/30 shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition">
-              <Sparkles className="w-6 h-6" />
-            </div>
+            <LogoIcon className="w-14 h-14 mx-auto group-hover:scale-105 transition duration-200 drop-shadow-xl" />
           </Link>
           <h2 className="text-2xl font-extrabold text-white">Sign In to Clausora</h2>
           <p className="text-xs text-slate-400">

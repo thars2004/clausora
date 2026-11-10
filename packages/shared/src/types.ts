@@ -292,10 +292,12 @@ export interface WorkBlueprint {
   workflowSteps?: WorkflowStep[];
   totalBudgetMinor?: number;
   budgetConfirmedByHuman?: boolean;
+  currency?: string;
   targetDeadline?: string;
   deadlineConfirmedByHuman?: boolean;
   aiModel: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export type AgreementStatus = 'draft' | 'awaiting_approval' | 'approved' | 'superseded' | 'disputed';

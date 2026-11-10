@@ -72,6 +72,40 @@ router.post('/projects/:projectId/milestones', authMiddleware, (req: AuthRequest
   }
 });
 
+// Explains why a status transition is blocked
+export function getMilestoneBlockedReason(
+  currentStatus: MilestoneStatus,
+  targetStatus: MilestoneStatus,
+  milestoneTitle?: string
+): string {
+  if (currentStatus === 'PAID') {
+    return 'Milestone is already settled and PAID. Captured PayPal sandbox escrow funds cannot be modified, reversed, or re-opened.';
+  }
+  if (currentStatus === 'CANCELLED') {
+    return 'Milestone is CANCELLED. Terminated milestones cannot transition to active states.';
+  }
+  if (currentStatus === 'CREATED' && targetStatus !== 'IN_PROGRESS') {
+    return `Milestone "${milestoneTitle || 'Deliverable'}" is newly created. The assigned provider must start work and progress the status to 'IN_PROGRESS' first.`;
+  }
+  if (currentStatus === 'IN_PROGRESS' && targetStatus === 'APPROVED_FOR_PAYMENT') {
+    return 'Milestone cannot be approved directly from IN_PROGRESS. The assigned provider must first submit verifiable work proof (repository PR, staging link, or test report) for verification.';
+  }
+  if (currentStatus === 'IN_PROGRESS' && targetStatus === 'PAID') {
+    return 'Milestone cannot be settled directly from IN_PROGRESS. Work proof must be submitted, reviewed by client, and funded via PayPal sandbox checkout.';
+  }
+  if (currentStatus === 'SUBMITTED' || currentStatus === 'AI_REVIEWED') {
+    return 'Milestone deliverables have been submitted. The client owner must review the evidence and formally approve the milestone before checkout release.';
+  }
+  if (currentStatus === 'AWAITING_CLIENT_DECISION') {
+    return 'Milestone is awaiting human client decision. The client owner must either approve the deliverable or request revisions.';
+  }
+  if (currentStatus === 'APPROVED_FOR_PAYMENT') {
+    return 'Milestone is already approved for payment. Please proceed with PayPal sandbox order authorization.';
+  }
+  const allowed = ALLOWED_MILESTONE_TRANSITIONS[currentStatus] || [];
+  return `Invalid status transition: Cannot change deliverable from '${currentStatus}' to '${targetStatus}'. Allowed next steps: [${allowed.length > 0 ? allowed.join(', ') : 'None (Terminal Finalized State)'}].`;
+}
+
 // Helper to validate state transitions
 function transitionMilestone(
   milestoneId: string,
@@ -79,14 +113,34 @@ function transitionMilestone(
   actor: { id: string; name: string; role: any }
 ) {
   const milestone = dbStore.milestones.get(milestoneId);
-  if (!milestone) throw new Error('Milestone not found');
+  if (!milestone) {
+    const err: any = new Error('Milestone not found');
+    err.status = 404;
+    err.reason = 'Milestone not found';
+    throw err;
+  }
+
+  const project = dbStore.projects.get(milestone.projectId);
+  if (project && project.status === 'awaiting_approval') {
+    const err: any = new Error('Cannot change deliverable status: Project proposal is awaiting counterpart acceptance. Both parties must approve and activate the project first.');
+    err.status = 400;
+    err.reason = 'Project proposal must be accepted and activated first before deliverable statuses can be updated.';
+    throw err;
+  }
+
+  if (project && (project.status === 'completed' || (project.status as string) === 'closed')) {
+    const err: any = new Error('Cannot change deliverable status: Project is completed and closed. Historical deliverable records and statuses are frozen for audit integrity.');
+    err.status = 400;
+    err.reason = 'Project is completed and closed. Milestone statuses are immutable.';
+    throw err;
+  }
 
   const allowed = ALLOWED_MILESTONE_TRANSITIONS[milestone.status] || [];
   if (!allowed.includes(targetStatus)) {
-    const err: any = new Error(
-      `Invalid transition: Cannot change milestone from '${milestone.status}' to '${targetStatus}'. Allowed: [${allowed.join(', ')}]`
-    );
+    const reason = getMilestoneBlockedReason(milestone.status, targetStatus, milestone.title);
+    const err: any = new Error(`Status change blocked: ${reason}`);
     err.status = 409;
+    err.reason = reason;
     throw err;
   }
 
@@ -195,12 +249,39 @@ router.post('/milestones/:milestoneId/approve', authMiddleware, async (req: Auth
     const userId = req.user!.id;
     const userRole = req.user!.role;
 
+    if (project && project.status === 'awaiting_approval') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot approve milestone: Project proposal is awaiting counterpart acceptance. Both parties must approve and activate the project first.',
+        reason: 'Project proposal must be accepted and activated first before milestones can be approved.',
+      });
+    }
+
+    if (project && (project.status === 'completed' || (project.status as string) === 'closed')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot approve milestone: Project is completed and closed.',
+        reason: 'Project is already completed and closed. Status is immutable.',
+      });
+    }
+
     // Client, admin, project/task owner, or creator can approve milestone
     const isOwner = project && (project.ownerId === userId || project.createdBy === userId);
     if (userRole !== 'client' && userRole !== 'admin' && !isOwner) {
       return res.status(403).json({
         success: false,
         message: 'Forbidden: Only the client owner or platform admin can approve milestones for payment.',
+        reason: 'Only client owner or platform admin has authorization to approve milestone releases.',
+      });
+    }
+
+    // Verifiable work proof check
+    const evidenceItems = Array.from(dbStore.evidence.values()).filter((e) => e.milestoneId === milestoneId);
+    if (evidenceItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot approve milestone: The assigned provider has not yet submitted verifiable work proof for "${milestone.title}".`,
+        reason: 'Assigned provider must submit verifiable work proof before milestone can be approved for payment.',
       });
     }
 
