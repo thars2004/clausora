@@ -7,39 +7,97 @@ import {
   ArrowRight,
   ShieldCheck,
   CreditCard,
-  FileCode,
   Radio,
-  CheckCircle,
   Layers,
-  ChevronRight,
-  Play,
+  LayoutDashboard,
+  LogIn,
+  PlusCircle,
+  Shield,
+  Zap,
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
-  const { user, switchPersona } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  const handleLaunchDemo = async (role: 'client' | 'provider' | 'admin') => {
-    await switchPersona(role);
-    if (role === 'admin') {
-      navigate('/admin');
+  // Redirect to login page instead of directly bypassing to dashboard
+  const handleLaunchDemo = (role: 'client' | 'provider' | 'admin') => {
+    if (user) {
+      if (role === 'admin') navigate('/admin');
+      else navigate('/dashboard');
     } else {
-      navigate('/projects/proj_hackathon_demo');
+      navigate(`/login?demo=${role}`);
+    }
+  };
+
+  const handleCreateNewProject = () => {
+    if (user) {
+      navigate('/new-project');
+    } else {
+      navigate('/login?redirect=/new-project');
     }
   };
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex flex-col selection:bg-indigo-600 selection:text-white">
+      {/* Sleek Landing Header */}
+      <header className="h-16 border-b border-slate-800/80 bg-[#0B0F19]/80 backdrop-blur-md sticky top-0 z-40 px-4 md:px-8 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-lg text-white tracking-tight">CLAUSORA</span>
+            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 font-semibold">
+              AI + PayPal
+            </span>
+          </div>
+        </Link>
+
+        <div className="flex items-center gap-3">
+          {user ? (
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs text-slate-400 hidden sm:inline">
+                Signed in as <strong className="text-white">{user.name}</strong>
+              </span>
+              <Link
+                to="/dashboard"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition shadow-md shadow-indigo-600/20"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>Dashboard</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link
+                to="/login"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-900 rounded-xl transition font-medium"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sign In</span>
+              </Link>
+              <Link
+                to="/register"
+                className="flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition shadow-md shadow-indigo-600/20"
+              >
+                <span>Get Started</span>
+              </Link>
+            </div>
+          )}
+        </div>
+      </header>
+
       {/* Hero Section */}
-      <section className="relative pt-20 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center overflow-hidden">
+      <section className="relative pt-16 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center overflow-hidden">
         {/* Glow backdrop */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-indigo-600/20 to-purple-600/20 blur-3xl -z-10 rounded-full" />
 
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300 mb-6">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-slate-300 mb-6 shadow-inner">
           <Sparkles className="w-4 h-4 text-purple-400" />
           <span>Built for the <strong>PayPal AI Hackathon 2026</strong></span>
           <span className="text-slate-500">•</span>
-          <span className="text-indigo-400 font-medium">Orders v2 Sandbox</span>
+          <span className="text-indigo-400 font-medium font-mono">Orders v2 Sandbox</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto leading-tight sm:leading-none">
@@ -54,53 +112,67 @@ export const LandingPage: React.FC = () => {
           Clausora turns unstructured project briefs, documents, and screenshots into verified deliverables, detects scope changes with AI, and releases human-approved PayPal milestone payments.
         </p>
 
-        {/* Quick Launch Buttons */}
+        {/* Quick Launch Buttons: Requires Login */}
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
           {user ? (
             <Link
-              to="/projects"
-              className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition group"
+              to="/dashboard"
+              className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition group"
             >
-              <span>View My Projects ({user.name})</span>
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Go to Dashboard ({user.name})</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
             </Link>
           ) : (
             <button
               onClick={() => handleLaunchDemo('client')}
-              className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition group"
+              type="button"
+              className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition group cursor-pointer"
             >
-              <span>Explore Hackathon Demo (Client)</span>
+              <Zap className="w-4 h-4 text-amber-300" />
+              <span>Explore Demo (Sign In)</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
             </button>
           )}
 
-          <Link
-            to="/new-project"
-            className="flex items-center gap-2 px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold rounded-xl border border-slate-800 transition"
+          <button
+            onClick={handleCreateNewProject}
+            type="button"
+            className="flex items-center gap-2 px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-200 font-semibold rounded-xl border border-slate-800 transition cursor-pointer"
           >
+            <PlusCircle className="w-4 h-4 text-indigo-400" />
             <span>Create New Project</span>
-          </Link>
+          </button>
         </div>
 
-        {/* Role Fast-Test Switcher */}
-        <div className="mt-8 p-3 max-w-lg mx-auto bg-slate-900/80 border border-slate-800 rounded-xl text-xs flex items-center justify-between gap-3">
-          <span className="text-slate-400 font-medium">Quick Role Switch:</span>
+        {/* Role Fast-Test Switcher (Shows Login Page) */}
+        <div className="mt-8 p-3 max-w-lg mx-auto bg-slate-900/80 border border-slate-800 rounded-xl text-xs flex items-center justify-between gap-3 shadow-sm">
+          <span className="text-slate-400 font-medium flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Select Demo Persona:</span>
+          </span>
           <div className="flex gap-2">
             <button
               onClick={() => handleLaunchDemo('client')}
-              className="px-2.5 py-1 bg-indigo-950/80 text-indigo-300 rounded border border-indigo-700/50 hover:bg-indigo-900 transition font-medium"
+              type="button"
+              className="px-2.5 py-1 bg-indigo-950/80 text-indigo-300 rounded-lg border border-indigo-700/50 hover:bg-indigo-900 transition font-medium cursor-pointer"
+              title="Sign in as Client (Sarah Chen)"
             >
               Client (Sarah)
             </button>
             <button
               onClick={() => handleLaunchDemo('provider')}
-              className="px-2.5 py-1 bg-purple-950/80 text-purple-300 rounded border border-purple-700/50 hover:bg-purple-900 transition font-medium"
+              type="button"
+              className="px-2.5 py-1 bg-purple-950/80 text-purple-300 rounded-lg border border-purple-700/50 hover:bg-purple-900 transition font-medium cursor-pointer"
+              title="Sign in as Provider (Alex Rivera)"
             >
               Provider (Alex)
             </button>
             <button
               onClick={() => handleLaunchDemo('admin')}
-              className="px-2.5 py-1 bg-amber-950/80 text-amber-300 rounded border border-amber-700/50 hover:bg-amber-900 transition font-medium"
+              type="button"
+              className="px-2.5 py-1 bg-amber-950/80 text-amber-300 rounded-lg border border-amber-700/50 hover:bg-amber-900 transition font-medium cursor-pointer"
+              title="Sign in as Platform Admin (Marcus)"
             >
               Admin Portal
             </button>
@@ -187,12 +259,18 @@ export const LandingPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="mt-auto py-8 border-t border-slate-800/80 px-4 text-center text-xs text-slate-500">
-        <p>Clausora — AI Work Intelligence & Milestone Escrow Orchestration Layer.</p>
-        <p className="mt-1 text-[11px] text-slate-600">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p>Clausora — AI Work Intelligence & Milestone Escrow Orchestration Layer.</p>
+          <div className="flex items-center gap-4 text-slate-400">
+            <Link to="/maintenance" className="hover:text-white transition">System Status</Link>
+            <span>•</span>
+            <Link to="/login" className="hover:text-white transition">Sign In</Link>
+          </div>
+        </div>
+        <p className="mt-2 text-[11px] text-slate-600">
           PayPal Developer Sandbox Orders v2 • Hugging Face Inference • Open Source under MIT License
         </p>
       </footer>
     </div>
   );
 };
-

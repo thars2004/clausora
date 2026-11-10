@@ -1,9 +1,10 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
+import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { NewProjectPage } from './pages/NewProjectPage';
@@ -13,12 +14,25 @@ import { RegisterPage } from './pages/RegisterPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { AdminPortalPage } from './pages/AdminPortalPage';
 import { ProjectsPage } from './pages/ProjectsPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { MaintenancePage } from './pages/MaintenancePage';
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
-  const isPublicPage = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register';
 
-  if (isPublicPage) {
+  const knownInternalPrefixes = [
+    '/dashboard',
+    '/projects',
+    '/new-project',
+    '/analytics',
+    '/admin',
+  ];
+
+  const isInternalPage = knownInternalPrefixes.some(
+    (prefix) => location.pathname === prefix || location.pathname.startsWith(prefix + '/')
+  );
+
+  if (!isInternalPage) {
     return <>{children}</>;
   }
 
@@ -42,16 +56,65 @@ export const App: React.FC = () => {
         <BrowserRouter>
           <AppLayout>
             <Routes>
+              {/* Public Pages */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/admin" element={<AdminPortalPage />} />
-              <Route path="/new-project" element={<NewProjectPage />} />
-              <Route path="/projects" element={<ProjectsPage />} />
-              <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="/maintenance" element={<MaintenancePage />} />
+              <Route path="/404" element={<NotFoundPage />} />
+
+              {/* Protected Internal Pages - Authentication Required */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <AnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminPortalPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/new-project"
+                element={
+                  <ProtectedRoute>
+                    <NewProjectPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects"
+                element={
+                  <ProtectedRoute>
+                    <ProjectsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects/:projectId"
+                element={
+                  <ProtectedRoute>
+                    <ProjectDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Fallback to 404 for any unmatched route */}
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </AppLayout>
         </BrowserRouter>
@@ -61,4 +124,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-
