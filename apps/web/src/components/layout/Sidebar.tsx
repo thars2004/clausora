@@ -83,8 +83,9 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-64 border-r border-slate-800 bg-[#0B0F19] p-4 flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)]">
-      <div className="space-y-6">
+    <aside className="w-64 border-r border-slate-800 bg-[#0B0F19] sticky top-16 h-[calc(100vh-4rem)] shrink-0 flex flex-col z-30">
+      {/* Scrollable Inside Content */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* Role Identity Tag */}
         <div className="px-3 py-2 bg-slate-900/80 border border-slate-800 rounded-xl flex items-center justify-between">
           <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">Portal Mode</span>
@@ -273,15 +274,17 @@ export const Sidebar: React.FC = () => {
         )}
       </div>
 
-      {/* Footer Notice */}
-      <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl space-y-1.5">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-          <Shield className="w-3.5 h-3.5 text-indigo-400" />
-          <span>PayPal Hackathon 2026</span>
+      {/* Fixed bottom footer notice inside sidebar */}
+      <div className="p-3 border-t border-slate-800/80 bg-[#0B0F19] shrink-0">
+        <div className="p-2.5 bg-slate-900/60 border border-slate-800/80 rounded-xl space-y-1">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+            <Shield className="w-3.5 h-3.5 text-indigo-400" />
+            <span>PayPal Hackathon 2026</span>
+          </div>
+          <p className="text-[10px] text-slate-400 leading-normal">
+            PayPal Sandbox Orders v2 & Hugging Face Qwen2.5-VL active.
+          </p>
         </div>
-        <p className="text-[10px] text-slate-400 leading-normal">
-          PayPal Sandbox Orders v2 & Hugging Face Qwen2.5-VL active.
-        </p>
       </div>
     </aside>
   );
