@@ -671,46 +671,67 @@ export class HuggingFaceClient {
       m3Date = new Date(targetTime).toISOString().split('T')[0];
     }
 
-    // Critical Financial Safety: Never invent a budget if unconfirmed by human!
-    let m1Amount: number | null = null;
-    let m2Amount: number | null = null;
-    let m3Amount: number | null = null;
+    // Calculate milestone amounts and deliverables based directly on task content and effort hours
+    const allTasks = workstreams.flatMap((ws) => ws.tasks || []);
+    const totalHours = allTasks.reduce((acc, t) => acc + (t.estimatedEffortHours || 8), 0) || 1;
 
-    if (budgetConfirmed && totalAmountMinor) {
-      m1Amount = Math.round(totalAmountMinor * 0.3);
-      m2Amount = Math.round(totalAmountMinor * 0.4);
-      m3Amount = totalAmountMinor - (m1Amount + m2Amount);
-    }
+    let accumulatedMinor = 0;
+    const suggestedMilestones: SuggestedMilestone[] = workstreams.length > 0
+      ? workstreams.map((ws, idx) => {
+          const wsTasks = ws.tasks || [];
+          const wsHours = wsTasks.reduce((acc, t) => acc + (t.estimatedEffortHours || 8), 0);
+          let calculatedAmount: number | null = null;
 
-    const suggestedMilestones: SuggestedMilestone[] = [
-      {
-        id: 'sm_1',
-        name: `Milestone 1: ${workstreams[0]?.tasks[0]?.title || 'Architecture & Foundations'}`,
-        includedTaskTitles: (workstreams[0]?.tasks || []).map((t) => t.title),
-        suggestedAmountMinor: m1Amount,
-        amountNeedsHumanInput: !budgetConfirmed,
-        currency,
-        dueDate: m1Date,
-      },
-      {
-        id: 'sm_2',
-        name: `Milestone 2: ${workstreams[1]?.tasks[0]?.title || 'Core Functional Suite'}`,
-        includedTaskTitles: (workstreams[1]?.tasks || []).map((t) => t.title),
-        suggestedAmountMinor: m2Amount,
-        amountNeedsHumanInput: !budgetConfirmed,
-        currency,
-        dueDate: m2Date,
-      },
-      {
-        id: 'sm_3',
-        name: `Milestone 3: ${workstreams[2]?.tasks[0]?.title || 'Verification & Final Delivery'}`,
-        includedTaskTitles: (workstreams[2]?.tasks || []).map((t) => t.title),
-        suggestedAmountMinor: m3Amount,
-        amountNeedsHumanInput: !budgetConfirmed,
-        currency,
-        dueDate: m3Date,
-      },
-    ];
+          if (budgetConfirmed && totalAmountMinor) {
+            if (idx === workstreams.length - 1) {
+              calculatedAmount = Math.max(0, totalAmountMinor - accumulatedMinor);
+            } else {
+              calculatedAmount = Math.round(totalAmountMinor * (wsHours / totalHours));
+              accumulatedMinor += calculatedAmount;
+            }
+          }
+
+          const dueDate = idx === 0 ? m1Date : idx === 1 ? m2Date : m3Date;
+          const titlePreview = wsTasks.length > 0 ? wsTasks[0].title : 'Deliverable';
+          return {
+            id: `sm_${idx + 1}`,
+            name: ws.name ? `Milestone ${idx + 1}: ${ws.name}` : `Milestone ${idx + 1}: ${titlePreview}`,
+            includedTaskTitles: wsTasks.map((t) => t.title),
+            suggestedAmountMinor: calculatedAmount,
+            amountNeedsHumanInput: !budgetConfirmed,
+            currency,
+            dueDate,
+          };
+        })
+      : [
+          {
+            id: 'sm_1',
+            name: 'Milestone 1: Architecture & Foundations',
+            includedTaskTitles: ['Architecture & Foundations'],
+            suggestedAmountMinor: budgetConfirmed && totalAmountMinor ? Math.round(totalAmountMinor * 0.3) : null,
+            amountNeedsHumanInput: !budgetConfirmed,
+            currency,
+            dueDate: m1Date,
+          },
+          {
+            id: 'sm_2',
+            name: 'Milestone 2: Core Functional Suite',
+            includedTaskTitles: ['Core Functional Suite'],
+            suggestedAmountMinor: budgetConfirmed && totalAmountMinor ? Math.round(totalAmountMinor * 0.4) : null,
+            amountNeedsHumanInput: !budgetConfirmed,
+            currency,
+            dueDate: m2Date,
+          },
+          {
+            id: 'sm_3',
+            name: 'Milestone 3: Verification & Final Delivery',
+            includedTaskTitles: ['Verification & Final Delivery'],
+            suggestedAmountMinor: budgetConfirmed && totalAmountMinor ? totalAmountMinor - Math.round(totalAmountMinor * 0.7) : null,
+            amountNeedsHumanInput: !budgetConfirmed,
+            currency,
+            dueDate: m3Date,
+          },
+        ];
 
     return {
       suggestedMilestones,

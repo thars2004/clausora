@@ -18,6 +18,8 @@ interface PayPalModalProps {
   milestonesList?: Milestone[];
   fullProjectAmountDollars?: string;
   projectRemainingDollars?: string;
+  hasProof?: boolean;
+  assignedProviderName?: string;
   onSelectMilestone?: (ms: Milestone) => void;
   onPaymentSuccess: () => void;
 }
@@ -28,6 +30,8 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
   milestone,
   fullProjectAmountDollars,
   projectRemainingDollars,
+  hasProof = true,
+  assignedProviderName,
   onPaymentSuccess,
 }) => {
   const [step, setStep] = useState<'input' | 'approve' | 'capturing' | 'success'>('input');
@@ -174,6 +178,18 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
           </div>
         )}
 
+        {!hasProof && (
+          <div className="p-2.5 bg-amber-950/60 border border-amber-800/80 text-amber-200 text-xs rounded-xl flex items-start gap-2 shadow-sm">
+            <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+            <div className="space-y-0.5">
+              <strong className="block font-semibold text-amber-300">Work Proof Required Before Payment</strong>
+              <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                The assigned provider <span className="font-semibold text-white">({assignedProviderName || 'Alex Rivera'})</span> must submit verifiable work proof for this deliverable before escrow funds can be authorized for release.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* STEP 1: Manually Editable Amount Input & Action Buttons */}
         {step === 'input' && (
           <div className="space-y-3">
@@ -226,15 +242,16 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
               <button
                 type="button"
                 onClick={handleDemoPay}
-                disabled={loading || !isInputValid}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow disabled:opacity-50"
+                disabled={loading || !isInputValid || !hasProof}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow disabled:opacity-40 disabled:cursor-not-allowed"
+                title={!hasProof ? 'Work proof required from provider before payment' : undefined}
               >
                 {loading ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <>
                     <Zap className="w-3.5 h-3.5 text-amber-300" />
-                    <span>Instant Pay (${enteredAmount || '0.00'})</span>
+                    <span>{!hasProof ? 'Proof Required' : `Instant Pay ($${enteredAmount || '0.00'})`}</span>
                   </>
                 )}
               </button>
@@ -242,15 +259,16 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
               <button
                 type="button"
                 onClick={handlePayPalCheckout}
-                disabled={loading || !isInputValid}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl transition shadow disabled:opacity-50"
+                disabled={loading || !isInputValid || !hasProof}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl transition shadow disabled:opacity-40 disabled:cursor-not-allowed"
+                title={!hasProof ? 'Work proof required from provider before payment' : undefined}
               >
                 {loading ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <>
                     <CreditCard className="w-3.5 h-3.5 text-white" />
-                    <span>PayPal Sandbox (${enteredAmount || '0.00'})</span>
+                    <span>{!hasProof ? 'Proof Required' : `PayPal Sandbox ($${enteredAmount || '0.00'})`}</span>
                   </>
                 )}
               </button>

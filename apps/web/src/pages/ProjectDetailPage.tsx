@@ -50,6 +50,8 @@ import {
   UserCheck,
   CheckSquare,
   Zap,
+  Lock,
+  AlertCircle,
 } from 'lucide-react';
 
 export const ProjectDetailPage: React.FC = () => {
@@ -78,6 +80,13 @@ export const ProjectDetailPage: React.FC = () => {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
+  const [projectEvidence, setProjectEvidence] = useState<EvidenceItem[]>([]);
+  const [isSubmitProofModalOpen, setIsSubmitProofModalOpen] = useState(false);
+  const [proofTargetMilestone, setProofTargetMilestone] = useState<Milestone | null>(null);
+  const [proofTitle, setProofTitle] = useState('');
+  const [proofUrl, setProofUrl] = useState('');
+  const [proofDesc, setProofDesc] = useState('');
+  const [submittingProof, setSubmittingProof] = useState(false);
   const [aiReview, setAiReview] = useState<AiReview | null>(null);
   const [scopeRequests, setScopeRequests] = useState<ScopeChangeRequest[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -312,6 +321,14 @@ export const ProjectDetailPage: React.FC = () => {
         }
       }
 
+      // Fetch all evidence items across the project
+      try {
+        const allEviRes = await api.get(`/projects/${pId}/evidence`);
+        setProjectEvidence(allEviRes.data.data?.evidence || []);
+      } catch {
+        // ignore
+      }
+
       // Fetch scope drift requests
       try {
         const scRes = await api.get(`/projects/${pId}/change-requests`);
@@ -387,6 +404,42 @@ export const ProjectDetailPage: React.FC = () => {
       toast.error(err.response?.data?.message || 'Failed to submit evidence artifact.', 'Evidence Error');
     } finally {
       setSubmittingEvidence(false);
+    }
+  };
+
+  // Provider submits deliverable work proof via dedicated modal
+  const openSubmitProofModal = (ms: Milestone) => {
+    setProofTargetMilestone(ms);
+    setProofTitle(`${ms.title} - Work Proof`);
+    setProofUrl('');
+    setProofDesc('');
+    setIsSubmitProofModalOpen(true);
+  };
+
+  const handleSubmitProofModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!proofTargetMilestone || !proofTitle.trim() || !proofUrl.trim()) return;
+    setSubmittingProof(true);
+    try {
+      const res = await api.post(`/milestones/${proofTargetMilestone.id}/evidence`, {
+        title: proofTitle.trim(),
+        description: proofDesc.trim(),
+        urlOrContent: proofUrl.trim(),
+        type: proofUrl.includes('github') ? 'repository' : 'url',
+      });
+      toast.success(
+        res.data?.message || 'Work proof submitted successfully! Client payment is now unlocked.',
+        'Work Proof Submitted'
+      );
+      setIsSubmitProofModalOpen(false);
+      setProofTitle('');
+      setProofUrl('');
+      setProofDesc('');
+      await fetchProjectData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to submit work proof.', 'Proof Error');
+    } finally {
+      setSubmittingProof(false);
     }
   };
 
@@ -649,53 +702,6 @@ export const ProjectDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Workspace Switcher Strip */}
-      {allUserProjects.length > 1 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-900/90 border border-slate-800 rounded-2xl">
-          <div className="flex items-center gap-2 overflow-x-auto py-0.5">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0 pl-1">
-              <FolderGit2 className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Switch Workspace:</span>
-            </span>
-
-            {allUserProjects.map((p) => {
-              const isCurrent = p.id === project.id;
-              return (
-                <Link
-                  key={p.id}
-                  to={`/projects/${p.id}`}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition ${
-                    isCurrent
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 border border-indigo-500'
-                      : 'bg-slate-950/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  {isCurrent && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-200" />}
-                  <span className="truncate max-w-[160px] sm:max-w-[200px]">{p.title}</span>
-                  <span
-                    className={`text-[9px] font-mono px-1.5 py-0.2 rounded uppercase ${
-                      isCurrent ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-800 text-slate-400'
-                    }`}
-                  >
-                    {p.status}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-            <Link
-              to="/projects"
-              className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-950/60 border border-indigo-800/40 hover:bg-indigo-900/60 transition"
-            >
-              <span>All Projects ({allUserProjects.length})</span>
-              <ArrowUpRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
-      )}
-
       {/* Project Hero Banner */}
       <div className="bg-[#111827] border border-slate-800 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
@@ -719,8 +725,15 @@ export const ProjectDetailPage: React.FC = () => {
                   {project.ownerName || project.clientName || project.paymentDetails?.billingName || (isOwner ? user?.name : 'Client')}
                 </strong>
                 <span className="text-[10px] text-slate-400 font-normal">
-                  ({isClientCreator ? 'Client' : isProviderCreator ? 'Provider' : 'Admin'})
+                  ({isClientCreator ? 'Client' : isProviderCreator ? 'Provider' : 'Client'})
                 </span>
+              </span>
+              <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-lg bg-purple-950/60 border border-purple-800/50 text-purple-200 flex items-center gap-1.5">
+                <span className="text-purple-400 font-normal">Assigned Provider:</span>
+                <strong className="text-white font-semibold">
+                  {project.assignedProviderName || 'Alex Rivera (Rivera Tech)'}
+                </strong>
+                <span className="text-[10px] text-purple-400 font-normal">(Provider)</span>
               </span>
             </div>
 
@@ -1516,6 +1529,188 @@ export const ProjectDetailPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Milestone Deliverables Calculated from Task Content */}
+          <div className="p-5 bg-slate-900/90 border border-slate-800 rounded-2xl space-y-4 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Milestone Releases (Calculated from Task Content)</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Milestone allocations are calculated directly from blueprint task effort. Work proof must be submitted by the assigned provider before payment can be authorized.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-purple-950/60 border border-purple-800/50 text-purple-200 flex items-center gap-1.5">
+                  <span className="text-purple-400">Assigned Provider:</span>
+                  <strong className="text-white font-semibold">{project.assignedProviderName || 'Alex Rivera (Rivera Tech)'}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* List of Milestones */}
+            <div className="space-y-3">
+              {milestones.map((ms, idx) => {
+                const msEvidence = projectEvidence.filter((e) => e.milestoneId === ms.id);
+                const hasProof =
+                  msEvidence.length > 0 ||
+                  ms.status === 'SUBMITTED' ||
+                  ms.status === 'APPROVED_FOR_PAYMENT' ||
+                  ms.status === 'PAID';
+                const isPaid = ms.status === 'PAID' || (ms.paidMinor && ms.paidMinor >= ms.amountMinor);
+                const msDollars = (ms.amountMinor / 100).toFixed(2);
+                const msPaidDollars = ((ms.paidMinor || (isPaid ? ms.amountMinor : 0)) / 100).toFixed(2);
+
+                // Find matching workstream tasks if available
+                const matchingWs = blueprint?.workstreams?.[idx];
+                const wsTasks = matchingWs?.tasks || [];
+
+                return (
+                  <div
+                    key={ms.id}
+                    className={`p-4 rounded-xl border transition ${
+                      isPaid
+                        ? 'bg-slate-950/50 border-emerald-900/40'
+                        : hasProof
+                        ? 'bg-slate-950/80 border-slate-700/80'
+                        : 'bg-slate-950/60 border-amber-900/30'
+                    }`}
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-mono font-bold text-indigo-400">
+                            Phase {idx + 1}
+                          </span>
+                          <h4 className="text-sm font-semibold text-white truncate max-w-lg">
+                            {ms.title}
+                          </h4>
+
+                          {/* Status Badge */}
+                          {isPaid ? (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/50 text-emerald-300 font-semibold flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                              Paid & Released (${msPaidDollars})
+                            </span>
+                          ) : hasProof ? (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-950 border border-teal-700/50 text-teal-300 font-semibold flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-teal-400" />
+                              Proof Submitted ({msEvidence.length} artifact{msEvidence.length !== 1 ? 's' : ''})
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-700/60 text-amber-300 font-semibold flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3 text-amber-400" />
+                              Proof Required Before Payment
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Task Content Breakdown */}
+                        <div className="text-xs text-slate-300 space-y-1">
+                          {wsTasks.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5 items-center pt-0.5">
+                              <span className="text-[11px] text-slate-400 font-medium">Included Tasks:</span>
+                              {wsTasks.map((t) => (
+                                <span
+                                  key={t.id}
+                                  className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300"
+                                  title={t.description || t.title}
+                                >
+                                  <strong>{t.id}:</strong> {t.title.length > 35 ? t.title.substring(0, 35) + '…' : t.title}
+                                  {t.estimatedEffortHours ? ` (${t.estimatedEffortHours}h)` : ''}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-slate-400 truncate max-w-2xl">
+                              {ms.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Submitted Proof Display if any */}
+                        {msEvidence.length > 0 && (
+                          <div className="flex items-center gap-2 flex-wrap pt-1 text-[11px]">
+                            <span className="text-slate-400 font-medium">Verified Proof:</span>
+                            {msEvidence.map((evi) => (
+                              <a
+                                key={evi.id}
+                                href={evi.urlOrContent}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-950/70 border border-indigo-800/40 text-indigo-300 hover:text-white transition font-mono"
+                              >
+                                <span>{evi.title}</span>
+                                <ExternalLink className="w-3 h-3 text-indigo-400" />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right: Allocation Amount & Action Buttons */}
+                      <div className="flex items-center gap-3 shrink-0 self-end lg:self-center">
+                        <div className="text-right">
+                          <span className="text-[9px] uppercase font-mono text-slate-400 block font-semibold">
+                            Deliverable Value
+                          </span>
+                          <span className="text-base font-bold font-mono text-white">
+                            ${msDollars} <span className="text-[10px] text-slate-400 font-normal">{ms.currency || 'USD'}</span>
+                          </span>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2">
+                          {/* Provider Action: Submit Work Proof */}
+                          {!isPaid && (
+                            <button
+                              onClick={() => openSubmitProofModal(ms)}
+                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1.5"
+                              title="Provider: Submit or update proof artifact for this deliverable"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-purple-400" />
+                              <span>{hasProof ? 'Add More Proof' : 'Submit Work Proof'}</span>
+                            </button>
+                          )}
+
+                          {/* Client Action: Make Payment / Release Escrow */}
+                          {!isPaid && (
+                            (user?.role === 'client' || user?.role === 'admin' || isOwner) ? (
+                              hasProof ? (
+                                <button
+                                  onClick={() => {
+                                    setSelectedMilestone(ms);
+                                    setIsPayPalModalOpen(true);
+                                  }}
+                                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-900/40 transition hover:scale-[1.02]"
+                                  title="Release escrow payment for this verified deliverable"
+                                >
+                                  <Zap className="w-3.5 h-3.5 text-amber-300" />
+                                  <span>Pay Deliverable (${msDollars})</span>
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-800 text-slate-500 text-xs font-semibold rounded-xl border border-slate-800 cursor-not-allowed opacity-60"
+                                  title="Payment locked: Assigned provider must submit work proof before payment can be made"
+                                >
+                                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                                  <span>Proof Required</span>
+                                </button>
+                              )
+                            ) : null
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1788,8 +1983,92 @@ export const ProjectDetailPage: React.FC = () => {
           milestone={selectedMilestone}
           fullProjectAmountDollars={agreedBudgetDollars}
           projectRemainingDollars={((Math.max(0, agreedBudgetMinor - settledMinor)) / 100).toFixed(2)}
+          hasProof={
+            projectEvidence.some((e) => e.milestoneId === selectedMilestone.id) ||
+            selectedMilestone.status === 'SUBMITTED' ||
+            selectedMilestone.status === 'APPROVED_FOR_PAYMENT' ||
+            selectedMilestone.status === 'PAID'
+          }
+          assignedProviderName={project?.assignedProviderName}
           onPaymentSuccess={fetchProjectData}
         />
+      )}
+
+      {/* Provider Submit Work Proof Modal */}
+      {proofTargetMilestone && (
+        <Modal
+          isOpen={isSubmitProofModalOpen}
+          onClose={() => setIsSubmitProofModalOpen(false)}
+          title="Submit Work Proof Artifact"
+          subtitle={`Deliverable: ${proofTargetMilestone.title} • Value: $${(proofTargetMilestone.amountMinor / 100).toFixed(2)} USD`}
+          maxWidth="md"
+        >
+          <form onSubmit={handleSubmitProofModal} className="space-y-4">
+            <div className="p-3 bg-purple-950/40 border border-purple-800/40 rounded-xl flex items-center justify-between text-xs">
+              <span className="text-purple-300 font-medium">Assigned Provider</span>
+              <span className="font-mono font-bold text-white">{project?.assignedProviderName || 'Alex Rivera (Rivera Tech)'}</span>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300">Deliverable / Artifact Title</label>
+              <input
+                type="text"
+                required
+                value={proofTitle}
+                onChange={(e) => setProofTitle(e.target.value)}
+                placeholder="e.g. Completed OAuth2 Authentication & Test Suite"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300">Proof URL / Repository Ref / Demo Link</label>
+              <input
+                type="text"
+                required
+                value={proofUrl}
+                onChange={(e) => setProofUrl(e.target.value)}
+                placeholder="e.g. https://github.com/rivera/email-engine/pull/1 or https://demo.clausora.dev"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300">Completion Notes / Description</label>
+              <textarea
+                rows={3}
+                value={proofDesc}
+                onChange={(e) => setProofDesc(e.target.value)}
+                placeholder="Describe key deliverable outcomes, test results, and verified specifications..."
+                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsSubmitProofModalOpen(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-medium transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submittingProof || !proofTitle.trim() || !proofUrl.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-purple-900/40 transition disabled:opacity-50"
+              >
+                {submittingProof ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                    <span>Submit Work Proof & Unlock Payment</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {/* Edit Project Modal */}

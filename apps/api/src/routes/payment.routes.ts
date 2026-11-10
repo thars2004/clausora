@@ -89,6 +89,23 @@ router.post(
         });
       }
 
+      // Enforce: Assigned provider must submit work proof before escrow payment can be released
+      const milestoneEvidence = Array.from(dbStore.evidence.values()).filter(
+        (e) => e.milestoneId === milestone.id
+      );
+      const hasProof =
+        milestoneEvidence.length > 0 ||
+        milestone.status === 'SUBMITTED' ||
+        milestone.status === 'APPROVED_FOR_PAYMENT' ||
+        milestone.status === 'PAID';
+
+      if (!hasProof) {
+        return res.status(400).json({
+          success: false,
+          message: `Work proof required: The assigned provider must submit proof for "${milestone.title}" before escrow payment can be authorized.`,
+        });
+      }
+
       const requestedMinor = req.body.amountMinor
         ? Number(req.body.amountMinor)
         : (milestoneRemainingMinor > 0 ? milestoneRemainingMinor : projectRemainingMinor);
@@ -151,6 +168,7 @@ router.post(
       }
 
       // Re-calculate Project overall settled payment in MongoDB Atlas
+      const milestoneNewPaid = milestone.paidMinor || (milestone.status === 'PAID' ? milestone.amountMinor : 0);
       let updatedAllMilestones = Array.from(dbStore.milestones.values()).filter(
         (m) => m.projectId === milestone.projectId
       );
@@ -181,8 +199,8 @@ router.post(
         eventType: 'PAYPAL_PAYMENT_CAPTURED',
         entityType: 'payment',
         entityId: paymentId,
-        summary: `Captured split payment of $${(paymentMinor / 100).toFixed(2)} ${milestone.currency} for "${milestone.title}". Balance remaining: $${((milestone.amountMinor - newPaidMinor) / 100).toFixed(2)}. Capture Reference: ${captureId}.`,
-        metadata: { captureId, amountMinor: paymentMinor, newPaidMinor, totalMinor: milestone.amountMinor },
+        summary: `Captured split payment of $${(paymentMinor / 100).toFixed(2)} ${milestone.currency} for "${milestone.title}". Balance remaining: $${((milestone.amountMinor - milestoneNewPaid) / 100).toFixed(2)}. Capture Reference: ${captureId}.`,
+        metadata: { captureId, amountMinor: paymentMinor, newPaidMinor: milestoneNewPaid, totalMinor: milestone.amountMinor },
       });
 
       await notificationService.send({
@@ -200,8 +218,8 @@ router.post(
           milestone,
           captureId,
           amountPaidMinor: paymentMinor,
-          newPaidMinor,
-          remainingMinor: milestone.amountMinor - newPaidMinor,
+          newPaidMinor: milestoneNewPaid,
+          remainingMinor: milestone.amountMinor - milestoneNewPaid,
           totalSettledMinor,
         },
         message: `Successfully released $${(paymentMinor / 100).toFixed(2)} ${milestone.currency} for "${milestone.title}".`,
@@ -260,6 +278,23 @@ router.post(
         return res.status(409).json({
           success: false,
           message: 'This project has already been captured and paid in full.',
+        });
+      }
+
+      // Enforce: Assigned provider must submit work proof before PayPal checkout can be authorized
+      const milestoneEvidence = Array.from(dbStore.evidence.values()).filter(
+        (e) => e.milestoneId === milestone.id
+      );
+      const hasProof =
+        milestoneEvidence.length > 0 ||
+        milestone.status === 'SUBMITTED' ||
+        milestone.status === 'APPROVED_FOR_PAYMENT' ||
+        milestone.status === 'PAID';
+
+      if (!hasProof) {
+        return res.status(400).json({
+          success: false,
+          message: `Work proof required: The assigned provider must submit proof for "${milestone.title}" before PayPal checkout can be authorized.`,
         });
       }
 

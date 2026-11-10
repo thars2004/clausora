@@ -52,6 +52,12 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const resolvedName = ownerUser?.name || p.paymentDetails?.billingName || (p.ownerId === req.user?.id ? req.user?.name : 'Client');
     p.ownerName = resolvedName;
     p.clientName = resolvedName;
+
+    const providerUser = p.providerIds && p.providerIds.length > 0
+      ? dbStore.findUserById(p.providerIds[0])
+      : (p.acceptedBy ? dbStore.findUserById(p.acceptedBy) : null);
+    p.assignedProviderName = providerUser?.name || 'Alex Rivera (Rivera Tech)';
+    p.assignedProviderId = providerUser?.id || (p.providerIds && p.providerIds[0]) || 'usr_provider_demo';
   });
 
   return res.json({
@@ -178,33 +184,46 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
     }
     await dbStore.saveProject(project);
 
-    // Instantiate actionable milestones so deliverables can immediately receive escrow payments
-    const suggested = blueprint.suggestedMilestones || [];
+    // Instantiate actionable milestones based directly on task content and effort hours
+    const workstreams = blueprint.workstreams || [];
+    const allTasks = workstreams.flatMap((ws) => ws.tasks || []);
+    const totalHours = allTasks.reduce((sum, t) => sum + (t.estimatedEffortHours || 8), 0) || 1;
     const totalBudget = project.totalAmountMinor || blueprint.totalBudgetMinor || 50000;
-    if (suggested.length > 0) {
-      const perMilestone = Math.round(totalBudget / suggested.length);
-      for (let idx = 0; idx < suggested.length; idx++) {
-        const sm = suggested[idx];
+
+    if (workstreams.length > 0) {
+      let accumulated = 0;
+      for (let idx = 0; idx < workstreams.length; idx++) {
+        const ws = workstreams[idx];
+        const wsTasks = ws.tasks || [];
+        const wsHours = wsTasks.reduce((sum, t) => sum + (t.estimatedEffortHours || 8), 0);
+        let amountMinor = Math.round(totalBudget * (wsHours / totalHours));
+        if (idx === workstreams.length - 1) {
+          amountMinor = Math.max(0, totalBudget - accumulated);
+        } else {
+          accumulated += amountMinor;
+        }
+
         const milestoneId = `ms_${projectId}_${idx + 1}`;
+        const taskListStr = wsTasks.map((t) => `[${t.id}] ${t.title}`).join(' • ');
         const ms: any = {
           id: milestoneId,
           projectId,
           agreementId: `agr_${projectId}`,
-          title: sm.name || `Phase ${idx + 1} Deliverable`,
-          description: sm.includedTaskTitles?.join(', ') || `Deliverables for phase ${idx + 1}`,
-          amountMinor: sm.suggestedAmountMinor || perMilestone,
+          title: ws.name ? `Milestone ${idx + 1}: ${ws.name}` : `Milestone ${idx + 1}: ${wsTasks[0]?.title || 'Phase Deliverable'}`,
+          description: taskListStr || ws.description || `Deliverables for milestone ${idx + 1}`,
+          amountMinor,
           paidMinor: 0,
           currency: project.currency || 'USD',
-          dueDate: sm.dueDate || new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
-          taskIds: [],
-          acceptanceCriteria: [
-            {
+          dueDate: new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
+          taskIds: wsTasks.map((t) => t.id),
+          acceptanceCriteria: wsTasks.flatMap((t) =>
+            (t.acceptanceCriteria || []).map((ac: any) => ({
               id: 'crit_' + Math.random().toString(36).substring(2, 7),
-              criterion: 'Demonstrable working implementation according to technical specification.',
-              deliverable: sm.name || `Phase ${idx + 1}`,
+              criterion: typeof ac === 'string' ? ac : ac.criterion || ac.deliverable,
+              deliverable: t.title,
               status: 'unverified',
-            },
-          ],
+            }))
+          ),
           status: 'IN_PROGRESS',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -213,42 +232,76 @@ router.post('/', authMiddleware, upload.single('file'), async (req: AuthRequest,
         await dbStore.saveMilestone(ms);
       }
     } else {
-      const phase1Amount = Math.round(totalBudget * 0.3);
-      const phase2Amount = Math.round(totalBudget * 0.4);
-      const phase3Amount = totalBudget - phase1Amount - phase2Amount;
-      const phases = [
-        { name: 'System Architecture & Foundation', desc: 'Environment configuration and core service interfaces', amount: phase1Amount },
-        { name: 'Core Pipeline & Automation Engine', desc: 'Core business logic and integration pipelines', amount: phase2Amount },
-        { name: 'Acceptance Verification & Client Handover', desc: 'Deliverable proof verification and final deployment', amount: phase3Amount },
-      ];
-      for (let idx = 0; idx < phases.length; idx++) {
-        const ph = phases[idx];
-        const milestoneId = `ms_${projectId}_${idx + 1}`;
-        const ms: any = {
-          id: milestoneId,
-          projectId,
-          agreementId: `agr_${projectId}`,
-          title: ph.name,
-          description: ph.desc,
-          amountMinor: ph.amount,
-          paidMinor: 0,
-          currency: project.currency || 'USD',
-          dueDate: new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
-          taskIds: [],
-          acceptanceCriteria: [
-            {
-              id: 'crit_' + Math.random().toString(36).substring(2, 7),
-              criterion: 'Quality and functional expectations met without unhandled exceptions.',
-              deliverable: ph.name,
-              status: 'unverified',
-            },
-          ],
-          status: 'IN_PROGRESS',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        dbStore.milestones.set(milestoneId, ms);
-        await dbStore.saveMilestone(ms);
+      const suggested = blueprint.suggestedMilestones || [];
+      if (suggested.length > 0) {
+        const perMilestone = Math.round(totalBudget / suggested.length);
+        for (let idx = 0; idx < suggested.length; idx++) {
+          const sm = suggested[idx];
+          const milestoneId = `ms_${projectId}_${idx + 1}`;
+          const ms: any = {
+            id: milestoneId,
+            projectId,
+            agreementId: `agr_${projectId}`,
+            title: sm.name || `Phase ${idx + 1} Deliverable`,
+            description: sm.includedTaskTitles?.join(', ') || `Deliverables for phase ${idx + 1}`,
+            amountMinor: sm.suggestedAmountMinor || perMilestone,
+            paidMinor: 0,
+            currency: project.currency || 'USD',
+            dueDate: sm.dueDate || new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
+            taskIds: [],
+            acceptanceCriteria: [
+              {
+                id: 'crit_' + Math.random().toString(36).substring(2, 7),
+                criterion: 'Demonstrable working implementation according to technical specification.',
+                deliverable: sm.name || `Phase ${idx + 1}`,
+                status: 'unverified',
+              },
+            ],
+            status: 'IN_PROGRESS',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          dbStore.milestones.set(milestoneId, ms);
+          await dbStore.saveMilestone(ms);
+        }
+      } else {
+        const phase1Amount = Math.round(totalBudget * 0.3);
+        const phase2Amount = Math.round(totalBudget * 0.4);
+        const phase3Amount = totalBudget - phase1Amount - phase2Amount;
+        const phases = [
+          { name: 'System Architecture & Foundation', desc: 'Environment configuration and core service interfaces', amount: phase1Amount },
+          { name: 'Core Pipeline & Automation Engine', desc: 'Core business logic and integration pipelines', amount: phase2Amount },
+          { name: 'Acceptance Verification & Client Handover', desc: 'Deliverable proof verification and final deployment', amount: phase3Amount },
+        ];
+        for (let idx = 0; idx < phases.length; idx++) {
+          const ph = phases[idx];
+          const milestoneId = `ms_${projectId}_${idx + 1}`;
+          const ms: any = {
+            id: milestoneId,
+            projectId,
+            agreementId: `agr_${projectId}`,
+            title: ph.name,
+            description: ph.desc,
+            amountMinor: ph.amount,
+            paidMinor: 0,
+            currency: project.currency || 'USD',
+            dueDate: new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
+            taskIds: [],
+            acceptanceCriteria: [
+              {
+                id: 'crit_' + Math.random().toString(36).substring(2, 7),
+                criterion: 'Quality and functional expectations met without unhandled exceptions.',
+                deliverable: ph.name,
+                status: 'unverified',
+              },
+            ],
+            status: 'IN_PROGRESS',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          dbStore.milestones.set(milestoneId, ms);
+          await dbStore.saveMilestone(ms);
+        }
       }
     }
 
@@ -336,34 +389,48 @@ router.get('/:projectId', authMiddleware, async (req: AuthRequest, res: Response
     }
   }
 
-  // Auto-instantiate milestones if none exist yet for this project
+  // Auto-instantiate milestones based on task content if none exist yet for this project
+  const workstreams = latestBlueprint?.workstreams || [];
+  const totalBudget = project.totalAmountMinor || (latestBlueprint?.totalBudgetMinor) || 50000;
+
   if (milestones.length === 0) {
-    const totalBudget = project.totalAmountMinor || (latestBlueprint?.totalBudgetMinor) || 50000;
-    const suggested = latestBlueprint?.suggestedMilestones || [];
-    if (suggested.length > 0) {
-      const perMilestone = Math.round(totalBudget / suggested.length);
-      for (let idx = 0; idx < suggested.length; idx++) {
-        const sm = suggested[idx];
+    if (workstreams.length > 0) {
+      const allTasks = workstreams.flatMap((ws) => ws.tasks || []);
+      const totalHours = allTasks.reduce((sum, t) => sum + (t.estimatedEffortHours || 8), 0) || 1;
+      let accumulated = 0;
+
+      for (let idx = 0; idx < workstreams.length; idx++) {
+        const ws = workstreams[idx];
+        const wsTasks = ws.tasks || [];
+        const wsHours = wsTasks.reduce((sum, t) => sum + (t.estimatedEffortHours || 8), 0);
+        let amountMinor = Math.round(totalBudget * (wsHours / totalHours));
+        if (idx === workstreams.length - 1) {
+          amountMinor = Math.max(0, totalBudget - accumulated);
+        } else {
+          accumulated += amountMinor;
+        }
+
         const milestoneId = `ms_${projectId}_${idx + 1}`;
+        const taskListStr = wsTasks.map((t) => `[${t.id}] ${t.title}`).join(' • ');
         const ms: any = {
           id: milestoneId,
           projectId,
           agreementId: project.currentAgreementId || `agr_${projectId}`,
-          title: sm.name || `Phase ${idx + 1} Deliverable`,
-          description: sm.includedTaskTitles?.join(', ') || `Deliverables for phase ${idx + 1}`,
-          amountMinor: sm.suggestedAmountMinor || perMilestone,
+          title: ws.name ? `Milestone ${idx + 1}: ${ws.name}` : `Milestone ${idx + 1}: ${wsTasks[0]?.title || 'Phase Deliverable'}`,
+          description: taskListStr || ws.description || `Deliverables for milestone ${idx + 1}`,
+          amountMinor,
           paidMinor: 0,
           currency: project.currency || 'USD',
-          dueDate: sm.dueDate || new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
-          taskIds: [],
-          acceptanceCriteria: [
-            {
+          dueDate: new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
+          taskIds: wsTasks.map((t) => t.id),
+          acceptanceCriteria: wsTasks.flatMap((t) =>
+            (t.acceptanceCriteria || []).map((ac: any) => ({
               id: 'crit_' + Math.random().toString(36).substring(2, 7),
-              criterion: 'Demonstrable working implementation according to technical specification.',
-              deliverable: sm.name || `Phase ${idx + 1}`,
+              criterion: typeof ac === 'string' ? ac : ac.criterion || ac.deliverable,
+              deliverable: t.title,
               status: 'unverified',
-            },
-          ],
+            }))
+          ),
           status: 'IN_PROGRESS',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -373,45 +440,101 @@ router.get('/:projectId', authMiddleware, async (req: AuthRequest, res: Response
         milestones.push(ms);
       }
     } else {
-      const phase1Amount = Math.round(totalBudget * 0.3);
-      const phase2Amount = Math.round(totalBudget * 0.4);
-      const phase3Amount = totalBudget - phase1Amount - phase2Amount;
-      const phases = [
-        { name: 'System Architecture & Foundation', desc: 'Environment configuration and core service interfaces', amount: phase1Amount },
-        { name: 'Core Pipeline & Automation Engine', desc: 'Core business logic and integration pipelines', amount: phase2Amount },
-        { name: 'Acceptance Verification & Client Handover', desc: 'Deliverable proof verification and final deployment', amount: phase3Amount },
-      ];
-      for (let idx = 0; idx < phases.length; idx++) {
-        const ph = phases[idx];
-        const milestoneId = `ms_${projectId}_${idx + 1}`;
-        const ms: any = {
-          id: milestoneId,
-          projectId,
-          agreementId: project.currentAgreementId || `agr_${projectId}`,
-          title: ph.name,
-          description: ph.desc,
-          amountMinor: ph.amount,
-          paidMinor: 0,
-          currency: project.currency || 'USD',
-          dueDate: new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
-          taskIds: [],
-          acceptanceCriteria: [
-            {
-              id: 'crit_' + Math.random().toString(36).substring(2, 7),
-              criterion: 'Quality and functional expectations met without unhandled exceptions.',
-              deliverable: ph.name,
-              status: 'unverified',
-            },
-          ],
-          status: 'IN_PROGRESS',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        dbStore.milestones.set(milestoneId, ms);
-        await dbStore.saveMilestone(ms);
-        milestones.push(ms);
+      const suggested = latestBlueprint?.suggestedMilestones || [];
+      if (suggested.length > 0) {
+        const perMilestone = Math.round(totalBudget / suggested.length);
+        for (let idx = 0; idx < suggested.length; idx++) {
+          const sm = suggested[idx];
+          const milestoneId = `ms_${projectId}_${idx + 1}`;
+          const ms: any = {
+            id: milestoneId,
+            projectId,
+            agreementId: project.currentAgreementId || `agr_${projectId}`,
+            title: sm.name || `Phase ${idx + 1} Deliverable`,
+            description: sm.includedTaskTitles?.join(', ') || `Deliverables for phase ${idx + 1}`,
+            amountMinor: sm.suggestedAmountMinor || perMilestone,
+            paidMinor: 0,
+            currency: project.currency || 'USD',
+            dueDate: sm.dueDate || new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
+            taskIds: [],
+            acceptanceCriteria: [
+              {
+                id: 'crit_' + Math.random().toString(36).substring(2, 7),
+                criterion: 'Demonstrable working implementation according to technical specification.',
+                deliverable: sm.name || `Phase ${idx + 1}`,
+                status: 'unverified',
+              },
+            ],
+            status: 'IN_PROGRESS',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          dbStore.milestones.set(milestoneId, ms);
+          await dbStore.saveMilestone(ms);
+          milestones.push(ms);
+        }
+      } else {
+        const phase1Amount = Math.round(totalBudget * 0.3);
+        const phase2Amount = Math.round(totalBudget * 0.4);
+        const phase3Amount = totalBudget - phase1Amount - phase2Amount;
+        const phases = [
+          { name: 'System Architecture & Foundation', desc: 'Environment configuration and core service interfaces', amount: phase1Amount },
+          { name: 'Core Pipeline & Automation Engine', desc: 'Core business logic and integration pipelines', amount: phase2Amount },
+          { name: 'Acceptance Verification & Client Handover', desc: 'Deliverable proof verification and final deployment', amount: phase3Amount },
+        ];
+        for (let idx = 0; idx < phases.length; idx++) {
+          const ph = phases[idx];
+          const milestoneId = `ms_${projectId}_${idx + 1}`;
+          const ms: any = {
+            id: milestoneId,
+            projectId,
+            agreementId: project.currentAgreementId || `agr_${projectId}`,
+            title: ph.name,
+            description: ph.desc,
+            amountMinor: ph.amount,
+            paidMinor: 0,
+            currency: project.currency || 'USD',
+            dueDate: new Date(Date.now() + (idx + 1) * 7 * 86400000).toISOString().split('T')[0],
+            taskIds: [],
+            acceptanceCriteria: [
+              {
+                id: 'crit_' + Math.random().toString(36).substring(2, 7),
+                criterion: 'Quality and functional expectations met without unhandled exceptions.',
+                deliverable: ph.name,
+                status: 'unverified',
+              },
+            ],
+            status: 'IN_PROGRESS',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          dbStore.milestones.set(milestoneId, ms);
+          await dbStore.saveMilestone(ms);
+          milestones.push(ms);
+        }
       }
     }
+  } else if (milestones.length > 0 && workstreams.length > 0) {
+    // Reconcile and calculate milestones based on task content for existing milestones
+    let needsSaveAny = false;
+    milestones.forEach((m, idx) => {
+      const ws = workstreams[idx];
+      if (ws) {
+        const wsTasks = ws.tasks || [];
+        if (!m.taskIds || m.taskIds.length === 0) {
+          m.taskIds = wsTasks.map((t) => t.id);
+          needsSaveAny = true;
+        }
+        if (!m.description || m.description.startsWith('Deliverables for phase')) {
+          m.description = wsTasks.map((t) => `[${t.id}] ${t.title}`).join(' • ');
+          needsSaveAny = true;
+        }
+        if (needsSaveAny) {
+          dbStore.milestones.set(m.id, m);
+          dbStore.saveMilestone(m).catch(() => {});
+        }
+      }
+    });
   }
 
   // Find agreements
@@ -438,6 +561,12 @@ router.get('/:projectId', authMiddleware, async (req: AuthRequest, res: Response
   const resolvedName = ownerUser?.name || project.paymentDetails?.billingName || (project.ownerId === req.user?.id ? req.user?.name : 'Client');
   project.ownerName = resolvedName;
   project.clientName = resolvedName;
+
+  const providerUser = project.providerIds && project.providerIds.length > 0
+    ? dbStore.findUserById(project.providerIds[0])
+    : (project.acceptedBy ? dbStore.findUserById(project.acceptedBy) : null);
+  project.assignedProviderName = providerUser?.name || 'Alex Rivera (Rivera Tech)';
+  project.assignedProviderId = providerUser?.id || (project.providerIds && project.providerIds[0]) || 'usr_provider_demo';
 
   return res.json({
     success: true,

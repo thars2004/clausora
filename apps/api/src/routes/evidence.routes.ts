@@ -42,6 +42,13 @@ router.post('/milestones/:milestoneId/evidence', authMiddleware, upload.single('
 
     await dbStore.saveEvidence(item);
 
+    // Transition milestone status to SUBMITTED if currently CREATED or IN_PROGRESS
+    if (milestone.status === 'CREATED' || milestone.status === 'IN_PROGRESS') {
+      milestone.status = 'SUBMITTED';
+      milestone.updatedAt = new Date().toISOString();
+      await dbStore.saveMilestone(milestone);
+    }
+
     dbStore.addAuditEvent({
       projectId: milestone.projectId,
       actorId: req.user!.id,
@@ -82,6 +89,16 @@ router.get('/milestones/:milestoneId/review', authMiddleware, (req: AuthRequest,
   return res.json({
     success: true,
     data: { review: latestReview },
+  });
+});
+
+// GET /api/projects/:projectId/evidence - all evidence for a project
+router.get('/projects/:projectId/evidence', authMiddleware, (req: AuthRequest, res: Response) => {
+  const { projectId } = req.params;
+  const items = Array.from(dbStore.evidence.values()).filter((e) => e.projectId === projectId);
+  return res.json({
+    success: true,
+    data: { evidence: items },
   });
 });
 
