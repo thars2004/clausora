@@ -87,6 +87,17 @@ export const ProjectDetailPage: React.FC = () => {
   const [proofUrl, setProofUrl] = useState('');
   const [proofDesc, setProofDesc] = useState('');
   const [submittingProof, setSubmittingProof] = useState(false);
+
+  // New Task Modal state
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDesc, setNewTaskDesc] = useState('');
+  const [newTaskHours, setNewTaskHours] = useState('16');
+  const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
+  const [newTaskDeliverable, setNewTaskDeliverable] = useState('');
+  const [newTaskMilestoneMode, setNewTaskMilestoneMode] = useState<'dedicated' | 'existing'>('dedicated');
+  const [selectedTargetMilestoneId, setSelectedTargetMilestoneId] = useState('');
+  const [creatingTask, setCreatingTask] = useState(false);
   const [aiReview, setAiReview] = useState<AiReview | null>(null);
   const [scopeRequests, setScopeRequests] = useState<ScopeChangeRequest[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
@@ -440,6 +451,55 @@ export const ProjectDetailPage: React.FC = () => {
       toast.error(err.response?.data?.message || 'Failed to submit work proof.', 'Proof Error');
     } finally {
       setSubmittingProof(false);
+    }
+  };
+
+  // Create new task and correctly place/calculate milestone based on task progress
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskTitle.trim() || !projectId) return;
+    setCreatingTask(true);
+    try {
+      const res = await api.post(`/projects/${projectId}/tasks`, {
+        title: newTaskTitle.trim(),
+        description: newTaskDesc.trim() || newTaskTitle.trim(),
+        estimatedEffortHours: Number(newTaskHours) || 16,
+        priority: newTaskPriority,
+        deliverable: newTaskDeliverable.trim() || newTaskTitle.trim(),
+        createDedicatedMilestone: newTaskMilestoneMode === 'dedicated',
+        targetMilestoneId: newTaskMilestoneMode === 'existing' ? selectedTargetMilestoneId : undefined,
+      });
+      toast.success(
+        res.data?.message || 'Task and milestone created successfully based on task effort!',
+        'Task & Milestone Created'
+      );
+      setIsAddTaskModalOpen(false);
+      setNewTaskTitle('');
+      setNewTaskDesc('');
+      setNewTaskHours('16');
+      setNewTaskDeliverable('');
+      await fetchProjectData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to create task.', 'Task Creation Error');
+    } finally {
+      setCreatingTask(false);
+    }
+  };
+
+  // Update task status and synchronize milestone progress
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
+    if (!projectId) return;
+    try {
+      const res = await api.patch(`/projects/${projectId}/tasks/${taskId}`, {
+        status: newStatus,
+      });
+      toast.success(
+        res.data?.message || `Task progress updated to ${newStatus}. Milestone synced!`,
+        'Task Progress Updated'
+      );
+      await fetchProjectData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update task progress.', 'Update Error');
     }
   };
 
@@ -1548,6 +1608,15 @@ export const ProjectDetailPage: React.FC = () => {
                   <span className="text-purple-400">Assigned Provider:</span>
                   <strong className="text-white font-semibold">{project.assignedProviderName || 'Alex Rivera (Rivera Tech)'}</strong>
                 </span>
+
+                <button
+                  onClick={() => setIsAddTaskModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold transition shadow-md shadow-indigo-900/30 hover:scale-[1.02]"
+                  title="Create new project task with proportional milestone calculation"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Task</span>
+                </button>
               </div>
             </div>
 
@@ -1568,6 +1637,11 @@ export const ProjectDetailPage: React.FC = () => {
                 const matchingWs = blueprint?.workstreams?.[idx];
                 const wsTasks = matchingWs?.tasks || [];
 
+                // Calculate progress based on tasks
+                const taskProgress = ms.progressPercent !== undefined
+                  ? ms.progressPercent
+                  : (isPaid ? 100 : hasProof ? 80 : wsTasks.length > 0 ? Math.round(wsTasks.reduce((acc, t) => acc + (t.status === 'done' ? 100 : t.status === 'submitted' ? 80 : t.status === 'in_progress' ? 50 : 0), 0) / wsTasks.length) : 35);
+
                 return (
                   <div
                     key={ms.id}
@@ -1580,7 +1654,7 @@ export const ProjectDetailPage: React.FC = () => {
                     }`}
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                      <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="space-y-2 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-mono font-bold text-indigo-400">
                             Phase {idx + 1}
@@ -1608,20 +1682,54 @@ export const ProjectDetailPage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Task Content Breakdown */}
-                        <div className="text-xs text-slate-300 space-y-1">
+                        {/* Task Progress Bar & Progress Indicator */}
+                        <div className="space-y-1 pt-0.5 max-w-md">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-400 font-medium flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-indigo-400" />
+                              <span>Task Progress</span>
+                            </span>
+                            <span className="font-mono font-bold text-indigo-300">
+                              {taskProgress}% {taskProgress === 100 ? '• Done' : taskProgress >= 80 ? '• Submitted' : taskProgress >= 50 ? '• In Progress' : '• Pending'}
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800/80">
+                            <div
+                              className="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${taskProgress}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Task Content Breakdown with Interactive Status Dropdown */}
+                        <div className="text-xs text-slate-300 space-y-1.5 pt-1">
                           {wsTasks.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5 items-center pt-0.5">
+                            <div className="flex flex-wrap gap-2 items-center">
                               <span className="text-[11px] text-slate-400 font-medium">Included Tasks:</span>
                               {wsTasks.map((t) => (
-                                <span
+                                <div
                                   key={t.id}
-                                  className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300"
-                                  title={t.description || t.title}
+                                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200"
                                 >
-                                  <strong>{t.id}:</strong> {t.title.length > 35 ? t.title.substring(0, 35) + '…' : t.title}
-                                  {t.estimatedEffortHours ? ` (${t.estimatedEffortHours}h)` : ''}
-                                </span>
+                                  <span className="font-mono text-[10px] text-indigo-400 font-bold">{t.id}</span>
+                                  <span className="text-[11px] text-slate-300 truncate max-w-[140px]" title={t.title}>
+                                    {t.title}
+                                  </span>
+                                  <span className="text-[9px] text-slate-500 font-mono">
+                                    {t.estimatedEffortHours ? `${t.estimatedEffortHours}h` : ''}
+                                  </span>
+                                  <select
+                                    value={t.status || 'todo'}
+                                    onChange={(e) => handleUpdateTaskStatus(t.id, e.target.value)}
+                                    className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-teal-300 font-semibold focus:outline-none cursor-pointer hover:border-slate-500 transition"
+                                    title="Update task progress (synchronizes milestone)"
+                                  >
+                                    <option value="todo">Todo (0%)</option>
+                                    <option value="in_progress">In Progress (50%)</option>
+                                    <option value="submitted">Submitted (80%)</option>
+                                    <option value="done">Done (100%)</option>
+                                  </select>
+                                </div>
                               ))}
                             </div>
                           ) : (
@@ -2070,6 +2178,154 @@ export const ProjectDetailPage: React.FC = () => {
           </form>
         </Modal>
       )}
+
+      {/* Create New Task & Calculate Milestone Modal */}
+      <Modal
+        isOpen={isAddTaskModalOpen}
+        onClose={() => setIsAddTaskModalOpen(false)}
+        title="Create New Project Task"
+        subtitle="New tasks are added to the Work DNA blueprint with milestone allocation and progress calculated from task effort."
+        maxWidth="lg"
+      >
+        <form onSubmit={handleCreateTask} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-300">Task Title</label>
+            <input
+              type="text"
+              required
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              placeholder="e.g. Automated Stripe Fallback & Webhook Reconciliation"
+              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-300">Description & Deliverable Scope</label>
+            <textarea
+              rows={3}
+              value={newTaskDesc}
+              onChange={(e) => setNewTaskDesc(e.target.value)}
+              placeholder="Describe technical requirements, expected inputs/outputs, and integration endpoints..."
+              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300">Estimated Effort (Hours)</label>
+              <input
+                type="number"
+                min="1"
+                max="500"
+                value={newTaskHours}
+                onChange={(e) => setNewTaskHours(e.target.value)}
+                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+              />
+              <span className="text-[10px] text-slate-500">Milestone budget allocation is calculated from effort hours.</span>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300">Priority Level</label>
+              <select
+                value={newTaskPriority}
+                onChange={(e: any) => setNewTaskPriority(e.target.value)}
+                className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+                <option value="critical">Critical / Blocking</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-300">Deliverable Artifact / Output</label>
+            <input
+              type="text"
+              value={newTaskDeliverable}
+              onChange={(e) => setNewTaskDeliverable(e.target.value)}
+              placeholder="e.g. Tested webhook handler module and unit test logs"
+              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div className="space-y-2 p-3 bg-slate-950 border border-slate-800/80 rounded-xl">
+            <label className="text-xs font-semibold text-slate-300 block">Milestone Placement & Calculation</label>
+            <div className="space-y-2 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="milestoneMode"
+                  checked={newTaskMilestoneMode === 'dedicated'}
+                  onChange={() => setNewTaskMilestoneMode('dedicated')}
+                  className="accent-indigo-500"
+                />
+                <span className="text-slate-200 font-medium">Create a New Dedicated Milestone Phase for this task</span>
+              </label>
+
+              {milestones.length > 0 && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="milestoneMode"
+                    checked={newTaskMilestoneMode === 'existing'}
+                    onChange={() => {
+                      setNewTaskMilestoneMode('existing');
+                      if (!selectedTargetMilestoneId && milestones.length > 0) {
+                        setSelectedTargetMilestoneId(milestones[0].id);
+                      }
+                    }}
+                    className="accent-indigo-500"
+                  />
+                  <span className="text-slate-200 font-medium">Attach to an Existing Milestone</span>
+                </label>
+              )}
+
+              {newTaskMilestoneMode === 'existing' && milestones.length > 0 && (
+                <div className="pl-6 pt-1">
+                  <select
+                    value={selectedTargetMilestoneId}
+                    onChange={(e) => setSelectedTargetMilestoneId(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none"
+                  >
+                    {milestones.map((m, idx) => (
+                      <option key={m.id} value={m.id}>
+                        Phase {idx + 1}: {m.title} (${(m.amountMinor / 100).toFixed(2)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsAddTaskModalOpen(false)}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-medium transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={creatingTask || !newTaskTitle.trim()}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-900/40 transition disabled:opacity-50"
+            >
+              {creatingTask ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  <span>Create Task & Calculate Milestone</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Edit Project Modal */}
       {project && (

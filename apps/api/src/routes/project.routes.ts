@@ -537,6 +537,28 @@ router.get('/:projectId', authMiddleware, async (req: AuthRequest, res: Response
     });
   }
 
+  // Calculate dynamic progress percent for each milestone based on task progress
+  milestones.forEach((m) => {
+    if (m.status === 'PAID') {
+      m.progressPercent = 100;
+    } else {
+      const msTasks = workstreams.flatMap((ws) => ws.tasks || []).filter((t) => m.taskIds && m.taskIds.includes(t.id));
+      if (msTasks.length > 0) {
+        const totalTaskScore = msTasks.reduce((sum, t) => {
+          const score = t.status === 'done' ? 100 : t.status === 'submitted' ? 80 : t.status === 'in_progress' ? 50 : 0;
+          return sum + score;
+        }, 0);
+        m.progressPercent = Math.round(totalTaskScore / msTasks.length);
+      } else if (m.status === 'SUBMITTED' || m.status === 'APPROVED_FOR_PAYMENT') {
+        m.progressPercent = 80;
+      } else if (m.status === 'IN_PROGRESS') {
+        m.progressPercent = 35;
+      } else {
+        m.progressPercent = 0;
+      }
+    }
+  });
+
   // Find agreements
   let agreements = Array.from(dbStore.agreements.values()).filter((a) => a.projectId === projectId);
   if (agreements.length === 0 && isDbConnected()) {
@@ -747,6 +769,309 @@ router.delete('/:projectId', authMiddleware, async (req: AuthRequest, res: Respo
   return res.json({
     success: true,
     message: `Project "${project.title}" was deleted successfully.`,
+  });
+});
+
+// POST /api/projects/:projectId/tasks - Create a new task and correctly place/calculate the milestone
+router.post('/:projectId/tasks', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { projectId } = req.params;
+  const project = dbStore.projects.get(projectId);
+  if (!project) {
+    return res.status(404).json({ success: false, message: 'Project not found.' });
+  }
+
+  const {
+    title,
+    description,
+    estimatedEffortHours,
+    priority,
+    deliverable,
+    acceptanceCriteria,
+    status: initialStatus,
+    targetMilestoneId,
+    createDedicatedMilestone,
+  } = req.body;
+
+  if (!title || !title.trim()) {
+    return res.status(400).json({ success: false, message: 'Task title is required.' });
+  }
+
+  // Find latest blueprint
+  const blueprints = Array.from(dbStore.blueprints.values()).filter((b) => b.projectId === projectId);
+  let blueprint = blueprints[blueprints.length - 1];
+  if (!blueprint) {
+    blueprint = {
+      id: 'bp_' + Math.random().toString(36).substring(2, 9),
+      projectId,
+      version: 1,
+      projectTitle: project.title,
+      projectSummary: project.description,
+      assumptions: [],
+      risks: [],
+      clarifyingQuestions: [],
+      workstreams: [],
+      suggestedMilestones: [],
+      totalBudgetMinor: project.totalAmountMinor || 50000,
+      currency: project.currency || 'USD',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    dbStore.blueprints.set(blueprint.id, blueprint);
+  }
+
+  // Count existing tasks to generate incremental ID: TASK-XXX
+  const allTasks = blueprint.workstreams.flatMap((ws) => ws.tasks || []);
+  let maxNum = 0;
+  for (const t of allTasks) {
+    const match = t.id.match(/TASK-(\d+)/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+  }
+  const nextTaskId = `TASK-${String(maxNum + 1).padStart(3, '0')}`;
+
+  const taskHours = Number(estimatedEffortHours) > 0 ? Number(estimatedEffortHours) : 16;
+  const taskStatus = initialStatus || 'todo';
+  const newTask: any = {
+    id: nextTaskId,
+    title: title.trim(),
+    description: description ? description.trim() : title.trim(),
+    estimatedEffortHours: taskHours,
+    priority: priority || 'medium',
+    complexity: 'medium',
+    deliverable: deliverable ? deliverable.trim() : title.trim(),
+    acceptanceCriteria: Array.isArray(acceptanceCriteria) && acceptanceCriteria.length > 0
+      ? acceptanceCriteria
+      : [`Demonstrable working implementation of ${title.trim()}.`],
+    dependencies: [],
+    recommendedEvidence: ['repository_link', 'screenshot'],
+    confidence: 1.0,
+    status: taskStatus,
+    assignedClientId: project.ownerId,
+    assignedProviderId: project.assignedProviderId || (project.providerIds && project.providerIds[0]) || 'usr_provider_demo',
+  };
+
+  // Find project milestones
+  const existingMilestones = Array.from(dbStore.milestones.values()).filter((m) => m.projectId === projectId);
+
+  let affectedMilestone: any = null;
+
+  if (targetMilestoneId && !createDedicatedMilestone) {
+    // Attach to existing milestone
+    affectedMilestone = existingMilestones.find((m) => m.id === targetMilestoneId);
+  }
+
+  if (affectedMilestone) {
+    if (!affectedMilestone.taskIds) affectedMilestone.taskIds = [];
+    if (!affectedMilestone.taskIds.includes(newTask.id)) {
+      affectedMilestone.taskIds.push(newTask.id);
+    }
+    affectedMilestone.description = affectedMilestone.description
+      ? `${affectedMilestone.description} • [${newTask.id}] ${newTask.title}`
+      : `[${newTask.id}] ${newTask.title}`;
+
+    (newTask.acceptanceCriteria || []).forEach((crit: string) => {
+      affectedMilestone.acceptanceCriteria.push({
+        id: 'crit_' + Math.random().toString(36).substring(2, 7),
+        criterion: crit,
+        deliverable: newTask.title,
+        status: 'unverified',
+      });
+    });
+
+    // Update milestone status based on task progress
+    if (taskStatus === 'submitted') {
+      affectedMilestone.status = 'SUBMITTED';
+    }
+
+    affectedMilestone.updatedAt = new Date().toISOString();
+    dbStore.milestones.set(affectedMilestone.id, affectedMilestone);
+    await dbStore.saveMilestone(affectedMilestone);
+
+    // Put into matching workstream or first workstream
+    let ws = blueprint.workstreams.find((w) => w.name.includes(affectedMilestone.title) || w.tasks.some((t: any) => affectedMilestone.taskIds.includes(t.id)));
+    if (!ws && blueprint.workstreams.length > 0) ws = blueprint.workstreams[0];
+    if (ws) {
+      ws.tasks.push(newTask);
+    } else {
+      blueprint.workstreams.push({
+        id: 'ws_' + Math.random().toString(36).substring(2, 7),
+        name: affectedMilestone.title,
+        description: affectedMilestone.description,
+        tasks: [newTask],
+      });
+    }
+  } else {
+    // Create a new dedicated milestone for this task
+    const nextIdx = existingMilestones.length + 1;
+    const newMsId = `ms_${projectId}_${nextIdx}`;
+
+    // Calculate milestone amount based on task effort hours and project budget
+    const totalExistingHours = allTasks.reduce((sum, t) => sum + (t.estimatedEffortHours || 8), 0);
+    const newTotalHours = totalExistingHours + taskHours;
+    const projectTotalMinor = project.totalAmountMinor || blueprint.totalBudgetMinor || 50000;
+    const calculatedAmountMinor = Math.max(1000, Math.round(projectTotalMinor * (taskHours / (newTotalHours || 1))));
+
+    // Calculate initial milestone status based on task progress
+    let initialMilestoneStatus: any = 'IN_PROGRESS';
+    if (taskStatus === 'submitted') initialMilestoneStatus = 'SUBMITTED';
+    else if (taskStatus === 'done') initialMilestoneStatus = 'APPROVED_FOR_PAYMENT';
+
+    affectedMilestone = {
+      id: newMsId,
+      projectId,
+      agreementId: project.currentAgreementId || `agr_${projectId}`,
+      title: `Milestone ${nextIdx}: ${newTask.title}`,
+      description: `[${newTask.id}] ${newTask.title} (${taskHours}h) • ${newTask.description}`,
+      amountMinor: calculatedAmountMinor,
+      paidMinor: 0,
+      currency: project.currency || 'USD',
+      dueDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+      taskIds: [newTask.id],
+      acceptanceCriteria: (newTask.acceptanceCriteria || []).map((crit: string) => ({
+        id: 'crit_' + Math.random().toString(36).substring(2, 7),
+        criterion: crit,
+        deliverable: newTask.title,
+        status: 'unverified',
+      })),
+      status: initialMilestoneStatus,
+      progressPercent: taskStatus === 'done' ? 100 : taskStatus === 'submitted' ? 80 : taskStatus === 'in_progress' ? 50 : 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    dbStore.milestones.set(newMsId, affectedMilestone);
+    await dbStore.saveMilestone(affectedMilestone);
+
+    // Create corresponding workstream for the new milestone
+    blueprint.workstreams.push({
+      id: 'ws_' + Math.random().toString(36).substring(2, 7),
+      name: affectedMilestone.title,
+      description: affectedMilestone.description,
+      tasks: [newTask],
+    });
+  }
+
+  blueprint.updatedAt = new Date().toISOString();
+  dbStore.blueprints.set(blueprint.id, blueprint);
+  await dbStore.saveBlueprint(blueprint);
+
+  dbStore.addAuditEvent({
+    projectId,
+    actorId: req.user!.id,
+    actorName: req.user!.name,
+    actorRole: req.user!.role,
+    eventType: 'TASK_CREATED',
+    entityType: 'task',
+    entityId: newTask.id,
+    summary: `Created new task [${newTask.id}] "${newTask.title}" (${taskHours}h). Milestone "${affectedMilestone.title}" allocated with status ${affectedMilestone.status}.`,
+  });
+
+  return res.status(201).json({
+    success: true,
+    data: {
+      task: newTask,
+      milestone: affectedMilestone,
+      blueprint,
+    },
+    message: `Task [${newTask.id}] and Milestone "${affectedMilestone.title}" created successfully.`,
+  });
+});
+
+// PATCH /api/projects/:projectId/tasks/:taskId - Update task status/progress and synchronize milestone
+router.patch('/:projectId/tasks/:taskId', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { projectId, taskId } = req.params;
+  const { status: newStatus } = req.body;
+
+  const project = dbStore.projects.get(projectId);
+  if (!project) {
+    return res.status(404).json({ success: false, message: 'Project not found.' });
+  }
+
+  const blueprints = Array.from(dbStore.blueprints.values()).filter((b) => b.projectId === projectId);
+  const blueprint = blueprints[blueprints.length - 1];
+  if (!blueprint) {
+    return res.status(404).json({ success: false, message: 'Blueprint not found.' });
+  }
+
+  let foundTask: any = null;
+  for (const ws of blueprint.workstreams) {
+    for (const t of ws.tasks) {
+      if (t.id === taskId) {
+        foundTask = t;
+        break;
+      }
+    }
+    if (foundTask) break;
+  }
+
+  if (!foundTask) {
+    return res.status(404).json({ success: false, message: `Task ${taskId} not found in project blueprint.` });
+  }
+
+  if (newStatus) {
+    foundTask.status = newStatus;
+  }
+
+  // Find corresponding milestone
+  const milestones = Array.from(dbStore.milestones.values()).filter((m) => m.projectId === projectId);
+  const affectedMilestone = milestones.find((m) => m.taskIds && m.taskIds.includes(taskId));
+
+  if (affectedMilestone) {
+    // If task is submitted, milestone transitions to SUBMITTED if not already paid
+    if (newStatus === 'submitted' && affectedMilestone.status !== 'PAID') {
+      affectedMilestone.status = 'SUBMITTED';
+    } else if (newStatus === 'done' && affectedMilestone.status !== 'PAID') {
+      // Check if all tasks in milestone are done
+      const allMsTasks = blueprint.workstreams.flatMap((ws) => ws.tasks).filter((t: any) => affectedMilestone.taskIds.includes(t.id));
+      const allDone = allMsTasks.every((t: any) => t.status === 'done');
+      if (allDone) {
+        affectedMilestone.status = 'APPROVED_FOR_PAYMENT';
+      }
+    } else if (newStatus === 'in_progress' && affectedMilestone.status === 'CREATED') {
+      affectedMilestone.status = 'IN_PROGRESS';
+    }
+
+    // Calculate milestone progress percent based on all its tasks
+    const msTasks = blueprint.workstreams.flatMap((ws) => ws.tasks).filter((t: any) => affectedMilestone.taskIds.includes(t.id));
+    if (affectedMilestone.status === 'PAID') {
+      affectedMilestone.progressPercent = 100;
+    } else if (msTasks.length > 0) {
+      const totalScore = msTasks.reduce((sum: number, t: any) => {
+        const score = t.status === 'done' ? 100 : t.status === 'submitted' ? 80 : t.status === 'in_progress' ? 50 : 0;
+        return sum + score;
+      }, 0);
+      affectedMilestone.progressPercent = Math.round(totalScore / msTasks.length);
+    }
+
+    affectedMilestone.updatedAt = new Date().toISOString();
+    dbStore.milestones.set(affectedMilestone.id, affectedMilestone);
+    await dbStore.saveMilestone(affectedMilestone);
+  }
+
+  blueprint.updatedAt = new Date().toISOString();
+  dbStore.blueprints.set(blueprint.id, blueprint);
+  await dbStore.saveBlueprint(blueprint);
+
+  dbStore.addAuditEvent({
+    projectId,
+    actorId: req.user!.id,
+    actorName: req.user!.name,
+    actorRole: req.user!.role,
+    eventType: 'TASK_UPDATED',
+    entityType: 'task',
+    entityId: taskId,
+    summary: `Task [${taskId}] progress updated to "${newStatus}". Milestone "${affectedMilestone?.title || 'Deliverable'}" synced.`,
+  });
+
+  return res.json({
+    success: true,
+    data: {
+      task: foundTask,
+      milestone: affectedMilestone,
+    },
+    message: `Task progress updated to ${newStatus}. Milestone synchronized.`,
   });
 });
 

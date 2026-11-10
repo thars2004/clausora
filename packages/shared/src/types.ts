@@ -360,6 +360,7 @@ export interface Milestone {
   currency: string; // e.g. USD
   dueDate: string;
   taskIds: string[];
+  progressPercent?: number; // 0 to 100 calculated from task progress
   acceptanceCriteria: Array<{
     id: string;
     criterion: string;
