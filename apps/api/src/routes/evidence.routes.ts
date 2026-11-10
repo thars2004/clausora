@@ -73,7 +73,9 @@ router.post('/milestones/:milestoneId/evidence', authMiddleware, upload.single('
 // GET /api/milestones/:milestoneId/evidence
 router.get('/milestones/:milestoneId/evidence', authMiddleware, (req: AuthRequest, res: Response) => {
   const { milestoneId } = req.params;
-  const items = Array.from(dbStore.evidence.values()).filter((e) => e.milestoneId === milestoneId);
+  const items = Array.from(dbStore.evidence.values())
+    .filter((e) => e.milestoneId === milestoneId)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   return res.json({
     success: true,
     data: { evidence: items },
@@ -95,7 +97,9 @@ router.get('/milestones/:milestoneId/review', authMiddleware, (req: AuthRequest,
 // GET /api/projects/:projectId/evidence - all evidence for a project
 router.get('/projects/:projectId/evidence', authMiddleware, (req: AuthRequest, res: Response) => {
   const { projectId } = req.params;
-  const items = Array.from(dbStore.evidence.values()).filter((e) => e.projectId === projectId);
+  const items = Array.from(dbStore.evidence.values())
+    .filter((e) => e.projectId === projectId)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   return res.json({
     success: true,
     data: { evidence: items },

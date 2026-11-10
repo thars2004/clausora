@@ -62,6 +62,9 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     p.assignedProviderId = providerUser?.id || (p.providerIds && p.providerIds[0]) || 'usr_provider_demo';
   });
 
+  // First-Come-First-Serve: Oldest project first (order of creation)
+  userProjects.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+
   return res.json({
     success: true,
     data: { projects: userProjects },
@@ -619,7 +622,10 @@ router.get('/:projectId/activity', authMiddleware, (req: AuthRequest, res: Respo
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
-  const events = dbStore.auditEvents.filter((e) => e.projectId === projectId);
+  // Newest First: Sort audit activity events descending by date
+  const events = dbStore.auditEvents
+    .filter((e) => e.projectId === projectId)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
   return res.json({
     success: true,

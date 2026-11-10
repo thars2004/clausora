@@ -55,6 +55,8 @@ export const ProjectsPage: React.FC = () => {
       if (!isBackground) setLoading(true);
       const res = await api.get('/projects');
       const list = res.data.data?.projects || [];
+      // First-Come-First-Serve: preserve creation order (oldest first)
+      list.sort((a: any, b: any) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
       setProjects(list);
 
       if (showToastMsg) {

@@ -1,9 +1,10 @@
 import os
 import math
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 def create_clausora_svg(path, size=512):
-    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}" width="{size}" height="{size}" fill="none">
+    # Always keep viewBox="0 0 512 512" so coordinates 0..512 scale identically regardless of rendered size
+    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="{size}" height="{size}" fill="none">
   <defs>
     <linearGradient id="cla-bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#4F46E5" />
@@ -25,8 +26,8 @@ def create_clausora_svg(path, size=512):
   </defs>
 
   <!-- Ambient Shadow & Rounded Squircle Container -->
-  <rect x="24" y="24" width="{size - 48}" height="{size - 48}" rx="108" fill="url(#cla-bg)" filter="url(#cla-shadow)"/>
-  <rect x="24" y="24" width="{size - 48}" height="{size - 48}" rx="108" stroke="#A5B4FC" stroke-opacity="0.35" stroke-width="4"/>
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#cla-bg)" filter="url(#cla-shadow)"/>
+  <rect x="24" y="24" width="464" height="464" rx="108" stroke="#A5B4FC" stroke-opacity="0.35" stroke-width="4"/>
 
   <!-- Geometric C-Ribbon Curve (Bilateral Contract & Escrow Enclosure) -->
   <path d="M 360 155 C 325 118 280 98 225 98 C 138 98 68 168 68 256 C 68 344 138 414 225 414 C 280 414 325 394 360 357" 
@@ -53,22 +54,34 @@ def create_clausora_svg(path, size=512):
     print(f"Generated SVG: {path}")
 
 
-def create_clausora_png(path, size=512):
-    # Render crisp raster image using Pillow
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+def cubic_bezier_points(p0, p1, p2, p3, steps=40):
+    points = []
+    for i in range(steps + 1):
+        t = i / float(steps)
+        u = 1.0 - t
+        tt = t * t
+        uu = u * u
+        uuu = uu * u
+        ttt = tt * t
+        
+        x = uuu * p0[0] + 3 * uu * t * p1[0] + 3 * u * tt * p2[0] + ttt * p3[0]
+        y = uuu * p0[1] + 3 * uu * t * p1[1] + 3 * u * tt * p2[1] + ttt * p3[1]
+        points.append((x, y))
+    return points
 
+
+def create_clausora_png(path, size=512):
+    # Render crisp raster image using Pillow matching the SVG cubic beziers exactly
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     scale = size / 512.0
     
-    # Background squircle
+    # 1. Background squircle with gradient
     margin = int(24 * scale)
     radius = int(108 * scale)
     
-    # Generate background with gradient
     bg_img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     bg_draw = ImageDraw.Draw(bg_img)
     
-    # Draw rounded rectangle
     bg_draw.rounded_rectangle(
         [margin, margin, size - margin, size - margin],
         radius=radius,
@@ -77,13 +90,12 @@ def create_clausora_png(path, size=512):
         width=max(1, int(4 * scale))
     )
     
-    # Blend with diagonal gradient
+    # Diagonal gradient blend (#4F46E5 to #7C3AED)
     for y in range(size):
         for x in range(size):
             r, g, b, a = bg_img.getpixel((x, y))
             if a > 0:
                 t = (x + y) / (2.0 * size)
-                # #4F46E5 (79, 70, 229) to #7C3AED (124, 58, 237)
                 nr = int(79 + (124 - 79) * t)
                 ng = int(70 + (58 - 70) * t)
                 nb = int(229 + (237 - 229) * t)
@@ -92,58 +104,54 @@ def create_clausora_png(path, size=512):
     img = Image.alpha_composite(img, bg_img)
     draw = ImageDraw.Draw(img)
     
-    # Draw C-Ribbon Curve using sampled points
-    pts = []
-    # Elliptical arc on left
-    cx = int(225 * scale)
-    cy = int(256 * scale)
-    rx = int(157 * scale)
-    ry = int(158 * scale)
+    # 2. EXACT SVG Cubic Beziers for the 'C' Ribbon:
+    # Segment 1: (360, 155) -> (325, 118) -> (280, 98) -> (225, 98)
+    # Segment 2: (225, 98) -> (138, 98) -> (68, 168) -> (68, 256)
+    # Segment 3: (68, 256) -> (68, 344) -> (138, 414) -> (225, 414)
+    # Segment 4: (225, 414) -> (280, 414) -> (325, 394) -> (360, 357)
+    seg1 = cubic_bezier_points((360, 155), (325, 118), (280, 98), (225, 98), steps=30)
+    seg2 = cubic_bezier_points((225, 98), (138, 98), (68, 168), (68, 256), steps=30)
+    seg3 = cubic_bezier_points((68, 256), (68, 344), (138, 414), (225, 414), steps=30)
+    seg4 = cubic_bezier_points((225, 414), (280, 414), (325, 394), (360, 357), steps=30)
     
-    start_angle = -1.05 * math.pi
-    end_angle = 1.05 * math.pi
-    steps = 100
+    all_c_points = seg1 + seg2[1:] + seg3[1:] + seg4[1:]
+    scaled_c = [(int(p[0] * scale), int(p[1] * scale)) for p in all_c_points]
     
-    # Draw C arc
     c_stroke = int(36 * scale)
-    for i in range(steps):
-        theta = -0.75 * math.pi - (i / steps) * (1.5 * math.pi)
-        px = cx + rx * math.cos(theta)
-        py = cy + ry * math.sin(theta)
-        pts.append((px, py))
-        
-    for i in range(len(pts) - 1):
-        draw.line([pts[i], pts[i+1]], fill=(255, 255, 255, 255), width=c_stroke)
-        draw.ellipse([pts[i][0] - c_stroke//2, pts[i][1] - c_stroke//2, pts[i][0] + c_stroke//2, pts[i][1] + c_stroke//2], fill=(255, 255, 255, 255))
-        
-    # Draw checkmark: (195, 260) -> (240, 305) -> (340, 185)
+    r_half = c_stroke // 2
+    for i in range(len(scaled_c) - 1):
+        draw.line([scaled_c[i], scaled_c[i+1]], fill=(255, 255, 255, 255), width=c_stroke)
+        draw.ellipse([scaled_c[i][0] - r_half, scaled_c[i][1] - r_half, scaled_c[i][0] + r_half, scaled_c[i][1] + r_half], fill=(255, 255, 255, 255))
+    draw.ellipse([scaled_c[-1][0] - r_half, scaled_c[-1][1] - r_half, scaled_c[-1][0] + r_half, scaled_c[-1][1] + r_half], fill=(255, 255, 255, 255))
+
+    # 3. Inner Verification Check: (195, 260) -> (240, 305) -> (340, 185)
     chk_stroke = int(34 * scale)
+    chk_half = chk_stroke // 2
     p1 = (int(195 * scale), int(260 * scale))
     p2 = (int(240 * scale), int(305 * scale))
     p3 = (int(340 * scale), int(185 * scale))
     
-    # Cyan accent checkmark
     draw.line([p1, p2], fill=(56, 189, 248, 255), width=chk_stroke)
     draw.line([p2, p3], fill=(34, 211, 238, 255), width=chk_stroke)
     for p in [p1, p2, p3]:
-        draw.ellipse([p[0] - chk_stroke//2, p[1] - chk_stroke//2, p[0] + chk_stroke//2, p[1] + chk_stroke//2], fill=(45, 200, 243, 255))
+        draw.ellipse([p[0] - chk_half, p[1] - chk_half, p[0] + chk_half, p[1] + chk_half], fill=(45, 200, 243, 255))
         
-    # Nodes:
-    # Top Node at (360, 155)
+    # 4. Nexus Nodes:
+    # Top Node at (360, 155) - Sky Cyan
     top_node = (int(360 * scale), int(155 * scale))
     r_outer = int(24 * scale)
     r_inner = int(10 * scale)
     draw.ellipse([top_node[0] - r_outer, top_node[1] - r_outer, top_node[0] + r_outer, top_node[1] + r_outer], fill=(56, 189, 248, 255))
     draw.ellipse([top_node[0] - r_inner, top_node[1] - r_inner, top_node[0] + r_inner, top_node[1] + r_inner], fill=(255, 255, 255, 255))
     
-    # Bottom Node at (360, 357)
+    # Bottom Node at (360, 357) - Royal Purple
     bot_node = (int(360 * scale), int(357 * scale))
     draw.ellipse([bot_node[0] - r_outer, bot_node[1] - r_outer, bot_node[0] + r_outer, bot_node[1] + r_outer], fill=(192, 132, 252, 255))
     draw.ellipse([bot_node[0] - r_inner, bot_node[1] - r_inner, bot_node[0] + r_inner, bot_node[1] + r_inner], fill=(255, 255, 255, 255))
     
     # Pip at check vertex
     r_pip = int(8 * scale)
-    draw.ellipse([p2[0] - r_pip, p2[1] - r_pip, p2[0] + r_pip, p2[1] + r_pip], fill=(255, 255, 255, 240))
+    draw.ellipse([p2[0] - r_pip, p2[1] - r_pip, p2[0] + r_pip, p2[1] + r_pip], fill=(255, 255, 255, 245))
     
     img.save(path, format="PNG")
     print(f"Generated PNG ({size}x{size}): {path}")
@@ -160,9 +168,9 @@ def main():
     os.makedirs(docs_dir, exist_ok=True)
     os.makedirs(doc_dir, exist_ok=True)
 
-    # 1. SVGs
+    # 1. SVGs - notice viewBox is always 512x512
     create_clausora_svg(os.path.join(web_public, "logo.svg"), size=512)
-    create_clausora_svg(os.path.join(web_public, "favicon.svg"), size=48)
+    create_clausora_svg(os.path.join(web_public, "favicon.svg"), size=64)
     create_clausora_svg(os.path.join(docs_dir, "logo.svg"), size=512)
     create_clausora_svg(os.path.join(doc_dir, "logo.svg"), size=512)
 

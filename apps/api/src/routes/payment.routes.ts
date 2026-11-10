@@ -121,10 +121,21 @@ router.post(
         return res.status(400).json({
           success: false,
           message: 'Payment amount must be greater than zero.',
+          reason: 'Payment amount must be greater than zero.',
         });
       }
 
-      const paymentMinor = Math.min(requestedMinor, projectRemainingMinor > 0 ? projectRemainingMinor : requestedMinor);
+      const maxAllowed = projectRemainingMinor > 0 ? projectRemainingMinor : milestoneRemainingMinor;
+      if (maxAllowed > 0 && requestedMinor > maxAllowed) {
+        return res.status(400).json({
+          success: false,
+          message: `Payment amount error: Entered amount ($${(requestedMinor / 100).toFixed(2)}) exceeds the remaining payable balance of $${(maxAllowed / 100).toFixed(2)} ${milestone.currency}.`,
+          reason: `Entered amount ($${(requestedMinor / 100).toFixed(2)}) cannot exceed remaining payable balance of $${(maxAllowed / 100).toFixed(2)} ${milestone.currency}.`,
+          maxAllowedMinor: maxAllowed,
+        });
+      }
+
+      const paymentMinor = requestedMinor;
 
       const captureId = 'CAP_DEMO_' + Math.random().toString(36).substring(2, 9).toUpperCase();
       const paymentId = 'pay_demo_' + Math.random().toString(36).substring(2, 9);
@@ -314,7 +325,25 @@ router.post(
 
       const requestedMinor = req.body?.amountMinor ? Number(req.body.amountMinor) : (milestoneRemainingMinor > 0 ? milestoneRemainingMinor : projectRemainingMinor);
       const maxAllowed = projectRemainingMinor > 0 ? projectRemainingMinor : (milestoneRemainingMinor > 0 ? milestoneRemainingMinor : requestedMinor);
-      const orderAmountMinor = Math.min(requestedMinor > 0 ? requestedMinor : maxAllowed, maxAllowed);
+
+      if (isNaN(requestedMinor) || requestedMinor <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Payment amount must be greater than zero.',
+          reason: 'Payment amount must be greater than zero.',
+        });
+      }
+
+      if (maxAllowed > 0 && requestedMinor > maxAllowed) {
+        return res.status(400).json({
+          success: false,
+          message: `Payment amount error: Requested amount ($${(requestedMinor / 100).toFixed(2)}) exceeds the remaining payable balance of $${(maxAllowed / 100).toFixed(2)} ${milestone.currency}.`,
+          reason: `Requested amount ($${(requestedMinor / 100).toFixed(2)}) cannot exceed remaining payable balance of $${(maxAllowed / 100).toFixed(2)} ${milestone.currency}.`,
+          maxAllowedMinor: maxAllowed,
+        });
+      }
+
+      const orderAmountMinor = requestedMinor;
 
       // Generate idempotency key
       const idempotencyKey = `ord_${milestoneId}_${Date.now()}`;

@@ -74,13 +74,19 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
     }
   }, [isOpen, milestone.id, remainingDollars, fullAmountToDisplay]);
 
+  const maxAllowedMinor = Math.round((parseFloat(remainingDollars) || 0) * 100);
   const parsedMinor = Math.round((parseFloat(enteredAmount) || 0) * 100);
-  const isInputValid = !isNaN(parsedMinor) && parsedMinor > 0;
+  const isTooHigh = maxAllowedMinor > 0 && parsedMinor > maxAllowedMinor;
+  const isInputValid = !isNaN(parsedMinor) && parsedMinor > 0 && !isTooHigh;
 
   // 1. Instant Demo Payment
   const handleDemoPay = async () => {
-    if (!isInputValid) {
-      setError(`Please enter a valid payment amount greater than $0.00.`);
+    if (!isInputValid || isTooHigh) {
+      setError(
+        isTooHigh
+          ? `Payment validation error: Entered amount ($${(parsedMinor / 100).toFixed(2)}) exceeds remaining balance of $${remainingDollars} USD.`
+          : `Please enter a valid payment amount greater than $0.00.`
+      );
       return;
     }
     setLoading(true);
@@ -103,8 +109,12 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
 
   // 2. PayPal Sandbox Checkout
   const handlePayPalCheckout = async () => {
-    if (!isInputValid) {
-      setError(`Please enter a valid payment amount greater than $0.00.`);
+    if (!isInputValid || isTooHigh) {
+      setError(
+        isTooHigh
+          ? `Payment validation error: Entered amount ($${(parsedMinor / 100).toFixed(2)}) exceeds remaining balance of $${remainingDollars} USD.`
+          : `Please enter a valid payment amount greater than $0.00.`
+      );
       return;
     }
     setLoading(true);
@@ -237,18 +247,29 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
                   type="number"
                   step="0.01"
                   min="0.01"
+                  max={remainingDollars}
                   value={enteredAmount}
                   onChange={(e) => {
                     setEnteredAmount(e.target.value);
                     setError('');
                   }}
                   placeholder="0.00"
-                  className="w-full pl-6 pr-12 py-2 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono font-bold text-white focus:outline-none focus:border-indigo-500 transition"
+                  className={`w-full pl-6 pr-12 py-2 bg-slate-950 border rounded-lg text-xs font-mono font-bold text-white focus:outline-none transition ${
+                    isTooHigh
+                      ? 'border-rose-500 focus:border-rose-400 text-rose-200'
+                      : 'border-slate-700 focus:border-indigo-500'
+                  }`}
                 />
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold text-slate-400">
                   {milestone.currency || 'USD'}
                 </span>
               </div>
+              {isTooHigh && (
+                <p className="text-[10px] text-rose-400 font-medium flex items-center gap-1 pt-0.5">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  <span>Amount exceeds remaining payable balance of ${remainingDollars} {milestone.currency || 'USD'}.</span>
+                </p>
+              )}
             </div>
 
             {/* Action Buttons: Instant Pay (Emerald) & PayPal Sandbox (PayPal Blue) */}
@@ -256,7 +277,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
               <button
                 type="button"
                 onClick={handleDemoPay}
-                disabled={loading || !isInputValid || !hasProof || (projectStatus ? projectStatus !== 'active' : false)}
+                disabled={loading || !isInputValid || isTooHigh || !hasProof || (projectStatus ? projectStatus !== 'active' : false)}
                 className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow disabled:opacity-40 disabled:cursor-not-allowed"
                 title={
                   projectStatus && projectStatus !== 'active'
@@ -285,7 +306,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
               <button
                 type="button"
                 onClick={handlePayPalCheckout}
-                disabled={loading || !isInputValid || !hasProof || (projectStatus ? projectStatus !== 'active' : false)}
+                disabled={loading || !isInputValid || isTooHigh || !hasProof || (projectStatus ? projectStatus !== 'active' : false)}
                 className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl transition shadow disabled:opacity-40 disabled:cursor-not-allowed"
                 title={
                   projectStatus && projectStatus !== 'active'

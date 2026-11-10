@@ -75,6 +75,9 @@ router.get('/users', authMiddleware, requireRole(['admin']), async (req: AuthReq
     };
   });
 
+  // Newest First: Sort users descending by registration/creation date
+  users.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
   return res.json({
     success: true,
     data: { users },
@@ -180,6 +183,9 @@ router.get('/payments', authMiddleware, requireRole(['admin']), (req: AuthReques
       payerEmail: payer?.email || '',
     };
   });
+
+  // Newest First: Sort payments descending by payment transaction date
+  payments.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
   return res.json({
     success: true,

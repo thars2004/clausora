@@ -7,7 +7,9 @@ const router = Router();
 // GET /api/notifications
 router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
   const userId = req.user!.id;
-  const userNotifs = dbStore.notifications.filter((n) => n.userId === userId || !n.userId);
+  const userNotifs = dbStore.notifications
+    .filter((n) => n.userId === userId || !n.userId)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   return res.json({
     success: true,
     data: { notifications: userNotifs },

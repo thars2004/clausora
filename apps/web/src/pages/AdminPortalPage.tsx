@@ -72,9 +72,17 @@ export const AdminPortalPage: React.FC = () => {
       ]);
 
       setStats(statsRes.data.data?.stats || null);
-      setUsersList(usersRes.data.data?.users || []);
+      
+      const rawUsers = usersRes.data.data?.users || [];
+      rawUsers.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      setUsersList(rawUsers);
+
       setTasksList(tasksRes.data.data?.tasks || []);
-      setPaymentsList(payRes.data.data?.payments || []);
+
+      const rawPayments = payRes.data.data?.payments || [];
+      rawPayments.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      setPaymentsList(rawPayments);
+
       setSystemHealth(healthRes.data || null);
     } catch (err: any) {
       console.error('Failed to load admin management data:', err);

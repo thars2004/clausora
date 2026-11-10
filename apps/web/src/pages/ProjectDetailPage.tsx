@@ -336,26 +336,32 @@ export const ProjectDetailPage: React.FC = () => {
         }
       }
 
-      // Fetch all evidence items across the project
+      // Fetch all evidence items across the project (Newest First)
       try {
         const allEviRes = await api.get(`/projects/${pId}/evidence`);
-        setProjectEvidence(allEviRes.data.data?.evidence || []);
+        const evList = allEviRes.data.data?.evidence || [];
+        evList.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        setProjectEvidence(evList);
       } catch {
         // ignore
       }
 
-      // Fetch scope drift requests
+      // Fetch scope drift requests (Newest First)
       try {
         const scRes = await api.get(`/projects/${pId}/change-requests`);
-        setScopeRequests(scRes.data.data?.changeRequests || []);
+        const scList = scRes.data.data?.changeRequests || [];
+        scList.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        setScopeRequests(scList);
       } catch {
         // ignore
       }
 
-      // Fetch audit events
+      // Fetch audit events (Newest First)
       try {
         const actRes = await api.get(`/projects/${pId}/activity`);
-        setAuditEvents(actRes.data.data?.events || []);
+        const evEvents = actRes.data.data?.events || [];
+        evEvents.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        setAuditEvents(evEvents);
       } catch {
         // ignore
       }

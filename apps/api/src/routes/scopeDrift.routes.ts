@@ -9,7 +9,9 @@ const router = Router();
 // GET /api/projects/:projectId/change-requests
 router.get('/projects/:projectId/change-requests', authMiddleware, (req: AuthRequest, res: Response) => {
   const { projectId } = req.params;
-  const requests = Array.from(dbStore.scopeChangeRequests.values()).filter((r) => r.projectId === projectId);
+  const requests = Array.from(dbStore.scopeChangeRequests.values())
+    .filter((r) => r.projectId === projectId)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   return res.json({
     success: true,
     data: { changeRequests: requests },
