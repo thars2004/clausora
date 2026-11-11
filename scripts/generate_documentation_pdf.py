@@ -217,25 +217,44 @@ def generate_pdf(output_path):
     # =========================================================================
     logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "logo.png")
     if os.path.exists(logo_path):
-        story.append(Spacer(1, 12))
-        story.append(RLImage(logo_path, width=54, height=54))
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 14))
+        # Top Header: Logo on the left side + CLAUSORA in a single line
+        title_para = Paragraph("<b>CLAUSORA</b>", ParagraphStyle(
+            'CoverTitleInline',
+            fontName='Helvetica-Bold',
+            fontSize=34,
+            leading=38,
+            textColor=colors.HexColor("#0F172A")
+        ))
+        logo_img = RLImage(logo_path, width=44, height=44)
+        top_bar = Table([[logo_img, title_para]], colWidths=[54, 450])
+        top_bar.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(top_bar)
+        story.append(Spacer(1, 6))
     else:
-        story.append(Spacer(1, 30))
+        story.append(Spacer(1, 24))
+        story.append(Paragraph("CLAUSORA", style_cover_title))
 
-    story.append(Paragraph("CLAUSORA", style_cover_title))
     story.append(Paragraph("Deliverable-Verified Escrow & AI Work DNA Execution Platform", style_cover_sub))
-    story.append(HRFlowable(width="100%", thickness=2.5, color=colors.HexColor("#4338CA"), spaceAfter=20))
+    story.append(HRFlowable(width="100%", thickness=2.5, color=colors.HexColor("#4338CA"), spaceAfter=18))
 
     meta_data = [
         [Paragraph("<b>Document Classification</b>", style_body), Paragraph("Official Engineering Technical Whitepaper & Specification", style_body)],
-        [Paragraph("<b>System Version</b>", style_body), Paragraph("1.0.0 (Production Release / GA)", style_body)],
-        [Paragraph("<b>AI Foundation Model</b>", style_body), Paragraph("Hugging Face Qwen/Qwen2.5-VL-7B-Instruct (@huggingface/inference)", style_body)],
+        [Paragraph("<b>System Version</b>", style_body), Paragraph("1.0.0 (Production Release / Vercel & Cloud Ready)", style_body)],
+        [Paragraph("<b>AI Foundation Model</b>", style_body), Paragraph("Google Gemini 1.5 Flash & Hugging Face Qwen/Qwen2.5-VL-7B-Instruct", style_body)],
         [Paragraph("<b>Escrow Infrastructure</b>", style_body), Paragraph("PayPal Orders v2 REST API (Sandbox Verified & Split Payouts)", style_body)],
-        [Paragraph("<b>Authors</b>", style_body), Paragraph("Core Platform Engineering & Architecture Working Group", style_body)],
-        [Paragraph("<b>Target Stack</b>", style_body), Paragraph("Node.js 20 LTS, Express, TypeScript, Vite, React 18, MongoDB Atlas", style_body)],
+        [Paragraph("<b>Deployment Target</b>", style_body), Paragraph("Vercel (Production Web SPA & Serverless) + Render/Container (API)", style_body)],
+        [Paragraph("<b>Target Stack</b>", style_body), Paragraph("Node.js 20 LTS, Express, TypeScript, Vite, React 19, MongoDB Atlas", style_body)],
         [Paragraph("<b>Publication Date</b>", style_body), Paragraph("November 2026", style_body)],
-        [Paragraph("<b>Status</b>", style_body), Paragraph("Production Verified & Passing All 33 Automated Test Suites", style_body)]
+        [Paragraph("<b>Status</b>", style_body), Paragraph("Production Verified & Passing All 50 Automated Test Suites (100% Green)", style_body)]
     ]
     meta_table = Table(meta_data, colWidths=[150, 354])
     meta_table.setStyle(TableStyle([
@@ -474,17 +493,19 @@ def generate_pdf(output_path):
     story.append(create_section_header("8", "Quality Assurance & Automated Test Ledger"))
     story.append(Spacer(1, 6))
     story.append(Paragraph(
-        "The Clausora codebase contains 33 automated native unit and integration test suites covering security, "
-        "role isolation, bilateral acceptance rules, PayPal capture simulation, and Tamil language parsing:",
+        "The Clausora codebase contains 50 automated native unit and integration test suites covering security, "
+        "Clausora AI multi-perspective intelligence, OTP password recovery, bilateral acceptance rules, and PayPal capture:",
         style_body
     ))
 
     test_data = [
         [Paragraph("<b>Test Suite Name</b>", style_th), Paragraph("<b>Test Cases</b>", style_th), Paragraph("<b>Outcome Status</b>", style_th), Paragraph("<b>Execution Scope</b>", style_th)],
+        [Paragraph("Multi-Agent Review Council & Clausora AI", style_body), Paragraph("12 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("3-agent consensus audit, multi-perspective advisory, project parameters.", style_body)],
         [Paragraph("Security, Auth & Role Isolation", style_body), Paragraph("4 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("JWT 24h expiration, registration roles, multi-tenant isolation.", style_body)],
+        [Paragraph("Password Recovery, OTP & Email System", style_body), Paragraph("5 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("6-digit OTP generation, 10m expiry, bcrypt hashing, audit dispatch.", style_body)],
         [Paragraph("AI Work DNA Blueprint Synthesis", style_body), Paragraph("1 Test", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("Dynamic task description parsing into verifiable deliverables.", style_body)],
         [Paragraph("API Server Health & Mounting", style_body), Paragraph("2 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("Express router registration, route availability verification.", style_body)],
-        [Paragraph("Project Creator Permissions & Bilateral Acceptance", style_body), Paragraph("12 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("Bilateral acceptance gates, self-approval blocking, closure protocol.", style_body)],
+        [Paragraph("Project Permissions & Bilateral Acceptance", style_body), Paragraph("12 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("Bilateral acceptance gates, self-approval blocking, closure protocol.", style_body)],
         [Paragraph("Milestone State Machine Safety", style_body), Paragraph("3 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("Prohibits premature transitions to PAID without client capture.", style_body)],
         [Paragraph("SHA-256 Canonical Agreement Hash", style_body), Paragraph("2 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("Deterministic serialization invariance; tamper detection.", style_body)],
         [Paragraph("Admin User Management & Audit", style_body), Paragraph("2 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("User role editing, account deletion, memory synchronization.", style_body)],

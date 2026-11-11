@@ -1,4 +1,4 @@
-# Clausora Production Deployment Guide (Vercel + Render + MongoDB Atlas)
+# <img src="logo.png" alt="Clausora Logo" width="38" height="38" style="vertical-align: middle; margin-right: 10px;" /> Clausora — Production Deployment Guide (Vercel + Render + MongoDB Atlas)
 
 This guide walks you through deploying Clausora to production with:
 - **Frontend**: React + Vite + Tailwind CSS deployed on **Vercel**

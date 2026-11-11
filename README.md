@@ -1,4 +1,4 @@
-# CLAUSORA ⚡
+# <img src="docs/logo.png" alt="Clausora Logo" width="38" height="38" style="vertical-align: middle; margin-right: 10px;" /> CLAUSORA ⚡
 ### AI Work Intelligence, Evidence Verification & PayPal Milestone Payments
 
 > *"Understand the work. Verify the outcome. Release the payment."*

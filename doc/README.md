@@ -1,4 +1,4 @@
-# Clausora — Documentation Index
+# <img src="logo.png" alt="Clausora Logo" width="38" height="38" style="vertical-align: middle; margin-right: 10px;" /> Clausora — Documentation Index
 
 Welcome to the official technical documentation for **Clausora**, the enterprise deliverable verification and PayPal escrow execution platform.
 

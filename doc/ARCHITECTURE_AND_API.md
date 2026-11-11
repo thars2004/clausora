@@ -1,4 +1,4 @@
-# Clausora — System Architecture & Complete API Reference
+# <img src="logo.png" alt="Clausora Logo" width="38" height="38" style="vertical-align: middle; margin-right: 10px;" /> Clausora — System Architecture & Complete API Reference
 
 **Document Version:** 1.0.0 (Production Release)  
 **System Architecture:** Monorepo with Express TypeScript Backend, Vite React Frontend, and Shared Domain Contracts  

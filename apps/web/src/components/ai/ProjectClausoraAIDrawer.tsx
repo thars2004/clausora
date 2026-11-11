@@ -481,3 +481,4 @@ export const ProjectClausoraAIDrawer: React.FC<ProjectClausoraAIDrawerProps> = (
 
 // Backwards-compatible export
 export const ProjectCopilotDrawer = ProjectClausoraAIDrawer;
+

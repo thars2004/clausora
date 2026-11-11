@@ -1,4 +1,4 @@
-# Clausora — Comprehensive Feature & Functional Specification
+# <img src="logo.png" alt="Clausora Logo" width="38" height="38" style="vertical-align: middle; margin-right: 10px;" /> Clausora — Comprehensive Feature & Functional Specification
 
 **Document Version:** 1.0.0 (Production Release)  
 **System Classification:** Technical Architecture & Feature Specification  

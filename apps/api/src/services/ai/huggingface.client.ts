@@ -1624,7 +1624,7 @@ Instructions:
       lower.includes('ready for payment') ||
       lower.includes('release');
 
-    let dynamicActions = [
+    let dynamicActions: NonNullable<ClausoraAIMessage['suggestedActions']> = [
       { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
       { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
       { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
@@ -1699,10 +1699,10 @@ Here is how the deterministic milestone escrow release works for **"${project.ti
 * Click the **Documentation** tab in the sidebar or the **PDF** badge to download a cryptographically signed contract agreement and audit report.`;
 
         dynamicActions = [
-          { label: '💳 Make a Payment (PayPal Sandbox)', action: 'make_payment', type: 'execute_payment', targetId: nextMilestone?.id },
-          { label: '📤 Submit Work Proof', action: 'submit_proof', type: 'execute_submit_proof', targetId: nextMilestone?.id },
           { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
           { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
         ];
       } else if (isGeneralTechQuery) {
         // GENERAL TECH EXPLANATION + PROJECT CONTEXT
