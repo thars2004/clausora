@@ -96,3 +96,4 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
   });
 });
+

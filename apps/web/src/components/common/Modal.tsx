@@ -56,24 +56,24 @@ export const Modal: React.FC<ModalProps> = ({
       aria-modal="true"
     >
       <div
-        className={`relative w-full my-auto ${maxWidthClass} bg-[#111827] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden transition-all`}
+        className={`relative w-full my-auto ${maxWidthClass} max-h-[92dvh] bg-[#111827] border border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden transition-all flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800/80 bg-slate-900/60 sticky top-0 z-10">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800/80 bg-slate-900/80 sticky top-0 z-10 shrink-0">
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-slate-100">{title}</h3>
-            {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">{title}</h3>
+            {subtitle && <p className="text-xs text-slate-300 font-medium mt-0.5">{subtitle}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+            className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-4 sm:p-6 max-h-[calc(85vh-5rem)] overflow-y-auto">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">{children}</div>
       </div>
     </div>
   );

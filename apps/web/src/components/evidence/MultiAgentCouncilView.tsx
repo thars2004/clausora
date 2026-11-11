@@ -296,3 +296,4 @@ export const MultiAgentCouncilView: React.FC<MultiAgentCouncilViewProps> = ({
     </div>
   );
 };
+
