@@ -19,6 +19,7 @@ const authRateLimiter = rateLimit({
   message: { success: false, message: 'Too many authentication attempts. Please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 
 // POST /api/auth/register

@@ -22,6 +22,9 @@ import adminRoutes from './routes/admin.routes';
 
 const app = express();
 
+// Trust reverse proxy headers (Render, Vercel, Cloudflare, AWS ALB)
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -51,6 +54,7 @@ const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
   message: { success: false, message: 'Too many requests, please try again later.' },
+  validate: { xForwardedForHeader: false },
 });
 
 app.use(express.json({ limit: '20mb' }));
