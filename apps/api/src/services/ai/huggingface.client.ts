@@ -1663,8 +1663,8 @@ I am your dedicated intelligence partner for **"${project.title}"** (State: \`${
         if (project.status === 'active') {
           responseText = `### 🟢 Project is Already Active!\n\nProject **"${project.title}"** was already accepted and is currently in active execution.\n\n* **Milestones:** ${milestones.length} phases scheduled.\n* **Next Actions:** The Provider can submit work proofs, or the Client can process milestone payments below:`;
           dynamicActions = [
-            { label: '💳 Make a Payment (PayPal Sandbox)', action: 'make_payment', type: 'execute_payment', targetId: nextMilestone?.id },
-            { label: '📤 Submit Work Proof', action: 'submit_proof', type: 'execute_submit_proof', targetId: nextMilestone?.id },
+            { label: '💳 Make a Payment (Inline)', action: 'make_payment', type: 'execute_payment', targetId: nextMilestone?.id },
+            { label: '📤 Submit Work Proof (Inline)', action: 'submit_proof', type: 'execute_submit_proof', targetId: nextMilestone?.id },
             { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
           ];
         } else {
@@ -1673,6 +1673,88 @@ I am your dedicated intelligence partner for **"${project.title}"** (State: \`${
             { label: '⚡ Approve & Activate Project', action: 'activate_project', type: 'execute_activate' },
             { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
             { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          ];
+        }
+      } else if (
+        lower.startsWith('submit proof') ||
+        lower.startsWith('proof:') ||
+        (lower.includes('submit') && lower.includes('proof'))
+      ) {
+        // DIRECT PROOF SUBMISSION WITH PARAMETER VALIDATION
+        const urlMatch = userQuestion.match(/https?:\/\/[^\s]+/i);
+        if (!urlMatch) {
+          responseText = `### ⚠️ Work Proof Validation Issue
+
+❌ **Issue: No Valid Proof URL Detected**
+
+Deliverable evidence submissions require a link starting with \`https://\` or \`http://\` (e.g. \`https://github.com/organization/repository\` or \`https://demo.app\`).
+
+* **Target Deliverable:** **${nextMilestone?.title || 'Active Milestone'}**
+* **Direct Input Form:** Open the inline input form below to supply your repository or pull request link directly:`;
+          dynamicActions = [
+            { label: '📤 Submit Work Proof (Inline)', action: 'submit_proof', type: 'execute_submit_proof', targetId: nextMilestone?.id },
+            { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
+          ];
+        } else {
+          responseText = `### 📋 Deliverable Proof Link Validated
+
+✅ **URL Format Matched:** \`${urlMatch[0]}\`
+
+* **Target Deliverable:** **${nextMilestone?.title || 'Active Milestone'}**
+* **Next Action:** Click the inline action chip below to submit and record this proof into the Evidence Graph:`;
+          dynamicActions = [
+            { label: '📤 Submit Work Proof (Inline)', action: 'submit_proof', type: 'execute_submit_proof', targetId: nextMilestone?.id },
+            { label: '🤖 Run AI Review Council', action: 'run_council', type: 'execute_council', targetId: nextMilestone?.id },
+          ];
+        }
+      } else if (
+        lower.startsWith('pay $') ||
+        lower.startsWith('pay milestone') ||
+        lower.startsWith('make payment of') ||
+        (lower.startsWith('pay') && /\d+/.test(lower))
+      ) {
+        // DIRECT PAYMENT WITH PARAMETER VALIDATION
+        const amountMatch = userQuestion.match(/\$?\s*(\d+(?:\.\d{1,2})?)/);
+        const requestedDollars = amountMatch ? parseFloat(amountMatch[1]) : 0;
+        const remainingNum = parseFloat(remainingDollars);
+
+        if (requestedDollars > remainingNum) {
+          responseText = `### ⚠️ Escrow Payment Validation Issue
+
+❌ **Issue: Payment Amount Exceeds Escrow Balance**
+
+The requested amount of **$${requestedDollars.toFixed(2)} USD** exceeds the remaining escrow balance of **$${remainingDollars} USD**.
+
+* **Total Agreed Budget:** **$${agreedBudgetDollars} USD**
+* **Already Settled:** **$${settledDollars} USD**
+* **Maximum Allowable Payment:** **$${remainingDollars} USD**
+
+Use the inline payment field below to adjust the amount:`;
+          dynamicActions = [
+            { label: '💳 Make a Payment (Inline)', action: 'make_payment', type: 'execute_payment', targetId: nextMilestone?.id },
+            { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+          ];
+        } else if (project.status === 'awaiting_approval') {
+          responseText = `### ⚠️ Payment Locked: Project Awaiting Activation
+
+❌ **Issue: Project is not active yet**
+
+Escrow payouts cannot be disbursed while in \`AWAITING_APPROVAL\` state. Activate the project agreement below first:`;
+          dynamicActions = [
+            { label: '⚡ Approve & Activate Project', action: 'activate_project', type: 'execute_activate' },
+          ];
+        } else {
+          responseText = `### 💳 Escrow Payment Prepared
+
+✅ **Amount Validated:** **$${requestedDollars.toFixed(2)} USD**
+
+* **Target Deliverable:** **${nextMilestone?.title || 'Active Milestone'}**
+* **Remaining Escrow After Release:** **$${Math.max(0, remainingNum - requestedDollars).toFixed(2)} USD**
+
+Disburse payment directly below with zero modal popups:`;
+          dynamicActions = [
+            { label: '💳 Make a Payment (Inline)', action: 'make_payment', type: 'execute_payment', targetId: nextMilestone?.id },
+            { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
           ];
         }
       } else if (isHowToQuery) {

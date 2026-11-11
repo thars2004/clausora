@@ -2768,22 +2768,14 @@ export const ProjectDetailPage: React.FC = () => {
           projectId={project.id}
           projectTitle={project.title}
           projectStatus={project.status}
+          milestones={milestones}
+          projectEvidence={projectEvidence}
+          userRole={user?.role}
+          userId={user?.id}
+          projectRemainingDollars={((Math.max(0, agreedBudgetMinor - settledMinor)) / 100).toFixed(2)}
+          fullProjectAmountDollars={agreedBudgetDollars}
           onActivateProject={handleAcceptProject}
-          onMakePayment={(msId) => {
-            const target = msId ? milestones.find((m) => m.id === msId) : null;
-            if (target) {
-              setSelectedMilestone(target);
-              setIsPayPalModalOpen(true);
-            } else {
-              handleOpenDirectPaymentModal();
-            }
-          }}
-          onSubmitProof={(msId) => {
-            const target = msId
-              ? milestones.find((m) => m.id === msId)
-              : milestones.find((m) => m.status !== 'PAID') || milestones[0];
-            if (target) openSubmitProofModal(target);
-          }}
+          onRefreshProject={fetchProjectData}
           onRunCouncilReview={() => {
             setTab('evidence');
           }}

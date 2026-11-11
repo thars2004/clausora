@@ -405,5 +405,58 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     const proofAction = proofReply.suggestedActions?.find((a: any) => a.type === 'execute_submit_proof');
     assert.ok(proofAction, 'Must offer execute_submit_proof action chip');
   });
+
+  test('project copilot validates direct payment and proof inputs and identifies issues', async () => {
+    const activeProject = {
+      id: 'proj_val_1',
+      title: 'Smart Inventory System',
+      status: 'active',
+      totalAmountMinor: 250000,
+    };
+    const milestones = [
+      { id: 'ms_1', title: 'Architecture Phase', status: 'IN_PROGRESS', amountMinor: 250000, paidMinor: 0 },
+    ];
+
+    // 1. Invalid Proof submission attempt (missing URL)
+    const invalidProofReply = await hfClient.runProjectCopilot({
+      project: activeProject,
+      milestones,
+      evidence: [],
+      payments: [],
+      userQuestion: 'submit proof without link',
+      userRole: 'provider',
+      userName: 'Dev',
+    });
+    assert.ok(invalidProofReply);
+    assert.ok(invalidProofReply.content.includes('Issue') || invalidProofReply.content.includes('No Valid Proof URL'), 'Must flag issue for missing proof URL');
+    assert.ok(invalidProofReply.suggestedActions?.some((a) => a.type === 'execute_submit_proof'));
+
+    // 2. Valid Proof submission attempt (with URL)
+    const validProofReply = await hfClient.runProjectCopilot({
+      project: activeProject,
+      milestones,
+      evidence: [],
+      payments: [],
+      userQuestion: 'submit proof https://github.com/org/repo/pull/1',
+      userRole: 'provider',
+      userName: 'Dev',
+    });
+    assert.ok(validProofReply);
+    assert.ok(validProofReply.content.includes('https://github.com/org/repo/pull/1'));
+    assert.ok(validProofReply.content.includes('Validated'));
+
+    // 3. Payment exceeding remaining balance
+    const overpaymentReply = await hfClient.runProjectCopilot({
+      project: activeProject,
+      milestones,
+      evidence: [],
+      payments: [],
+      userQuestion: 'pay $9000 for milestone',
+      userRole: 'client',
+      userName: 'Tharshini',
+    });
+    assert.ok(overpaymentReply);
+    assert.ok(overpaymentReply.content.includes('Issue') || overpaymentReply.content.includes('Exceeds Escrow Balance'), 'Must flag issue when payment exceeds balance');
+  });
 });
 
