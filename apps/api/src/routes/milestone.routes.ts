@@ -186,6 +186,18 @@ router.post('/milestones/:milestoneId/submit', authMiddleware, async (req: AuthR
       evidenceItems,
     });
 
+    // Multi-Agent Review Council (The "AI Jury")
+    const project = dbStore.projects.get(milestone.projectId);
+    const councilReview = await hfClient.runCouncilReview({
+      milestoneId,
+      milestoneTitle: milestone.title,
+      acceptanceCriteria: milestone.acceptanceCriteria,
+      evidenceItems,
+      projectTitle: project?.title,
+      budgetDollars: milestone.amountMinor ? (milestone.amountMinor / 100).toFixed(2) : undefined,
+    });
+    (milestone as any).councilReview = councilReview;
+
     const aiReviewId = 'rev_' + Math.random().toString(36).substring(2, 9);
     dbStore.aiReviews.set(aiReviewId, {
       id: aiReviewId,
@@ -196,7 +208,7 @@ router.post('/milestones/:milestoneId/submit', authMiddleware, async (req: AuthR
       overallRecommendation: aiReviewResult.overallRecommendation,
       limitations: aiReviewResult.limitations,
       modelId: hfClient.getModelName(),
-      promptVersion: '1.0',
+      promptVersion: '2.0',
       rawResponseHash: 'sha_' + Math.random().toString(36).substring(2, 10),
       createdAt: new Date().toISOString(),
     });
@@ -220,7 +232,7 @@ router.post('/milestones/:milestoneId/submit', authMiddleware, async (req: AuthR
       projectId: milestone.projectId,
       type: 'MILESTONE_AWAITING_DECISION',
       title: `Milestone "${milestone.title}" Ready for Client Review`,
-      body: `AI evidence analysis complete (${aiReviewResult.overallRecommendation}). Awaiting human client sign-off.`,
+      body: `AI evidence analysis complete (${councilReview.consensusVerdict.replace(/_/g, ' ')} - ${councilReview.overallScore}/100). Awaiting human client sign-off.`,
     });
 
     return res.json({
@@ -228,8 +240,9 @@ router.post('/milestones/:milestoneId/submit', authMiddleware, async (req: AuthR
       data: {
         milestone,
         aiReview: aiReviewResult,
+        councilReview,
       },
-      message: 'Milestone submitted and analyzed by AI. Awaiting client decision.',
+      message: 'Milestone submitted and analyzed by AI Review Council. Awaiting client decision.',
     });
   } catch (err) {
     next(err);
@@ -322,6 +335,43 @@ router.post('/milestones/:milestoneId/request-revision', authMiddleware, (req: A
       success: true,
       data: { milestone },
       message: 'Revision requested. Provider notified.',
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/milestones/:milestoneId/council-review - Run or re-run Multi-Agent Review Council on demand
+router.post('/:milestoneId/council-review', authMiddleware, async (req: AuthRequest, res: Response, next) => {
+  try {
+    const { milestoneId } = req.params;
+    const milestone = dbStore.milestones.get(milestoneId);
+    if (!milestone) {
+      return res.status(404).json({ success: false, message: 'Milestone not found' });
+    }
+
+    const project = dbStore.projects.get(milestone.projectId);
+    const evidenceItems = Array.from(dbStore.evidence.values()).filter((e) => e.milestoneId === milestoneId);
+
+    const councilReview = await hfClient.runCouncilReview({
+      milestoneId,
+      milestoneTitle: milestone.title,
+      acceptanceCriteria: milestone.acceptanceCriteria,
+      evidenceItems,
+      projectTitle: project?.title,
+      budgetDollars: milestone.amountMinor ? (milestone.amountMinor / 100).toFixed(2) : undefined,
+    });
+
+    (milestone as any).councilReview = councilReview;
+    dbStore.milestones.set(milestoneId, milestone);
+
+    return res.json({
+      success: true,
+      data: {
+        councilReview,
+        milestone,
+      },
+      message: 'Multi-Agent Review Council evaluation completed.',
     });
   } catch (err) {
     next(err);

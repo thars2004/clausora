@@ -16,6 +16,8 @@ import {
 } from '@clausora/shared';
 import { Badge } from '../components/common/Badge';
 import { EvidenceGraph } from '../components/evidence/EvidenceGraph';
+import { MultiAgentCouncilView } from '../components/evidence/MultiAgentCouncilView';
+import { ProjectCopilotDrawer } from '../components/copilot/ProjectCopilotDrawer';
 import { PayPalModal } from '../components/payment/PayPalModal';
 import { WorkflowVisualizer } from '../components/workflow/WorkflowVisualizer';
 import { Modal } from '../components/common/Modal';
@@ -81,6 +83,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
   const [projectEvidence, setProjectEvidence] = useState<EvidenceItem[]>([]);
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [isSubmitProofModalOpen, setIsSubmitProofModalOpen] = useState(false);
   const [proofTargetMilestone, setProofTargetMilestone] = useState<Milestone | null>(null);
   const [proofTitle, setProofTitle] = useState('');
@@ -1475,6 +1478,15 @@ export const ProjectDetailPage: React.FC = () => {
                 )}
               </div>
 
+              {/* Multi-Agent Deliverable Review Council (The AI Jury) */}
+              <MultiAgentCouncilView
+                milestone={activeSelectedMilestone}
+                evidenceItems={evidenceItems}
+                onReviewUpdated={(newReview) => {
+                  (activeSelectedMilestone as any).councilReview = newReview;
+                }}
+              />
+
               {/* Evidence Graph Component */}
               <EvidenceGraph
                 milestone={activeSelectedMilestone}
@@ -2734,6 +2746,30 @@ export const ProjectDetailPage: React.FC = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Floating Action Trigger: Project Vault AI Copilot */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          onClick={() => setIsCopilotOpen(true)}
+          className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs rounded-2xl shadow-2xl shadow-indigo-900/60 transition hover:scale-105 active:scale-95 border border-white/20 group backdrop-blur-sm"
+          title="Open Project Vault AI Copilot"
+        >
+          <Sparkles className="w-4 h-4 text-amber-300 animate-pulse group-hover:rotate-12 transition" />
+          <span className="font-semibold tracking-wide">AI Copilot</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+        </button>
+      </div>
+
+      {/* Project Vault Copilot Slide-Over Drawer */}
+      {project && (
+        <ProjectCopilotDrawer
+          isOpen={isCopilotOpen}
+          onClose={() => setIsCopilotOpen(false)}
+          projectId={project.id}
+          projectTitle={project.title}
+          projectStatus={project.status}
+        />
       )}
     </div>
   );

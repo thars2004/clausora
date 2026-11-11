@@ -1235,4 +1235,53 @@ router.patch('/:projectId/tasks/:taskId', authMiddleware, async (req: AuthReques
   });
 });
 
+// POST /api/projects/:projectId/copilot - Interactive Project Vault AI Copilot
+router.post('/:projectId/copilot', authMiddleware, async (req: AuthRequest, res: Response, next) => {
+  try {
+    const { projectId } = req.params;
+    const { question, history } = req.body;
+
+    if (!question || !question.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'A question or prompt is required for the Project Copilot.',
+      });
+    }
+
+    const project = dbStore.projects.get(projectId);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project workspace not found.',
+      });
+    }
+
+    const blueprint = Array.from(dbStore.blueprints.values()).find((b) => b.projectId === projectId);
+    const milestones = Array.from(dbStore.milestones.values()).filter((m) => m.projectId === projectId);
+    const evidence = Array.from(dbStore.evidence.values()).filter((e) =>
+      milestones.some((m) => m.id === e.milestoneId)
+    );
+    const payments = Array.from(dbStore.payments.values()).filter((p) => p.projectId === projectId);
+
+    const copilotReply = await hfClient.runProjectCopilot({
+      project,
+      blueprint,
+      milestones,
+      evidence,
+      payments,
+      history: history || [],
+      userQuestion: question.trim(),
+      userRole: req.user!.role,
+      userName: req.user!.name,
+    });
+
+    return res.json({
+      success: true,
+      data: copilotReply,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

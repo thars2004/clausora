@@ -569,3 +569,43 @@ export interface AnalyticsData {
     limitationsCount: number;
   };
 }
+
+// --- Multi-Agent Deliverable Review Council (AI Jury) ---
+export interface AgentReviewVerdict {
+  agentRole: 'tech_lead' | 'business_advocate' | 'compliance_auditor';
+  agentName: string;
+  agentTitle: string;
+  score: number; // 0 - 100
+  verdict: 'pass' | 'warning' | 'fail';
+  summary: string;
+  keyObservations: string[];
+  concernsOrRisks: string[];
+}
+
+export interface CouncilReviewResult {
+  milestoneId: string;
+  overallScore: number; // 0 - 100
+  consensusVerdict: 'VERIFIED_READY_FOR_PAYOUT' | 'CONDITIONAL_REVISION_NEEDED' | 'EVIDENCE_INSUFFICIENT';
+  executiveSummary: string;
+  agents: AgentReviewVerdict[];
+  verifiedCriteriaCount: number;
+  totalCriteriaCount: number;
+  modelUsed: string;
+  reviewedAt: string;
+}
+
+// --- Project Vault AI Copilot ---
+export interface CopilotMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: string;
+  citations?: Array<{
+    type: 'milestone' | 'agreement' | 'evidence' | 'payment';
+    title: string;
+    id: string;
+  }>;
+  suggestedActions?: Array<{
+    label: string;
+    action: string;
+  }>;
+}
