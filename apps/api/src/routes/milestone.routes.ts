@@ -342,7 +342,7 @@ router.post('/milestones/:milestoneId/request-revision', authMiddleware, (req: A
 });
 
 // POST /api/milestones/:milestoneId/council-review - Run or re-run Multi-Agent Review Council on demand
-router.post('/:milestoneId/council-review', authMiddleware, async (req: AuthRequest, res: Response, next) => {
+router.post(['/milestones/:milestoneId/council-review', '/:milestoneId/council-review'], authMiddleware, async (req: AuthRequest, res: Response, next) => {
   try {
     const { milestoneId } = req.params;
     const milestone = dbStore.milestones.get(milestoneId);
