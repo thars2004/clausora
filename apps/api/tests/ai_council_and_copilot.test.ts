@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { hfClient } from '../src/services/ai/huggingface.client.js';
 
-describe('Multi-Agent Review Council & Project Vault Copilot', () => {
+describe('Multi-Agent Review Council & Clausora AI Intelligence', () => {
   const milestoneId = 'ms_test_council_' + Date.now();
   const criteria = [
     { id: 'crit_1', criterion: 'Must implement OAuth2 token authentication', deliverable: 'Auth API endpoint', status: 'pending' },
@@ -62,7 +62,7 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     assert.ok(council.executiveSummary.toLowerCase().includes('blocked') || council.executiveSummary.toLowerCase().includes('insufficient'));
   });
 
-  test('project copilot answers contextually citing project parameters', async () => {
+  test('clausora ai answers contextually citing project parameters', async () => {
     const project = {
       id: 'proj_copilot_1',
       title: 'EduSmart AI Platform',
@@ -96,7 +96,7 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
   });
 
-  test('project copilot accurately answers deadline and timeline questions', async () => {
+  test('clausora ai accurately answers deadline and timeline questions', async () => {
     const project = {
       id: 'proj_copilot_2',
       title: 'Smart Inventory Management System',
@@ -134,7 +134,7 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
   });
 
-  test('project copilot accurately answers tech stack and architecture questions', async () => {
+  test('clausora ai accurately answers tech stack and architecture questions', async () => {
     const project = {
       id: 'proj_copilot_3',
       title: 'Smart Inventory Management System',
@@ -176,7 +176,7 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
   });
 
-  test('project copilot generates comprehensive multi-perspective summary', async () => {
+  test('clausora ai generates comprehensive multi-perspective summary', async () => {
     const project = {
       id: 'proj_copilot_4',
       title: 'Smart Inventory Management System',
@@ -241,7 +241,7 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
   });
 
-  test('project copilot responds helpfully to normal conversational questions', async () => {
+  test('clausora ai responds helpfully to normal conversational questions', async () => {
     const project = {
       id: 'proj_copilot_5',
       title: 'Smart Inventory Management System',
@@ -266,7 +266,7 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
   });
 
-  test('project copilot provides operational step-by-step guidance for platform how-to questions', async () => {
+  test('clausora ai provides operational step-by-step guidance for platform how-to questions', async () => {
     const project = {
       id: 'proj_copilot_6',
       title: 'Smart Inventory Management System',
@@ -293,7 +293,7 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     );
   });
 
-  test('project copilot explains external technical concepts with project context', async () => {
+  test('clausora ai explains external technical concepts with project context', async () => {
     const project = {
       id: 'proj_copilot_7',
       title: 'Smart Inventory Management System',
@@ -317,7 +317,7 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     assert.ok(reply.content.includes('Smart Inventory Management System') || reply.content.toLowerCase().includes('frontend'));
   });
 
-  test('project copilot answers general inquiries with multi-perspective analysis', async () => {
+  test('clausora ai answers general inquiries with multi-perspective analysis', async () => {
     const project = {
       id: 'proj_copilot_8',
       title: 'Smart Inventory Management System',
@@ -351,7 +351,7 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     );
   });
 
-  test('project copilot provides actionable execution chips for activation, payment, and work proof', async () => {
+  test('clausora ai provides actionable governance chips for project activation and review council', async () => {
     const project = {
       id: 'proj_copilot_actions',
       title: 'Smart Inventory Management System',
@@ -360,7 +360,7 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     };
 
     // 1. Activation Action
-    const activateReply = await hfClient.runProjectCopilot({
+    const activateReply = await hfClient.runClausoraAI({
       project,
       milestones: [{ id: 'ms_1', title: 'Phase 1', status: 'PENDING', amountMinor: 100000 }],
       evidence: [],
@@ -374,39 +374,24 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     const activateAction = activateReply.suggestedActions?.find((a: any) => a.type === 'execute_activate');
     assert.ok(activateAction, 'Must offer execute_activate action chip');
 
-    // 2. Payment Action
+    // 2. Review Council Action
     const activeProject = { ...project, status: 'active' };
-    const paymentReply = await hfClient.runProjectCopilot({
+    const councilReply = await hfClient.runClausoraAI({
       project: activeProject,
-      milestones: [{ id: 'ms_1', title: 'Phase 1', status: 'APPROVED', amountMinor: 100000 }],
-      evidence: [],
+      milestones: [{ id: 'ms_1', title: 'Phase 1', status: 'SUBMITTED', amountMinor: 100000 }],
+      evidence: [{ id: 'evi_1', title: 'PR 1' }],
       payments: [],
-      userQuestion: 'I want to make a payment and release escrow funds',
+      userQuestion: 'Are deliverables ready for review?',
       userRole: 'client',
       userName: 'Tharshini',
     });
 
-    assert.ok(paymentReply);
-    const paymentAction = paymentReply.suggestedActions?.find((a: any) => a.type === 'execute_payment');
-    assert.ok(paymentAction, 'Must offer execute_payment action chip');
-
-    // 3. Submit Proof Action
-    const proofReply = await hfClient.runProjectCopilot({
-      project: activeProject,
-      milestones: [{ id: 'ms_1', title: 'Phase 1', status: 'IN_PROGRESS', amountMinor: 100000 }],
-      evidence: [],
-      payments: [],
-      userQuestion: 'How do I submit deliverable work proof for milestone 1?',
-      userRole: 'provider',
-      userName: 'Dev Lead',
-    });
-
-    assert.ok(proofReply);
-    const proofAction = proofReply.suggestedActions?.find((a: any) => a.type === 'execute_submit_proof');
-    assert.ok(proofAction, 'Must offer execute_submit_proof action chip');
+    assert.ok(councilReply);
+    const councilAction = councilReply.suggestedActions?.find((a: any) => a.type === 'execute_council');
+    assert.ok(councilAction, 'Must offer execute_council action chip');
   });
 
-  test('project copilot validates direct payment and proof inputs and identifies issues', async () => {
+  test('clausora ai provides operational step-by-step guidance for milestone payments and proof', async () => {
     const activeProject = {
       id: 'proj_val_1',
       title: 'Smart Inventory System',
@@ -417,46 +402,31 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
       { id: 'ms_1', title: 'Architecture Phase', status: 'IN_PROGRESS', amountMinor: 250000, paidMinor: 0 },
     ];
 
-    // 1. Invalid Proof submission attempt (missing URL)
-    const invalidProofReply = await hfClient.runProjectCopilot({
+    // 1. Proof submission operational guidance
+    const proofGuidanceReply = await hfClient.runClausoraAI({
       project: activeProject,
       milestones,
       evidence: [],
       payments: [],
-      userQuestion: 'submit proof without link',
+      userQuestion: 'How do I submit deliverable proof?',
       userRole: 'provider',
       userName: 'Dev',
     });
-    assert.ok(invalidProofReply);
-    assert.ok(invalidProofReply.content.includes('Issue') || invalidProofReply.content.includes('No Valid Proof URL'), 'Must flag issue for missing proof URL');
-    assert.ok(invalidProofReply.suggestedActions?.some((a) => a.type === 'execute_submit_proof'));
+    assert.ok(proofGuidanceReply);
+    assert.ok(proofGuidanceReply.content.includes('Evidence') || proofGuidanceReply.content.includes('Submit Proof'), 'Must guide user to Evidence tab or Submit Proof');
 
-    // 2. Valid Proof submission attempt (with URL)
-    const validProofReply = await hfClient.runProjectCopilot({
+    // 2. Payment operational guidance
+    const paymentGuidanceReply = await hfClient.runClausoraAI({
       project: activeProject,
       milestones,
       evidence: [],
       payments: [],
-      userQuestion: 'submit proof https://github.com/org/repo/pull/1',
-      userRole: 'provider',
-      userName: 'Dev',
-    });
-    assert.ok(validProofReply);
-    assert.ok(validProofReply.content.includes('https://github.com/org/repo/pull/1'));
-    assert.ok(validProofReply.content.includes('Validated'));
-
-    // 3. Payment exceeding remaining balance
-    const overpaymentReply = await hfClient.runProjectCopilot({
-      project: activeProject,
-      milestones,
-      evidence: [],
-      payments: [],
-      userQuestion: 'pay $9000 for milestone',
+      userQuestion: 'How do I release payment?',
       userRole: 'client',
       userName: 'Tharshini',
     });
-    assert.ok(overpaymentReply);
-    assert.ok(overpaymentReply.content.includes('Issue') || overpaymentReply.content.includes('Exceeds Escrow Balance'), 'Must flag issue when payment exceeds balance');
+    assert.ok(paymentGuidanceReply);
+    assert.ok(paymentGuidanceReply.content.includes('PayPal') || paymentGuidanceReply.content.includes('Milestones'), 'Must guide user to PayPal / Milestones tab');
   });
 });
 

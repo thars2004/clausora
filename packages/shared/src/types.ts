@@ -594,8 +594,8 @@ export interface CouncilReviewResult {
   reviewedAt: string;
 }
 
-// --- Project Vault AI Copilot ---
-export interface CopilotMessage {
+// --- Clausora AI Assistant ---
+export interface ClausoraAIMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp?: string;
@@ -607,7 +607,9 @@ export interface CopilotMessage {
   suggestedActions?: Array<{
     label: string;
     action: string;
-    type?: 'chat' | 'execute_activate' | 'execute_payment' | 'execute_submit_proof' | 'execute_council';
+    type?: 'chat' | 'execute_activate' | 'execute_council';
     targetId?: string;
   }>;
 }
+
+export type CopilotMessage = ClausoraAIMessage;

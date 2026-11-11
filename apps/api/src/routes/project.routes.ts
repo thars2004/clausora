@@ -1235,8 +1235,8 @@ router.patch('/:projectId/tasks/:taskId', authMiddleware, async (req: AuthReques
   });
 });
 
-// POST /api/projects/:projectId/copilot - Interactive Project Vault AI Copilot
-router.post('/:projectId/copilot', authMiddleware, async (req: AuthRequest, res: Response, next) => {
+// POST /api/projects/:projectId/clausora-ai (and legacy /copilot) - Interactive Project Clausora AI Agent
+const handleClausoraAI = async (req: AuthRequest, res: Response, next: any) => {
   try {
     const { projectId } = req.params;
     const { question, history } = req.body;
@@ -1244,7 +1244,7 @@ router.post('/:projectId/copilot', authMiddleware, async (req: AuthRequest, res:
     if (!question || !question.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'A question or prompt is required for the Project Copilot.',
+        message: 'A question or prompt is required for Clausora AI.',
       });
     }
 
@@ -1263,7 +1263,7 @@ router.post('/:projectId/copilot', authMiddleware, async (req: AuthRequest, res:
     );
     const payments = Array.from(dbStore.payments.values()).filter((p) => p.projectId === projectId);
 
-    const copilotReply = await hfClient.runProjectCopilot({
+    const aiReply = await hfClient.runClausoraAI({
       project,
       blueprint,
       milestones,
@@ -1277,11 +1277,14 @@ router.post('/:projectId/copilot', authMiddleware, async (req: AuthRequest, res:
 
     return res.json({
       success: true,
-      data: copilotReply,
+      data: aiReply,
     });
   } catch (err) {
     next(err);
   }
-});
+};
+
+router.post('/:projectId/clausora-ai', authMiddleware, handleClausoraAI);
+router.post('/:projectId/copilot', authMiddleware, handleClausoraAI);
 
 export default router;

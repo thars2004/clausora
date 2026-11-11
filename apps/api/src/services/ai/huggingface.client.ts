@@ -24,6 +24,7 @@ import {
   SuggestedMilestone,
   CouncilReviewResult,
   AgentReviewVerdict,
+  ClausoraAIMessage,
   CopilotMessage,
 } from '@clausora/shared';
 
@@ -51,7 +52,7 @@ export class HuggingFaceClient {
    * Universal text call across Gemini API or Hugging Face Inference
    */
   public async callLlmText(prompt: string, systemPrompt?: string): Promise<string | null> {
-    const sys = systemPrompt || 'You are Clausora AI, an intelligent contractual verification and project copilot.';
+    const sys = systemPrompt || 'You are Clausora AI, an intelligent contractual verification and project intelligence assistant.';
 
     if (env.GEMINI_API_KEY) {
       try {
@@ -1315,19 +1316,19 @@ Input: ${JSON.stringify({ title: input.projectTitle, summary: input.projectSumma
   }
 
   // =========================================================================
-  // PROJECT VAULT AI COPILOT
+  // CLAUSORA AI PROJECT INTELLIGENCE AGENT
   // =========================================================================
-  async runProjectCopilot(input: {
+  async runClausoraAI(input: {
     project: any;
     blueprint?: any;
     milestones: any[];
     evidence: any[];
     payments: any[];
-    history?: CopilotMessage[];
+    history?: ClausoraAIMessage[];
     userQuestion: string;
     userRole: string;
     userName?: string;
-  }): Promise<CopilotMessage> {
+  }): Promise<ClausoraAIMessage> {
     const { project, blueprint, milestones, evidence, payments, userQuestion, userRole, userName } = input;
 
     // 1. Financial Calculation
@@ -1430,7 +1431,7 @@ Input: ${JSON.stringify({ title: input.projectTitle, summary: input.projectSumma
     const nextMilestone = milestones.find((m: any) => m.status !== 'PAID') || milestones[0];
 
     // Build LLM System Prompt with rich internal vault data & external knowledge instructions
-    const prompt = `You are Clausora Project Vault Copilot, an omniscient, highly capable AI assistant dedicated to project "${project.title}" (ID: ${project.id}).
+    const prompt = `You are Clausora AI, an omniscient, highly capable AI intelligence partner dedicated to project "${project.title}" (ID: ${project.id}).
 Current User: ${userName || 'User'} (Role: ${userRole.toUpperCase()})
 Project Status: ${project.status}
 Kickoff Date: ${kickoffDate}
@@ -1473,7 +1474,7 @@ Instructions:
    - ⏱️ 4. Delivery & Timeline Perspective (Deadlines, Critical Path, Milestone Schedule)
 4. Use clean markdown formatting with bold headings (### and ####) and bullet points (* ). Always ground project figures in the vault data above.`;
 
-    let responseText = await this.callLlmText(prompt, 'You are the Clausora Project Copilot.');
+    let responseText = await this.callLlmText(prompt, 'You are Clausora AI.');
 
     // Intelligent Deterministic Handler for Dev/Offline/Fallback or Precise Intent Matching
     const lower = userQuestion.toLowerCase().trim();
@@ -1633,128 +1634,47 @@ Instructions:
     if (!responseText) {
       if (isGreetingQuery) {
         // GREETING & CONVERSATIONAL INTRODUCTION
-        responseText = `### 🌐 Hello, ${userName || 'User'}! I am your Clausora AI Agent
+        responseText = `### 🌐 Hello, ${userName || 'User'}! I am your Clausora AI Assistant
 
-I am your dedicated intelligence partner for **"${project.title}"** (State: \`${project.status.toUpperCase()}\`), synthesizing both internal vault records and universal software engineering knowledge (powered by Gemini & Hugging Face).
+I am your dedicated intelligence partner for **"${project.title}"** (State: \`${project.status.toUpperCase()}\`), synthesizing workspace vault data and full-stack software engineering knowledge (powered by Gemini & Hugging Face).
 
 #### 🧠 What I Bring to Your Workspace:
-* **Direct Action Execution:** You can **make payments**, **submit deliverable proofs**, and **activate projects** right from this chat!
-* **Internal Vault Records:** Live access to project deadlines (**${deadlineText}**), escrow financials (**$${agreedBudgetDollars} USD** budget, **$${settledDollars} USD** settled), milestone criteria, and Evidence Graph proofs.
-* **External Technical & Escrow Advisory:** Guidance on modern web engineering (${frontendList[0] || 'React 19'}, ${backendList[0] || 'Node.js'}, ${databaseList[0] || 'MongoDB'}, REST APIs), test coverage, cryptographic verification, and PayPal Sandbox escrow.
+* **Project Intelligence:** Live visibility into project deadlines (**${deadlineText}**), escrow financials (**$${agreedBudgetDollars} USD** budget, **$${settledDollars} USD** settled), milestone criteria, and Evidence Graph proofs.
+* **Architecture & Technical Advisory:** Explanations and best practices for your stack (${frontendList[0] || 'React 19'}, ${backendList[0] || 'Node.js'}, ${databaseList[0] || 'MongoDB'}, REST APIs), test coverage, and SHA-256 cryptographic verification.
 * **Multi-Perspective Question Answering:** Every inquiry is analyzed through **Business**, **Technical**, **Financial**, and **Timeline** perspectives.
+* **Platform Workflow Guidance:** Operational assistance on verifying deliverables, submitting code proofs, or managing milestone payouts on the platform.
 
-#### 💡 Suggested Topics & Quick Actions:
-* Click below to execute actions or explore project parameters.`;
+#### 💡 Suggested Topics to Explore:
+* Ask about **deadlines and timeline schedule**
+* Inspect our **tech stack and architecture layers**
+* Request a **360° multi-perspective summary**
+* Inquire about **milestone progress and escrow status**`;
 
         dynamicActions = [
           ...(project.status === 'awaiting_approval'
             ? [{ label: '⚡ Approve & Activate Project', action: 'activate_project', type: 'execute_activate' as const }]
-            : [
-                { label: '💳 Make a Payment (PayPal Sandbox)', action: 'make_payment', type: 'execute_payment' as const, targetId: nextMilestone?.id },
-                { label: '📤 Submit Work Proof', action: 'submit_proof', type: 'execute_submit_proof' as const, targetId: nextMilestone?.id },
-              ]),
+            : []),
           { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
           { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
           { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
           { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+          { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
         ];
       } else if (isActivateQuery) {
-        // ACTIVATE PROJECT DIRECT ACTION
+        // ACTIVATE PROJECT ACTION
         if (project.status === 'active') {
-          responseText = `### 🟢 Project is Already Active!\n\nProject **"${project.title}"** was already accepted and is currently in active execution.\n\n* **Milestones:** ${milestones.length} phases scheduled.\n* **Next Actions:** The Provider can submit work proofs, or the Client can process milestone payments below:`;
+          responseText = `### 🟢 Project is Already Active!\n\nProject **"${project.title}"** was accepted and is in active execution.\n\n* **Milestones:** ${milestones.length} phases scheduled.\n* **Platform Operations:** The Provider can submit work proofs via the Evidence tab, and the Client can review deliverables and authorize payments on the Milestones tab.`;
           dynamicActions = [
-            { label: '💳 Make a Payment (Inline)', action: 'make_payment', type: 'execute_payment', targetId: nextMilestone?.id },
-            { label: '📤 Submit Work Proof (Inline)', action: 'submit_proof', type: 'execute_submit_proof', targetId: nextMilestone?.id },
+            { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
             { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+            { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
           ];
         } else {
-          responseText = `### ⚡ Project Activation & Governance: "${project.title}"\n\nThis project proposal is currently \`AWAITING_APPROVAL\`.\n\n* **Bilateral Escrow Governance:** Bilateral counterpart acceptance locks the canonical SHA-256 agreement hash and authorizes milestone progress.\n* **Direct Action Available:** You can activate this project right now directly from this AI chat window.\n\nClick the action button below to activate the project:`;
+          responseText = `### ⚡ Project Activation & Governance: "${project.title}"\n\nThis project proposal is currently \`AWAITING_APPROVAL\`.\n\n* **Bilateral Escrow Governance:** Bilateral counterpart acceptance locks the canonical SHA-256 agreement hash and authorizes milestone progress.\n* **Activation Action:** You can activate this project right now directly from this AI chat window.\n\nClick the action button below to activate the project:`;
           dynamicActions = [
             { label: '⚡ Approve & Activate Project', action: 'activate_project', type: 'execute_activate' },
             { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
             { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
-          ];
-        }
-      } else if (
-        lower.startsWith('submit proof') ||
-        lower.startsWith('proof:') ||
-        (lower.includes('submit') && lower.includes('proof'))
-      ) {
-        // DIRECT PROOF SUBMISSION WITH PARAMETER VALIDATION
-        const urlMatch = userQuestion.match(/https?:\/\/[^\s]+/i);
-        if (!urlMatch) {
-          responseText = `### ⚠️ Work Proof Validation Issue
-
-❌ **Issue: No Valid Proof URL Detected**
-
-Deliverable evidence submissions require a link starting with \`https://\` or \`http://\` (e.g. \`https://github.com/organization/repository\` or \`https://demo.app\`).
-
-* **Target Deliverable:** **${nextMilestone?.title || 'Active Milestone'}**
-* **Direct Input Form:** Open the inline input form below to supply your repository or pull request link directly:`;
-          dynamicActions = [
-            { label: '📤 Submit Work Proof (Inline)', action: 'submit_proof', type: 'execute_submit_proof', targetId: nextMilestone?.id },
-            { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
-          ];
-        } else {
-          responseText = `### 📋 Deliverable Proof Link Validated
-
-✅ **URL Format Matched:** \`${urlMatch[0]}\`
-
-* **Target Deliverable:** **${nextMilestone?.title || 'Active Milestone'}**
-* **Next Action:** Click the inline action chip below to submit and record this proof into the Evidence Graph:`;
-          dynamicActions = [
-            { label: '📤 Submit Work Proof (Inline)', action: 'submit_proof', type: 'execute_submit_proof', targetId: nextMilestone?.id },
-            { label: '🤖 Run AI Review Council', action: 'run_council', type: 'execute_council', targetId: nextMilestone?.id },
-          ];
-        }
-      } else if (
-        lower.startsWith('pay $') ||
-        lower.startsWith('pay milestone') ||
-        lower.startsWith('make payment of') ||
-        (lower.startsWith('pay') && /\d+/.test(lower))
-      ) {
-        // DIRECT PAYMENT WITH PARAMETER VALIDATION
-        const amountMatch = userQuestion.match(/\$?\s*(\d+(?:\.\d{1,2})?)/);
-        const requestedDollars = amountMatch ? parseFloat(amountMatch[1]) : 0;
-        const remainingNum = parseFloat(remainingDollars);
-
-        if (requestedDollars > remainingNum) {
-          responseText = `### ⚠️ Escrow Payment Validation Issue
-
-❌ **Issue: Payment Amount Exceeds Escrow Balance**
-
-The requested amount of **$${requestedDollars.toFixed(2)} USD** exceeds the remaining escrow balance of **$${remainingDollars} USD**.
-
-* **Total Agreed Budget:** **$${agreedBudgetDollars} USD**
-* **Already Settled:** **$${settledDollars} USD**
-* **Maximum Allowable Payment:** **$${remainingDollars} USD**
-
-Use the inline payment field below to adjust the amount:`;
-          dynamicActions = [
-            { label: '💳 Make a Payment (Inline)', action: 'make_payment', type: 'execute_payment', targetId: nextMilestone?.id },
-            { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
-          ];
-        } else if (project.status === 'awaiting_approval') {
-          responseText = `### ⚠️ Payment Locked: Project Awaiting Activation
-
-❌ **Issue: Project is not active yet**
-
-Escrow payouts cannot be disbursed while in \`AWAITING_APPROVAL\` state. Activate the project agreement below first:`;
-          dynamicActions = [
-            { label: '⚡ Approve & Activate Project', action: 'activate_project', type: 'execute_activate' },
-          ];
-        } else {
-          responseText = `### 💳 Escrow Payment Prepared
-
-✅ **Amount Validated:** **$${requestedDollars.toFixed(2)} USD**
-
-* **Target Deliverable:** **${nextMilestone?.title || 'Active Milestone'}**
-* **Remaining Escrow After Release:** **$${Math.max(0, remainingNum - requestedDollars).toFixed(2)} USD**
-
-Disburse payment directly below with zero modal popups:`;
-          dynamicActions = [
-            { label: '💳 Make a Payment (Inline)', action: 'make_payment', type: 'execute_payment', targetId: nextMilestone?.id },
-            { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
           ];
         }
       } else if (isHowToQuery) {
@@ -1989,7 +1909,7 @@ Deliverables submitted to this project workspace undergo automated multi-agent c
 * **Escrow Guarantee:** All funds are locked in the escrow ledger until milestone acceptance criteria pass human or AI Review Council verification.`;
 
         dynamicActions = [
-          { label: '💳 Make a Payment (PayPal Sandbox)', action: 'make_payment', type: 'execute_payment', targetId: nextMilestone?.id },
+          { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
           { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
           { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
           { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
@@ -2002,13 +1922,16 @@ There are currently **${evidence.length} evidence artifact(s)** logged in the Ev
 
 * **Acceptance Criteria Verification:** Each deliverable is cross-referenced with canonical SHA-256 contract terms.
 * **Review Council Option:** You can run the **Multi-Agent Review Council** (Technical Lead, Client Advocate, and Compliance Auditor) directly from the Evidence tab to get a consensus readiness verdict.
-* **Current Payout Readiness:** ${submittedCount > 0 ? `⚠️ There are **${submittedCount} submitted milestone(s)** awaiting verification before funds can be released.` : approvedCount > 0 ? `✅ There are **${approvedCount} approved milestone(s)** ready for PayPal disbursement.` : 'No pending deliverables awaiting payout authorization.'}`;
+* **Current Payout Readiness:** ${submittedCount > 0 ? `⚠️ There are **${submittedCount} submitted milestone(s)** awaiting verification before funds can be released.` : approvedCount > 0 ? `✅ There are **${approvedCount} approved milestone(s)** ready for PayPal disbursement.` : 'No pending deliverables awaiting payout authorization.'}
+
+#### 💡 Submitting Deliverable Proof:
+To submit code or demo proof, open the **Evidence** tab or active milestone card and click **Submit Proof**.`;
 
         dynamicActions = [
-          { label: '📤 Submit Work Proof', action: 'submit_proof', type: 'execute_submit_proof', targetId: nextMilestone?.id },
           { label: '🤖 Run AI Review Council', action: 'run_council', type: 'execute_council', targetId: nextMilestone?.id },
           { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
           { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
         ];
       } else {
         // UNIVERSAL MULTI-PERSPECTIVE INTELLIGENT EVALUATION FOR ANY INQUIRY
@@ -2085,6 +2008,11 @@ Regarding your inquiry: *"${userQuestion}"*
       citations,
       suggestedActions: dynamicActions,
     };
+  }
+
+  // Alias for backward compatibility
+  async runProjectCopilot(input: any): Promise<ClausoraAIMessage> {
+    return this.runClausoraAI(input);
   }
 }
 

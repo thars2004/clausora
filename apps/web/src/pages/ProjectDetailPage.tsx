@@ -18,7 +18,7 @@ import { Badge } from '../components/common/Badge';
 import { LogoIcon } from '../components/common/Logo';
 import { EvidenceGraph } from '../components/evidence/EvidenceGraph';
 import { MultiAgentCouncilView } from '../components/evidence/MultiAgentCouncilView';
-import { ProjectCopilotDrawer } from '../components/copilot/ProjectCopilotDrawer';
+import { ProjectClausoraAIDrawer } from '../components/ai/ProjectClausoraAIDrawer';
 import { PayPalModal } from '../components/payment/PayPalModal';
 import { WorkflowVisualizer } from '../components/workflow/WorkflowVisualizer';
 import { Modal } from '../components/common/Modal';
@@ -84,7 +84,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
   const [projectEvidence, setProjectEvidence] = useState<EvidenceItem[]>([]);
-  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [isClausoraAIOpen, setIsClausoraAIOpen] = useState(false);
   const [isSubmitProofModalOpen, setIsSubmitProofModalOpen] = useState(false);
   const [proofTargetMilestone, setProofTargetMilestone] = useState<Milestone | null>(null);
   const [proofTitle, setProofTitle] = useState('');
@@ -820,9 +820,9 @@ export const ProjectDetailPage: React.FC = () => {
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* Ask Clausora AI Agent Button (Directly near project title with Clausora Logo) */}
           <button
-            onClick={() => setIsCopilotOpen(true)}
+            onClick={() => setIsClausoraAIOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition shadow-lg shadow-cyan-950/60 border border-cyan-400/50 hover:scale-[1.02] active:scale-95 cursor-pointer tracking-wide"
-            title="Ask Clausora AI Agent: Take actions, check deadlines, tech stack, milestones, or payments"
+            title="Ask Clausora AI: Explanations, tech stack, milestones, deadlines, and multi-perspective reviews"
           >
             <LogoIcon className="w-4 h-4 shrink-0 drop-shadow" />
             <span>Ask Clausora AI</span>
@@ -2760,11 +2760,11 @@ export const ProjectDetailPage: React.FC = () => {
         </Modal>
       )}
 
-      {/* Clausora AI Agent Slide-Over Drawer with Action Execution */}
+      {/* Clausora AI Intelligence Slide-Over Drawer */}
       {project && (
-        <ProjectCopilotDrawer
-          isOpen={isCopilotOpen}
-          onClose={() => setIsCopilotOpen(false)}
+        <ProjectClausoraAIDrawer
+          isOpen={isClausoraAIOpen}
+          onClose={() => setIsClausoraAIOpen(false)}
           projectId={project.id}
           projectTitle={project.title}
           projectStatus={project.status}
