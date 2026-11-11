@@ -27,6 +27,24 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-1.5-flash
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: ENABLE_DEMO_SEED
+        value: "true"
+      - key: SMTP_SERVICE
+        value: gmail
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_SECURE
+        value: "true"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        value: "Clausora <notifications@clausora.dev>"
       - key: PAYPAL_MODE
         value: sandbox
       - key: PAYPAL_CLIENT_ID
