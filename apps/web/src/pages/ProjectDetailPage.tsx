@@ -821,12 +821,12 @@ export const ProjectDetailPage: React.FC = () => {
           {/* Ask Copilot Button (Directly near project title with Clausora Logo) */}
           <button
             onClick={() => setIsCopilotOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs font-bold transition shadow-lg shadow-purple-900/40 border border-purple-400/40 hover:scale-[1.02] active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition shadow-lg shadow-cyan-950/60 border border-cyan-400/50 hover:scale-[1.02] active:scale-95 cursor-pointer tracking-wide"
             title="Ask Project Vault Copilot about deadlines, tech stack, milestones, or payments"
           >
-            <LogoIcon className="w-4 h-4 shrink-0" />
+            <LogoIcon className="w-4 h-4 shrink-0 drop-shadow" />
             <span>Ask Copilot</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-pulse" />
           </button>
 
           {isPendingAcceptance && canAcceptProject && (

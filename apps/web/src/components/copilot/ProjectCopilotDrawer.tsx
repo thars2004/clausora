@@ -230,7 +230,7 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
         {/* Sticky Fixed Header (Always visible at top of window) */}
         <div className="shrink-0 p-4 sm:p-5 border-b border-slate-800 bg-[#111827] flex items-center justify-between sticky top-0 z-20 shadow-md">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-indigo-900/40 shrink-0 p-1.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 via-sky-600 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-950/60 border border-cyan-400/40 shrink-0 p-1.5">
               <LogoIcon className="w-6 h-6" />
             </div>
             <div>
@@ -351,7 +351,7 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
             <button
               type="submit"
               disabled={loading || !inputQuestion.trim()}
-              className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold rounded-xl transition flex items-center justify-center disabled:opacity-50 shadow-md shadow-indigo-900/40 shrink-0 hover:scale-105 active:scale-95"
+              className="px-4 py-2.5 bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold rounded-xl transition flex items-center justify-center disabled:opacity-50 shadow-md shadow-cyan-950/40 border border-cyan-400/30 shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
               title="Send to Copilot"
             >
               {loading ? (
