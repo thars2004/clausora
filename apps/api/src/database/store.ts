@@ -11,6 +11,8 @@ import {
   PaymentRecord,
   AuditEvent,
   InAppNotification,
+  PasswordResetOtp,
+  EmailLog,
 } from '@clausora/shared';
 import { isDbConnected } from './connection';
 import {
@@ -25,6 +27,8 @@ import {
   PaymentModel,
   AuditEventModel,
   NotificationModel,
+  PasswordResetOtpModel,
+  EmailLogModel,
 } from './models';
 
 class ClausoraLiveStore {
@@ -40,6 +44,8 @@ class ClausoraLiveStore {
   payments: Map<string, PaymentRecord> = new Map();
   auditEvents: AuditEvent[] = [];
   notifications: InAppNotification[] = [];
+  otps: Map<string, PasswordResetOtp> = new Map();
+  emailLogs: EmailLog[] = [];
 
   /**
    * Initializes store by loading all live data from MongoDB Atlas
@@ -62,6 +68,8 @@ class ClausoraLiveStore {
         livePayments,
         liveAudit,
         liveNotifs,
+        liveOtps,
+        liveEmailLogs,
       ] = await Promise.all([
         UserModel.find().lean(),
         ProjectModel.find().lean(),
@@ -74,6 +82,8 @@ class ClausoraLiveStore {
         PaymentModel.find().lean(),
         AuditEventModel.find().sort({ createdAt: -1 }).limit(100).lean(),
         NotificationModel.find().sort({ createdAt: -1 }).limit(50).lean(),
+        PasswordResetOtpModel.find({ used: false }).lean(),
+        EmailLogModel.find().sort({ createdAt: -1 }).limit(100).lean(),
       ]);
 
       liveUsers.forEach((u: any) => this.users.set(u.id, u));
@@ -87,6 +97,8 @@ class ClausoraLiveStore {
       livePayments.forEach((p: any) => this.payments.set(p.id, p));
       this.auditEvents = liveAudit as any[];
       this.notifications = liveNotifs as any[];
+      (liveOtps || []).forEach((o: any) => this.otps.set(o.email.toLowerCase(), o));
+      this.emailLogs = (liveEmailLogs || []) as any[];
 
       console.log(`✅ Synced with MongoDB Atlas: ${this.users.size} users, ${this.projects.size} projects, ${this.milestones.size} milestones.`);
     } catch (err: any) {
@@ -332,6 +344,83 @@ class ClausoraLiveStore {
     return fullNotification;
   }
 
+  // --- Password Recovery OTPs ---
+  async saveOtp(otpRecord: PasswordResetOtp): Promise<void> {
+    const emailKey = otpRecord.email.toLowerCase().trim();
+    this.otps.set(emailKey, otpRecord);
+    if (isDbConnected()) {
+      try {
+        await PasswordResetOtpModel.deleteMany({ email: emailKey });
+        await PasswordResetOtpModel.create(otpRecord);
+      } catch (err: any) {
+        console.warn('Atlas PasswordResetOtpModel save error:', err.message);
+      }
+    }
+  }
+
+  async getValidOtp(email: string, otp: string): Promise<PasswordResetOtp | null> {
+    const emailKey = email.toLowerCase().trim();
+    let record = this.otps.get(emailKey);
+    if (!record && isDbConnected()) {
+      try {
+        const dbOtp: any = await PasswordResetOtpModel.findOne({ email: emailKey, used: false })
+          .sort({ createdAt: -1 })
+          .lean();
+        if (dbOtp) {
+          record = dbOtp;
+          this.otps.set(emailKey, dbOtp);
+        }
+      } catch (err: any) {
+        console.warn('Atlas PasswordResetOtpModel fetch error:', err.message);
+      }
+    }
+    if (!record) return null;
+    if (record.used) return null;
+    if (new Date(record.expiresAt).getTime() < Date.now()) return null;
+    if (record.otp !== otp.trim()) {
+      record.attempts = (record.attempts || 0) + 1;
+      return null;
+    }
+    return record;
+  }
+
+  async markOtpUsed(email: string, otp: string): Promise<void> {
+    const emailKey = email.toLowerCase().trim();
+    const record = this.otps.get(emailKey);
+    if (record) {
+      record.used = true;
+    }
+    if (isDbConnected()) {
+      try {
+        await PasswordResetOtpModel.updateMany({ email: emailKey, otp: otp.trim() }, { used: true });
+      } catch (err: any) {
+        console.warn('Atlas PasswordResetOtpModel update error:', err.message);
+      }
+    }
+  }
+
+  // --- Transactional Email Logs ---
+  addEmailLog(log: Omit<EmailLog, 'id' | 'createdAt'>): EmailLog {
+    const fullLog: EmailLog = {
+      ...log,
+      id: 'eml_' + Math.random().toString(36).substring(2, 10),
+      createdAt: new Date().toISOString(),
+    };
+    this.emailLogs.unshift(fullLog);
+    if (isDbConnected()) {
+      EmailLogModel.create(fullLog).catch((err: any) =>
+        console.warn('Atlas EmailLogModel save error:', err.message)
+      );
+    }
+    return fullLog;
+  }
+
+  getEmailLogs(toEmail?: string): EmailLog[] {
+    if (!toEmail) return this.emailLogs;
+    const normalized = toEmail.toLowerCase().trim();
+    return this.emailLogs.filter((e) => e.to.toLowerCase() === normalized);
+  }
+
   clearAll(): void {
     this.users.clear();
     this.projects.clear();
@@ -345,6 +434,8 @@ class ClausoraLiveStore {
     this.payments.clear();
     this.auditEvents = [];
     this.notifications = [];
+    this.otps.clear();
+    this.emailLogs = [];
   }
 }
 

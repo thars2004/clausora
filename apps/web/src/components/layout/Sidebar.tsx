@@ -55,17 +55,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
     let isMounted = true;
     if (!user) return;
 
-    api
-      .get('/projects')
-      .then((res) => {
-        if (!isMounted) return;
-        const list = res.data.data?.projects || [];
-        setUserProjects(list);
-      })
-      .catch(() => {});
+    const loadProjects = () => {
+      api
+        .get('/projects')
+        .then((res) => {
+          if (!isMounted) return;
+          const list = res.data.data?.projects || [];
+          setUserProjects(list);
+        })
+        .catch(() => {});
+    };
+
+    loadProjects();
+    window.addEventListener('clausora:project-updated', loadProjects);
 
     return () => {
       isMounted = false;
+      window.removeEventListener('clausora:project-updated', loadProjects);
     };
   }, [user?.id, location.pathname]);
 

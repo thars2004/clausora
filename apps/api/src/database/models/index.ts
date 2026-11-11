@@ -334,3 +334,37 @@ const NotificationSchema = new Schema(
 
 export const NotificationModel = mongoose.models.Notification || mongoose.model('Notification', NotificationSchema);
 
+// 12. PasswordResetOtp Model
+const PasswordResetOtpSchema = new Schema(
+  {
+    email: { type: String, required: true, lowercase: true, trim: true, index: true },
+    otp: { type: String, required: true, index: true },
+    expiresAt: { type: String, required: true, index: true },
+    attempts: { type: Number, default: 0 },
+    used: { type: Boolean, default: false, index: true },
+    createdAt: { type: String, default: () => new Date().toISOString() },
+  },
+  { timestamps: true }
+);
+
+export const PasswordResetOtpModel =
+  mongoose.models.PasswordResetOtp || mongoose.model('PasswordResetOtp', PasswordResetOtpSchema);
+
+// 13. EmailLog Model (Stores transactional email audit records)
+const EmailLogSchema = new Schema(
+  {
+    id: { type: String, required: true, unique: true, index: true },
+    to: { type: String, required: true, lowercase: true, trim: true, index: true },
+    from: { type: String, required: true },
+    subject: { type: String, required: true },
+    type: { type: String, required: true, index: true },
+    status: { type: String, enum: ['sent', 'queued', 'simulated', 'failed'], default: 'sent', index: true },
+    text: { type: String },
+    html: { type: String },
+    createdAt: { type: String, default: () => new Date().toISOString(), index: true },
+  },
+  { timestamps: true }
+);
+
+export const EmailLogModel = mongoose.models.EmailLog || mongoose.model('EmailLog', EmailLogSchema);
+

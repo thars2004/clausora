@@ -270,6 +270,21 @@ export const LoginInputSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const ForgotPasswordInputSchema = z.object({
+  email: z.string().email('Valid email address is required'),
+});
+
+export const VerifyOtpInputSchema = z.object({
+  email: z.string().email('Valid email address is required'),
+  otp: z.string().length(6, 'Recovery OTP must be exactly 6 digits').regex(/^\d{6}$/, 'Recovery OTP must contain only numbers'),
+});
+
+export const ResetPasswordInputSchema = z.object({
+  email: z.string().email('Valid email address is required'),
+  otp: z.string().length(6, 'Recovery OTP must be exactly 6 digits').regex(/^\d{6}$/, 'Recovery OTP must contain only numbers'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters long'),
+});
+
 export const CreateProjectInputSchema = z.object({
   title: z.string().min(2, 'Title is required'),
   description: z.string().default(''),

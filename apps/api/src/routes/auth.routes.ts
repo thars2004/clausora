@@ -6,8 +6,9 @@ import { env } from '../config/env';
 import { dbStore } from '../database/store';
 import { isDbConnected } from '../database/connection';
 import { UserModel } from '../database/models';
-import { RegisterInputSchema, LoginInputSchema, DEMO_USERS } from '@clausora/shared';
+import { RegisterInputSchema, LoginInputSchema, ForgotPasswordInputSchema, VerifyOtpInputSchema, ResetPasswordInputSchema, DEMO_USERS } from '@clausora/shared';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { emailService } from '../services/email/email.service';
 
 const router = Router();
 
@@ -289,6 +290,169 @@ router.post('/logout', (req, res) => {
     success: true,
     message: 'Logged out successfully.',
   });
+});
+
+// POST /api/auth/forgot-password - Step 1: Request 6-digit recovery OTP
+router.post('/forgot-password', authRateLimiter, async (req, res, next) => {
+  try {
+    const input = ForgotPasswordInputSchema.parse(req.body);
+    const normalizedEmail = input.email.toLowerCase().trim();
+
+    // Check if user exists in memory store or MongoDB Atlas
+    let foundUser: any = null;
+    for (const u of dbStore.users.values()) {
+      if (u.email && u.email.toLowerCase().trim() === normalizedEmail) {
+        foundUser = u;
+        break;
+      }
+    }
+
+    if (!foundUser && isDbConnected()) {
+      const escaped = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const dbUser: any = await UserModel.findOne({
+        email: { $regex: new RegExp(`^${escaped}$`, 'i') },
+      }).lean();
+      if (dbUser) {
+        foundUser = dbUser;
+        dbStore.users.set(dbUser.id, dbUser);
+      }
+    }
+
+    if (!foundUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account registered with this email address.',
+      });
+    }
+
+    // Generate secure 6-digit numeric OTP (100000 - 999999)
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresInMinutes = 10;
+    const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString();
+
+    await dbStore.saveOtp({
+      email: normalizedEmail,
+      otp,
+      expiresAt,
+      attempts: 0,
+      used: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Send email notification with OTP
+    await emailService.sendPasswordResetOtp({
+      to: normalizedEmail,
+      name: foundUser.name,
+      otp,
+      expiresInMinutes,
+    });
+
+    return res.json({
+      success: true,
+      message: `A 6-digit password recovery code has been sent to ${normalizedEmail}. It will expire in ${expiresInMinutes} minutes.`,
+      data: {
+        email: normalizedEmail,
+        expiresInMinutes,
+        devOtp: env.NODE_ENV !== 'production' ? otp : undefined,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/verify-otp - Step 2: Validate 6-digit numeric OTP
+router.post('/verify-otp', authRateLimiter, async (req, res, next) => {
+  try {
+    const input = VerifyOtpInputSchema.parse(req.body);
+    const normalizedEmail = input.email.toLowerCase().trim();
+
+    const validOtp = await dbStore.getValidOtp(normalizedEmail, input.otp);
+    if (!validOtp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired recovery code. Please check your code or request a new OTP.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Recovery code verified successfully.',
+      data: {
+        email: normalizedEmail,
+        verified: true,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/reset-password - Step 3: Set new password with bcrypt hashing & invalidate OTP
+router.post('/reset-password', authRateLimiter, async (req, res, next) => {
+  try {
+    const input = ResetPasswordInputSchema.parse(req.body);
+    const normalizedEmail = input.email.toLowerCase().trim();
+
+    const validOtp = await dbStore.getValidOtp(normalizedEmail, input.otp);
+    if (!validOtp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired recovery code. Please request a new OTP.',
+      });
+    }
+
+    // Look up user
+    let foundUser: any = null;
+    for (const u of dbStore.users.values()) {
+      if (u.email && u.email.toLowerCase().trim() === normalizedEmail) {
+        foundUser = u;
+        break;
+      }
+    }
+
+    if (!foundUser && isDbConnected()) {
+      const escaped = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const dbUser: any = await UserModel.findOne({
+        email: { $regex: new RegExp(`^${escaped}$`, 'i') },
+      }).lean();
+      if (dbUser) {
+        foundUser = dbUser;
+        dbStore.users.set(dbUser.id, dbUser);
+      }
+    }
+
+    if (!foundUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User account not found.',
+      });
+    }
+
+    // Hash new password with bcrypt 12 rounds
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(input.newPassword, salt);
+
+    foundUser.passwordHash = passwordHash;
+    foundUser.updatedAt = new Date().toISOString();
+    await dbStore.saveUser(foundUser);
+
+    // Invalidate OTP immediately
+    await dbStore.markOtpUsed(normalizedEmail, input.otp);
+
+    // Send confirmation email
+    await emailService.sendPasswordChangedConfirmation({
+      to: normalizedEmail,
+      name: foundUser.name,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Your password has been successfully reset. You can now log in with your new credentials.',
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

@@ -38,6 +38,11 @@ const envSchema = z.object({
   PAYPAL_WEBHOOK_ID: z.string().optional(),
   EMAIL_PROVIDER: z.string().default('console'),
   EMAIL_FROM: z.string().default('Clausora <notifications@clausora.dev>'),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_SECURE: z.coerce.boolean().default(false),
   ENABLE_DEMO_SEED: z.coerce.boolean().default(true),
 });
 

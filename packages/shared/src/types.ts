@@ -523,6 +523,28 @@ export interface AdminOverviewStats {
   aiAnalysesPerformed: number;
 }
 
+export interface PasswordResetOtp {
+  id?: string;
+  email: string;
+  otp: string;
+  expiresAt: string;
+  attempts: number;
+  used: boolean;
+  createdAt: string;
+}
+
+export interface EmailLog {
+  id: string;
+  to: string;
+  from: string;
+  subject: string;
+  type: string;
+  status: 'sent' | 'queued' | 'simulated' | 'failed';
+  text?: string;
+  html?: string;
+  createdAt: string;
+}
+
 export interface AnalyticsData {
   milestoneDistribution: {
     paid: number;

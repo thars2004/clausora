@@ -29,5 +29,17 @@ router.patch('/:notificationId/read', authMiddleware, (req: AuthRequest, res: Re
   });
 });
 
+// GET /api/notifications/emails - Audit log of sent transactional emails
+router.get('/emails', authMiddleware, (req: AuthRequest, res: Response) => {
+  const user = req.user!;
+  // Admins can see all transactional emails, regular users see emails sent to them
+  const filterEmail = user.role === 'admin' ? undefined : user.email;
+  const emails = dbStore.getEmailLogs(filterEmail);
+  return res.json({
+    success: true,
+    data: { emails },
+  });
+});
+
 export default router;
 

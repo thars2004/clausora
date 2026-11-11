@@ -583,6 +583,7 @@ export const ProjectDetailPage: React.FC = () => {
       toast.success(res.data.message || 'Project successfully closed and finalized!', 'Project Closed');
       await fetchProjectData(false, false);
       setIsCloseModalOpen(false);
+      window.dispatchEvent(new Event('clausora:project-updated'));
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to close project.', 'Closure Error');
     } finally {
@@ -856,7 +857,7 @@ export const ProjectDetailPage: React.FC = () => {
             <span>Payment Profile</span>
           </button>
 
-          {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+          {(user?.role === 'client' || user?.role === 'admin' || isOwner) && !isProjectClosed && !isFullyPaid && (
             <button
               onClick={handleOpenDirectPaymentModal}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold transition shadow-lg shadow-purple-900/40 border border-purple-400/30 hover:scale-[1.02]"
@@ -1319,7 +1320,7 @@ export const ProjectDetailPage: React.FC = () => {
 
                           {isAwaiting && (
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+                              {(user?.role === 'client' || user?.role === 'admin' || isOwner) && !isProjectClosed && !isFullyPaid && (
                                 <button
                                   onClick={() => handleDirectMilestoneApprove(ms.id)}
                                   className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-md shadow-emerald-600/30 flex items-center gap-1"
@@ -1617,7 +1618,7 @@ export const ProjectDetailPage: React.FC = () => {
                 </p>
               </div>
 
-              {(user?.role === 'client' || user?.role === 'admin' || isOwner) && (
+              {(user?.role === 'client' || user?.role === 'admin' || isOwner) && !isProjectClosed && !isFullyPaid && (
                 <button
                   onClick={handleOpenDirectPaymentModal}
                   className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-purple-900/40 border border-purple-400/30 self-start sm:self-auto hover:scale-[1.02]"
