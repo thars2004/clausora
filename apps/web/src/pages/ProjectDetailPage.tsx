@@ -817,6 +817,17 @@ export const ProjectDetailPage: React.FC = () => {
 
         {/* Action Buttons Row (Placed directly below title) */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Ask Copilot Button (Directly near project title) */}
+          <button
+            onClick={() => setIsCopilotOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs font-bold transition shadow-lg shadow-purple-900/40 border border-purple-400/40 hover:scale-[1.02] active:scale-95 cursor-pointer"
+            title="Ask Project Vault Copilot about deadlines, tech stack, milestones, or payments"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <span>Ask Copilot</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          </button>
+
           {isPendingAcceptance && canAcceptProject && (
             <button
               onClick={handleAcceptProject}

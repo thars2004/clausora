@@ -95,5 +95,150 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     assert.ok(reply.content.includes('$500.00') || reply.content.includes('500'), 'Must cite paid amount');
     assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
   });
+
+  test('project copilot accurately answers deadline and timeline questions', async () => {
+    const project = {
+      id: 'proj_copilot_2',
+      title: 'Smart Inventory Management System',
+      status: 'active',
+      deadline: '2026-11-30',
+      totalAmountMinor: 250000,
+      createdAt: '2026-11-01T00:00:00.000Z',
+    };
+
+    const milestones = [
+      { id: 'ms_1', title: 'Architecture & Foundation', status: 'PAID', dueDate: '2026-11-10', amountMinor: 50000 },
+      { id: 'ms_2', title: 'Barcode & RFID Module', status: 'IN_PROGRESS', dueDate: '2026-11-20', amountMinor: 100000 },
+      { id: 'ms_3', title: 'Analytics & Payout Settlement', status: 'PENDING', dueDate: '2026-11-30', amountMinor: 100000 },
+    ];
+
+    const reply = await hfClient.runProjectCopilot({
+      project,
+      milestones,
+      evidence: [],
+      payments: [{ id: 'pay_1', status: 'COMPLETED', amountMinor: 50000 }],
+      userQuestion: 'What is the project deadline and milestone timeline schedule?',
+      userRole: 'client',
+      userName: 'Tharshini',
+    });
+
+    assert.ok(reply);
+    assert.equal(reply.role, 'assistant');
+    assert.ok(
+      reply.content.toLowerCase().includes('deadline') ||
+      reply.content.includes('November 30, 2026') ||
+      reply.content.includes('2026-11-30'),
+      'Must cite target completion deadline'
+    );
+    assert.ok(reply.content.includes('Architecture & Foundation'), 'Must list milestone title');
+    assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
+  });
+
+  test('project copilot accurately answers tech stack and architecture questions', async () => {
+    const project = {
+      id: 'proj_copilot_3',
+      title: 'Smart Inventory Management System',
+      status: 'active',
+      totalAmountMinor: 250000,
+    };
+
+    const blueprint = {
+      technicalAnalysis: {
+        recommendedArchitecture: 'Event-Driven Microservices with Next.js SPA and Express REST APIs',
+        technologyStack: {
+          frontend: ['React 19', 'TypeScript', 'Tailwind CSS', 'Vite'],
+          backend: ['Node.js', 'Express', 'TypeScript', 'JWT'],
+          database: ['MongoDB Atlas', 'Mongoose ODM'],
+          apis: ['PayPal Sandbox Orders v2', 'Hugging Face AI', 'Nodemailer'],
+          infrastructure: ['Docker', 'Vercel'],
+        },
+        integrationComplexity: 'high',
+      },
+    };
+
+    const reply = await hfClient.runProjectCopilot({
+      project,
+      blueprint,
+      milestones: [],
+      evidence: [],
+      payments: [],
+      userQuestion: 'What tech stack, database, and frameworks does this project use?',
+      userRole: 'provider',
+      userName: 'Dev Lead',
+    });
+
+    assert.ok(reply);
+    assert.equal(reply.role, 'assistant');
+    assert.ok(reply.content.includes('React') || reply.content.includes('Frontend'), 'Must cite frontend');
+    assert.ok(reply.content.includes('Node.js') || reply.content.includes('Express'), 'Must cite backend');
+    assert.ok(reply.content.includes('MongoDB') || reply.content.includes('Database'), 'Must cite database');
+    assert.ok(reply.content.includes('PayPal') || reply.content.includes('Escrow'), 'Must cite escrow/APIs');
+    assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
+  });
+
+  test('project copilot generates comprehensive multi-perspective summary', async () => {
+    const project = {
+      id: 'proj_copilot_4',
+      title: 'Smart Inventory Management System',
+      status: 'active',
+      deadline: '2026-11-30',
+      totalAmountMinor: 250000,
+    };
+
+    const blueprint = {
+      businessAnalysis: {
+        businessObjective: 'Eliminate stockout friction and automate replenishment with barcode scanner tracking',
+        targetAudience: ['Warehouse Managers', 'Retail Operators'],
+        userProblemsSolved: ['Real-time stock loss prevention', 'Automated purchase orders'],
+      },
+      technicalAnalysis: {
+        recommendedArchitecture: 'Microservices with React SPA',
+        technologyStack: {
+          frontend: ['React 19', 'TypeScript'],
+          backend: ['Node.js', 'Express'],
+          database: ['MongoDB Atlas'],
+          apis: ['PayPal Sandbox Orders v2'],
+          infrastructure: ['Docker'],
+        },
+      },
+    };
+
+    const milestones = [
+      { id: 'ms_1', title: 'Phase 1 Foundation', status: 'PAID', amountMinor: 100000 },
+      { id: 'ms_2', title: 'Phase 2 Live Scanner', status: 'IN_PROGRESS', amountMinor: 150000 },
+    ];
+
+    const reply = await hfClient.runProjectCopilot({
+      project,
+      blueprint,
+      milestones,
+      evidence: [],
+      payments: [{ id: 'pay_1', status: 'COMPLETED', amountMinor: 100000 }],
+      userQuestion: 'Give me a multiple perspective of summarize content for this project',
+      userRole: 'client',
+      userName: 'Tharshini',
+    });
+
+    assert.ok(reply);
+    assert.equal(reply.role, 'assistant');
+    // Must contain multi-perspective sections
+    assert.ok(
+      reply.content.toLowerCase().includes('business') || reply.content.includes('💼'),
+      'Must contain Business & Client Perspective'
+    );
+    assert.ok(
+      reply.content.toLowerCase().includes('technical') || reply.content.includes('🛠️'),
+      'Must contain Technical & Architecture Perspective'
+    );
+    assert.ok(
+      reply.content.toLowerCase().includes('financial') || reply.content.includes('⚖️') || reply.content.includes('💰'),
+      'Must contain Financial & Escrow Perspective'
+    );
+    assert.ok(
+      reply.content.toLowerCase().includes('delivery') || reply.content.toLowerCase().includes('timeline') || reply.content.includes('⏱️'),
+      'Must contain Delivery & Timeline Perspective'
+    );
+    assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
+  });
 });
 

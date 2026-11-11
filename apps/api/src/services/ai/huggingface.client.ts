@@ -1328,8 +1328,9 @@ Input: ${JSON.stringify({ title: input.projectTitle, summary: input.projectSumma
     userRole: string;
     userName?: string;
   }): Promise<CopilotMessage> {
-    const { project, milestones, evidence, payments, userQuestion, userRole, userName } = input;
+    const { project, blueprint, milestones, evidence, payments, userQuestion, userRole, userName } = input;
 
+    // 1. Financial Calculation
     const agreedBudgetMinor = project.totalAmountMinor || 0;
     const settledMinor = payments
       .filter((p: any) => p.status === 'COMPLETED' || p.status === 'PAID')
@@ -1337,36 +1338,364 @@ Input: ${JSON.stringify({ title: input.projectTitle, summary: input.projectSumma
     const settledDollars = (settledMinor / 100).toFixed(2);
     const agreedBudgetDollars = (agreedBudgetMinor / 100).toFixed(2);
     const remainingDollars = Math.max(0, (agreedBudgetMinor - settledMinor) / 100).toFixed(2);
+    const settledPercent = agreedBudgetMinor > 0 ? Math.round((settledMinor / agreedBudgetMinor) * 100) : 0;
+    const remainingPercent = 100 - settledPercent;
 
-    const prompt = `You are Clausora Project Vault Copilot, an expert AI assistant dedicated to project "${project.title}" (ID: ${project.id}).
-Current User: ${userName || 'User'} (${userRole.toUpperCase()})
+    // 2. Timeline & Deadline Analysis
+    let deadlineText = 'No fixed completion deadline set (rolling milestone delivery)';
+    let daysRemainingText = 'On-demand schedule';
+    let isOverdue = false;
+    let daysRemaining: number | null = null;
+
+    if (project.deadline && typeof project.deadline === 'string' && project.deadline.trim()) {
+      const targetDate = new Date(project.deadline);
+      if (!isNaN(targetDate.getTime())) {
+        const today = new Date();
+        const diffMs = targetDate.getTime() - today.getTime();
+        daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+        deadlineText = targetDate.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+
+        if (daysRemaining < 0) {
+          isOverdue = true;
+          daysRemainingText = `⚠️ Overdue by ${Math.abs(daysRemaining)} day(s)`;
+        } else if (daysRemaining === 0) {
+          daysRemainingText = `⚡ Target completion is due today`;
+        } else {
+          daysRemainingText = `⏳ ${daysRemaining} day(s) remaining until delivery`;
+        }
+      } else {
+        deadlineText = project.deadline;
+      }
+    } else {
+      // Check milestones for scheduled due dates
+      const validDueDates = milestones
+        .map((m: any) => m.dueDate)
+        .filter((d: any) => d && typeof d === 'string' && !isNaN(new Date(d).getTime()))
+        .sort();
+      if (validDueDates.length > 0) {
+        const latestDue = validDueDates[validDueDates.length - 1];
+        const targetDate = new Date(latestDue);
+        deadlineText = `${targetDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} (Calculated from final milestone phase)`;
+        const diffMs = targetDate.getTime() - Date.now();
+        daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        daysRemainingText = daysRemaining >= 0 ? `⏳ ${daysRemaining} day(s) remaining` : `⚠️ Phase overdue by ${Math.abs(daysRemaining)} day(s)`;
+      }
+    }
+
+    const kickoffDate = project.createdAt
+      ? new Date(project.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : 'Initial workspace kickoff';
+
+    // 3. Technical Stack & Architecture Extraction
+    const techStack = blueprint?.technicalAnalysis?.technologyStack;
+    const frontendList = techStack?.frontend && techStack.frontend.length > 0
+      ? techStack.frontend
+      : ['React 19', 'TypeScript', 'Tailwind CSS', 'Vite', 'Lucide React'];
+    const backendList = techStack?.backend && techStack.backend.length > 0
+      ? techStack.backend
+      : ['Node.js', 'Express', 'TypeScript', 'REST API', 'JSON Web Tokens (JWT)'];
+    const databaseList = techStack?.database && techStack.database.length > 0
+      ? techStack.database
+      : ['MongoDB Atlas', 'Mongoose ODM'];
+    const apisList = techStack?.apis && techStack.apis.length > 0
+      ? techStack.apis
+      : ['PayPal Sandbox Orders v2 (Escrow Releases)', 'Hugging Face AI Inference API', 'Nodemailer SMTP Gateway'];
+    const architecturePattern = blueprint?.technicalAnalysis?.recommendedArchitecture
+      || 'Event-Driven Milestone Escrow State Machine with React SPA and Express REST microservices';
+    const complexity = blueprint?.technicalAnalysis?.integrationComplexity || 'medium';
+
+    // 4. Business & Functional Extraction
+    const biz = blueprint?.businessAnalysis;
+    const businessObjective = biz?.businessObjective
+      || project.description
+      || 'Deliver a deterministic, verifiable software solution with automated milestone escrow governance.';
+    const targetAudience = biz?.targetAudience && biz.targetAudience.length > 0
+      ? biz.targetAudience.join(', ')
+      : 'End users, platform administrators, and technical auditors';
+    const userProblemsSolved = biz?.userProblemsSolved && biz.userProblemsSolved.length > 0
+      ? biz.userProblemsSolved.join('; ')
+      : 'Automates workflow execution, ensures cryptographic proof of deliverables, and prevents payment dispute risks';
+
+    // 5. Milestone & Delivery Progress
+    const paidCount = milestones.filter((m: any) => m.status === 'PAID').length;
+    const approvedCount = milestones.filter((m: any) => m.status === 'APPROVED').length;
+    const submittedCount = milestones.filter((m: any) => m.status === 'SUBMITTED').length;
+    const inProgressCount = milestones.filter((m: any) => m.status === 'IN_PROGRESS').length;
+    const pendingCount = milestones.filter((m: any) => m.status === 'PENDING').length;
+    const nextMilestone = milestones.find((m: any) => m.status !== 'PAID') || milestones[0];
+
+    // Build LLM System Prompt with rich context
+    const prompt = `You are Clausora Project Vault Copilot, the authoritative AI assistant dedicated to project "${project.title}" (ID: ${project.id}).
+Current User: ${userName || 'User'} (Role: ${userRole.toUpperCase()})
 Project Status: ${project.status}
-Financials: Agreed Budget $${agreedBudgetDollars} USD, Settled via PayPal: $${settledDollars} USD, Remaining Balance: $${remainingDollars} USD.
-Milestones (${milestones.length}):
-${milestones.map((m: any, i: number) => `  ${i + 1}. [${m.status}] "${m.title}" - $${((m.amountMinor || 0) / 100).toFixed(2)} USD (Paid: $${((m.paidMinor || 0) / 100).toFixed(2)} USD)`).join('\n')}
-Evidence Artifacts (${evidence.length}): ${evidence.map((e: any) => `"${e.title}" (${e.type})`).join(', ') || 'None'}
+Kickoff Date: ${kickoffDate}
+Target Completion Deadline: ${deadlineText} (${daysRemainingText})
+
+Financial Overview:
+- Agreed Contract Value: $${agreedBudgetDollars} USD
+- Settled via PayPal Sandbox: $${settledDollars} USD (${settledPercent}%)
+- Remaining In-Escrow: $${remainingDollars} USD (${remainingPercent}%)
+- Gateway & Escrow Method: ${project.paymentDetails?.paymentMethod || 'PayPal Sandbox Orders v2'}
+
+Technical Architecture & Stack:
+- Architecture Pattern: ${architecturePattern}
+- Frontend: ${frontendList.join(', ')}
+- Backend: ${backendList.join(', ')}
+- Database: ${databaseList.join(', ')}
+- APIs & Escrow: ${apisList.join(', ')}
+- Security: SHA-256 canonical agreement hashing, bcrypt 12-round salt, JWT auth
+- Integration Complexity: ${complexity}
+
+Business Objectives & Purpose:
+- Objective: ${businessObjective}
+- Target Audience: ${targetAudience}
+- Problems Solved: ${userProblemsSolved}
+
+Milestones Pipeline (${milestones.length} total, ${paidCount} paid):
+${milestones.map((m: any, i: number) => `  ${i + 1}. [${m.status}] "${m.title}" - $${((m.amountMinor || 0) / 100).toFixed(2)} USD | Due: ${m.dueDate || 'Scheduled'} | Acceptance Criteria: ${m.acceptanceCriteria?.length || 0}`).join('\n')}
+
+Evidence Artifacts (${evidence.length}): ${evidence.map((e: any) => `"${e.title}" (${e.type}, verified: ${e.verified})`).join(', ') || 'No evidence uploaded yet'}
 
 User Question: "${userQuestion}"
 
 Instructions:
-1. Provide a direct, professional, highly helpful answer.
-2. Cite milestone names and financial figures where relevant.
-3. If user is Client, guide them on review/approval/payment. If Provider, guide them on deliverables/evidence.
-4. Keep answer concise (2-4 paragraphs max). Use clean markdown formatting with bullet points.`;
+1. When asked for a "summary" or "multiple perspectives", provide 4 distinct, bold sections:
+   - 💼 1. Business & Client Perspective (Commercial Value, Objective, Problems Solved)
+   - 🛠️ 2. Technical & Architecture Perspective (Tech Stack, Frontend, Backend, Database, Security)
+   - ⚖️ 3. Financial & Escrow Perspective (Agreed Budget, Settled via PayPal, In-Escrow Balance)
+   - ⏱️ 4. Delivery & Timeline Perspective (Deadline, Days Remaining, Milestone Schedule)
+2. When asked about "deadline", "when is it due", "dates", or "timeline", cite the exact target deadline, days remaining, kickoff date, and individual milestone due dates.
+3. When asked about "tech stack", "technologies", "frameworks", "database", "backend", or "frontend", cite the exact layers and components listed above.
+4. Maintain a clean, professional, markdown format with bold headings and bullet points. Never hallucinate fake tech or figures not rooted in this project context.`;
 
     let responseText = await this.callLlmText(prompt, 'You are the Clausora Project Copilot.');
 
+    // Intelligent Deterministic Handler for Dev/Offline/Fallback or Precise Intent Matching
+    const lower = userQuestion.toLowerCase().trim();
+
+    const isSummaryQuery =
+      lower.includes('summar') ||
+      lower.includes('multiple perspective') ||
+      lower.includes('perspectives') ||
+      lower.includes('overview') ||
+      lower.includes('breakdown') ||
+      lower.includes('executive summary') ||
+      lower.includes('about the project') ||
+      lower.includes('explain project');
+
+    const isDeadlineQuery =
+      lower.includes('deadline') ||
+      lower.includes('when') ||
+      lower.includes('due') ||
+      lower.includes('timeline') ||
+      lower.includes('schedule') ||
+      lower.includes('delivery date') ||
+      lower.includes('target date') ||
+      lower.includes('timeframe') ||
+      lower.includes('calendar') ||
+      lower.includes('completion date');
+
+    const isTechStackQuery =
+      lower.includes('tech stack') ||
+      lower.includes('technolog') ||
+      lower.includes('stack') ||
+      lower.includes('framework') ||
+      lower.includes('database') ||
+      lower.includes('backend') ||
+      lower.includes('frontend') ||
+      lower.includes('architecture') ||
+      lower.includes('libraries') ||
+      lower.includes('tools') ||
+      lower.includes('what tech') ||
+      lower.includes('what stack');
+
+    const isFinancialQuery =
+      lower.includes('pay') ||
+      lower.includes('budget') ||
+      lower.includes('money') ||
+      lower.includes('cost') ||
+      lower.includes('financial') ||
+      lower.includes('funds') ||
+      lower.includes('balance') ||
+      lower.includes('escrow') ||
+      lower.includes('paypal');
+
+    const isEvidenceQuery =
+      lower.includes('evidence') ||
+      lower.includes('proof') ||
+      lower.includes('deliverable') ||
+      lower.includes('acceptance') ||
+      lower.includes('review') ||
+      lower.includes('verify') ||
+      lower.includes('council') ||
+      lower.includes('ready for payment') ||
+      lower.includes('release');
+
+    let dynamicActions = [
+      { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+      { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+      { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+      { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+    ];
+
     if (!responseText) {
-      const lower = userQuestion.toLowerCase();
-      if (lower.includes('pay') || lower.includes('budget') || lower.includes('money') || lower.includes('cost') || lower.includes('financial')) {
-        responseText = `### 💰 Financial & Escrow Status Overview\n\n* **Agreed Project Budget:** **$${agreedBudgetDollars} USD**\n* **Settled & Released via PayPal:** **$${settledDollars} USD**\n* **Remaining Escrow Balance:** **$${remainingDollars} USD**\n\nAll milestone payouts are guarded by Clausora's deterministic escrow engine with server-side PayPal Sandbox verification. Funds are only disbursed once deliverables pass acceptance criteria.`;
-      } else if (lower.includes('status') || lower.includes('progress') || lower.includes('health') || lower.includes('summary')) {
-        const paidCount = milestones.filter((m: any) => m.status === 'PAID').length;
-        responseText = `### 📊 Project Execution Summary for "${project.title}"\n\n* **Project State:** \`${project.status.toUpperCase()}\`\n* **Milestone Progress:** **${paidCount} of ${milestones.length} Milestones Completed**\n* **Total Evidence Artifacts:** **${evidence.length} verified item(s)**\n\n${paidCount === milestones.length ? '🎉 **All milestones have been fully delivered and settled!** You can finalize and close the project workspace.' : `The active phase is currently progressing. Check the **Evidence Graph** to review work proofs before authorizing payouts.`}`;
-      } else if (lower.includes('evidence') || lower.includes('proof') || lower.includes('deliverable') || lower.includes('code')) {
-        responseText = `### 🔍 Deliverable Evidence & Verification\n\nThere are currently **${evidence.length} evidence artifact(s)** logged in the Evidence Graph for this workspace.\n\n* **Verification Method:** Each deliverable is cross-referenced against the canonical SHA-256 contract acceptance criteria.\n* **Recommendation:** You can run the **Multi-Agent Review Council** in the Evidence tab to receive an instant 3-agent technical, business, and compliance audit before releasing payment.`;
+      if (isSummaryQuery) {
+        // MULTI-PERSPECTIVE SUMMARY
+        responseText = `### 🌐 Multi-Perspective Project Summary: "${project.title}"
+
+#### 💼 1. Business & Client Perspective
+* **Core Business Objective:** ${businessObjective}
+* **Target Audience:** ${targetAudience}
+* **Problems Solved:** ${userProblemsSolved}
+* **Commercial Readiness:** ${paidCount === milestones.length ? 'Fully delivered and ready for production deployment.' : `Phase in active development (${paidCount} of ${milestones.length} milestones settled).`}
+
+#### 🛠️ 2. Technical & Architecture Perspective
+* **Recommended Architecture:** ${architecturePattern}
+* **Frontend Layer:** ${frontendList.join(', ')}
+* **Backend & API Services:** ${backendList.join(', ')}
+* **Database & Persistence:** ${databaseList.join(', ')}
+* **Third-Party & Escrow Integrations:** ${apisList.join(', ')}
+* **Security & Cryptography:** Canonical SHA-256 agreement fingerprints, JWT authentication, 12-round bcrypt password hashing, and role-based access control (RBAC).
+
+#### ⚖️ 3. Financial & Escrow Perspective
+* **Total Agreed Budget:** **$${agreedBudgetDollars} USD**
+* **Settled & Released via PayPal:** **$${settledDollars} USD** (${settledPercent}% released)
+* **Remaining In-Escrow Balance:** **$${remainingDollars} USD** (${remainingPercent}% protected)
+* **Escrow Mechanism:** Payouts are deterministic and locked until deliverables satisfy verifiable criteria.
+
+#### ⏱️ 4. Delivery & Timeline Perspective
+* **Final Target Deadline:** **${deadlineText}** (${daysRemainingText})
+* **Milestone Pipeline:** **${paidCount} Paid**, **${approvedCount} Approved**, **${submittedCount + inProgressCount} In Progress**, **${pendingCount} Pending**
+* **Current Active Milestone:** ${nextMilestone ? `"${nextMilestone.title}" (Due: ${nextMilestone.dueDate || 'TBD'})` : 'All milestones completed'}`;
+
+        dynamicActions = [
+          { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+          { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
+        ];
+      } else if (isDeadlineQuery) {
+        // DEADLINE & TIMELINE
+        const milestoneTimeline = milestones.length > 0
+          ? milestones.map((m: any, i: number) => {
+              const due = m.dueDate ? m.dueDate : 'Phase Scheduled';
+              const st = m.status === 'PAID' ? '✅ Paid' : m.status === 'APPROVED' ? '👍 Approved' : m.status === 'SUBMITTED' ? '📩 Submitted' : m.status === 'IN_PROGRESS' ? '⚡ In Progress' : '⏳ Pending';
+              return `* **Phase ${i + 1}: ${m.title}**\n  * **Due Date:** \`${due}\` | **Status:** ${st} | **Allocation:** $${((m.amountMinor || 0) / 100).toFixed(2)} USD`;
+            }).join('\n')
+          : '* No milestones registered for this project yet.';
+
+        responseText = `### ⏱️ Project Deadline & Milestone Timeline: "${project.title}"
+
+* **Final Completion Deadline:** **${deadlineText}**
+* **Time Remaining:** **${daysRemainingText}**
+* **Kickoff Date:** ${kickoffDate}
+* **Delivery Status:** ${isOverdue ? '⚠️ Target date requires review.' : '🟢 Schedule actively tracking milestone progress.'}
+
+#### 📅 Milestone Schedule Breakdown:
+${milestoneTimeline}
+
+#### 🎯 Next Immediate Target:
+${nextMilestone ? `* Focus is on **"${nextMilestone.title}"** (Due: \`${nextMilestone.dueDate || 'Phase Scheduled'}\`) with an escrow allocation of **$${((nextMilestone.amountMinor || 0) / 100).toFixed(2)} USD**.` : '🎉 All project milestones have been delivered.'}`;
+
+        dynamicActions = [
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+          { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+        ];
+      } else if (isTechStackQuery) {
+        // TECH STACK & ARCHITECTURE
+        responseText = `### 🛠️ Technical Architecture & Stack: "${project.title}"
+
+* **Architecture Pattern:** **${architecturePattern}**
+* **Integration Complexity:** \`${complexity.toUpperCase()}\`
+* **Verification Standard:** SHA-256 agreement cryptographic hashing with automated acceptance test validation.
+
+#### 🧩 Technology Stack Layers:
+* **🎨 Frontend Client:** ${frontendList.join(', ')}
+* **⚙️ Backend & API Services:** ${backendList.join(', ')}
+* **🗄️ Database & Storage:** ${databaseList.join(', ')}
+* **💳 Escrow & Integrations:** ${apisList.join(', ')}
+* **🛡️ Security & Authentication:** SHA-256 contract fingerprinting, JSON Web Tokens (JWT), 12-round bcrypt salt, and role-based access control (RBAC).
+
+#### 🧪 Code Quality & Deliverable Standards:
+Deliverables submitted to this project workspace undergo automated multi-agent code inspection and acceptance testing before escrow funds are authorized for disbursement.`;
+
+        dynamicActions = [
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+          { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
+        ];
+      } else if (isFinancialQuery) {
+        // FINANCIALS & ESCROW
+        responseText = `### 💰 Financial Ledger & Escrow Status: "${project.title}"
+
+* **Total Agreed Budget:** **$${agreedBudgetDollars} USD**
+* **Settled & Released via PayPal:** **$${settledDollars} USD** (${settledPercent}% disbursed)
+* **Remaining In-Escrow Funds:** **$${remainingDollars} USD** (${remainingPercent}% protected)
+* **Payment Integration:** \`${project.paymentDetails?.paymentMethod || 'PayPal Sandbox Orders v2'}\`
+* **Escrow Guarantee:** All funds are locked in the escrow ledger until milestone acceptance criteria pass human or AI Review Council verification.`;
+
+        dynamicActions = [
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+        ];
+      } else if (isEvidenceQuery) {
+        // EVIDENCE & DELIVERABLES
+        responseText = `### 🔍 Deliverable Evidence & Verification Status
+
+There are currently **${evidence.length} evidence artifact(s)** logged in the Evidence Graph for this project.
+
+* **Acceptance Criteria Verification:** Each deliverable is cross-referenced with canonical SHA-256 contract terms.
+* **Review Council Option:** You can run the **Multi-Agent Review Council** (Technical Lead, Client Advocate, and Compliance Auditor) directly from the Evidence tab to get a consensus readiness verdict.
+* **Current Payout Readiness:** ${submittedCount > 0 ? `⚠️ There are **${submittedCount} submitted milestone(s)** awaiting verification before funds can be released.` : approvedCount > 0 ? `✅ There are **${approvedCount} approved milestone(s)** ready for PayPal disbursement.` : 'No pending deliverables awaiting payout authorization.'}`;
+
+        dynamicActions = [
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+        ];
       } else {
-        responseText = `### 🤖 Project Cockpit Assistant\n\nRegarding your inquiry on **"${project.title}"**:\n\n* **Active Status:** \`${project.status}\`\n* **Milestone Pipeline:** ${milestones.length} scheduled phases with $${agreedBudgetDollars} USD total escrow allocation.\n* **Next Recommended Action:** ${userRole === 'client' ? 'Review submitted evidence in the Evidence Graph tab and approve deliverables when ready for PayPal payment release.' : 'Submit verifiable work proofs (PR link, repository URL, or test report) for your active milestone to trigger the AI Review Council.'}`;
+        // GENERAL FALLBACK
+        responseText = `### 🤖 Project Cockpit Assistant: "${project.title}"
+
+* **Current Status:** \`${project.status.toUpperCase()}\`
+* **Target Deadline:** **${deadlineText}** (${daysRemainingText})
+* **Milestone Pipeline:** **${paidCount} of ${milestones.length} Milestones Paid** ($${settledDollars} of $${agreedBudgetDollars} USD released)
+* **Recommended Next Step:** ${userRole === 'client' ? 'Review submitted evidence in the Evidence Graph or authorize approved milestone payouts.' : 'Submit verifiable deliverables (repository link, pull request, or test report) for the active milestone to initiate AI Council Review.'}`;
+
+        dynamicActions = [
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+          { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+        ];
+      }
+    } else {
+      if (isDeadlineQuery) {
+        dynamicActions = [
+          { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+        ];
+      } else if (isTechStackQuery) {
+        dynamicActions = [
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+          { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
+        ];
+      } else if (isSummaryQuery) {
+        dynamicActions = [
+          { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+          { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
+        ];
       }
     }
 
@@ -1384,11 +1713,7 @@ Instructions:
       content: responseText,
       timestamp: new Date().toISOString(),
       citations,
-      suggestedActions: [
-        { label: 'Check Financials', action: 'What is our financial and escrow status?' },
-        { label: 'Review Milestones', action: 'Summarize our active milestones and progress' },
-        { label: 'Verify Deliverables', action: 'Are deliverables ready for payment release?' },
-      ],
+      suggestedActions: dynamicActions,
     };
   }
 }

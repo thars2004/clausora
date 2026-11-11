@@ -22,10 +22,11 @@ interface ProjectCopilotDrawerProps {
 
 // Inline parser for bold, code, and text styling
 const formatInline = (str: string): React.ReactNode[] => {
-  const parts = str.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  if (!str) return [];
+  const parts = str.split(/(\*\*[^*]+?\*\*|`[^`]+?`)/g);
 
   return parts.map((part, idx) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
       const boldText = part.slice(2, -2);
       return (
         <strong key={idx} className="font-extrabold text-white tracking-wide">
@@ -33,7 +34,7 @@ const formatInline = (str: string): React.ReactNode[] => {
         </strong>
       );
     }
-    if (part.startsWith('`') && part.endsWith('`')) {
+    if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
       const codeText = part.slice(1, -1);
       return (
         <code
@@ -50,6 +51,7 @@ const formatInline = (str: string): React.ReactNode[] => {
 
 // Markdown block renderer for clean, bold headings, bullet lists, and paragraphs
 const renderFormattedContent = (text: string) => {
+  if (!text) return null;
   const lines = text.split('\n');
 
   return lines.map((line, lineIdx) => {
@@ -58,33 +60,64 @@ const renderFormattedContent = (text: string) => {
       return <div key={lineIdx} className="h-1.5" />;
     }
 
-    // Heading (e.g. ### 💰 Financial & Escrow Status Overview)
-    if (trimmed.startsWith('### ') || trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
-      const headingText = trimmed.replace(/^#+\s*/, '');
+    const isSubIndented = line.startsWith('  ') || line.startsWith('\t');
+
+    // Sub-headings (e.g. #### 💼 1. Business & Client Perspective)
+    const subHeadingMatch = trimmed.match(/^#{4,6}\s+(.*)/);
+    if (subHeadingMatch) {
+      return (
+        <div
+          key={lineIdx}
+          className="text-xs font-bold text-indigo-200 mt-3 mb-1.5 bg-indigo-950/60 border border-indigo-800/60 px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 tracking-tight shadow-sm"
+        >
+          {formatInline(subHeadingMatch[1])}
+        </div>
+      );
+    }
+
+    // Main section headings (e.g. ### 🌐 Multi-Perspective Project Summary)
+    const mainHeadingMatch = trimmed.match(/^#{1,3}\s+(.*)/);
+    if (mainHeadingMatch) {
       return (
         <h4
           key={lineIdx}
-          className="text-xs sm:text-sm font-extrabold text-white tracking-tight mt-2.5 mb-1.5 flex items-center gap-1.5 border-b border-slate-800/80 pb-1"
+          className="text-xs sm:text-sm font-extrabold text-white tracking-tight mt-3 mb-1.5 flex items-center gap-1.5 border-b border-slate-800/80 pb-1.5 text-indigo-300"
         >
-          {formatInline(headingText)}
+          {formatInline(mainHeadingMatch[1])}
         </h4>
       );
     }
 
-    // Bullet point (e.g. * **Agreed Project Budget:** **$2500.00 USD**)
-    if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
-      const bulletText = trimmed.substring(2);
+    // Numbered list item (e.g. 1. Design Phase)
+    const numMatch = trimmed.match(/^(\d+)[\.\)]\s+(.*)/);
+    if (numMatch) {
+      const num = numMatch[1];
+      const rest = numMatch[2];
       return (
-        <div key={lineIdx} className="flex items-start gap-2 my-1 text-slate-200">
+        <div key={lineIdx} className={`flex items-start gap-2 my-1 text-slate-200 ${isSubIndented ? 'pl-5' : 'pl-1'}`}>
+          <span className="font-mono text-[10px] font-extrabold text-indigo-300 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 shrink-0 mt-0.5">
+            {num}
+          </span>
+          <span className="flex-1 leading-relaxed">{formatInline(rest)}</span>
+        </div>
+      );
+    }
+
+    // Bullet point (handles '* ', '- ', '• ', '* * ', etc.)
+    const bulletMatch = trimmed.match(/^(?:[*\-•]\s+)+(.*)/);
+    if (bulletMatch) {
+      const bulletContent = bulletMatch[1];
+      return (
+        <div key={lineIdx} className={`flex items-start gap-2 my-1 text-slate-200 ${isSubIndented ? 'pl-5' : 'pl-1'}`}>
           <span className="text-indigo-400 font-extrabold shrink-0 mt-0.5 leading-none">•</span>
-          <span className="flex-1 leading-relaxed">{formatInline(bulletText)}</span>
+          <span className="flex-1 leading-relaxed">{formatInline(bulletContent)}</span>
         </div>
       );
     }
 
     // Regular paragraph
     return (
-      <p key={lineIdx} className="leading-relaxed text-slate-200 my-1 font-medium">
+      <p key={lineIdx} className={`leading-relaxed text-slate-200 my-1 font-medium ${isSubIndented ? 'pl-4' : ''}`}>
         {formatInline(trimmed)}
       </p>
     );
@@ -101,13 +134,14 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
   const [messages, setMessages] = useState<CopilotMessage[]>([
     {
       role: 'assistant',
-      content: `### 🤖 Welcome to Project Copilot\n\nI am your dedicated AI assistant for **"${projectTitle}"**.\n\n* **Active Status:** \`${projectStatus.toUpperCase()}\`\n* **Vault Access:** Work DNA blueprint, milestone acceptance criteria, evidence graph, and PayPal escrow records.\n\nSelect an action below or ask any question to inspect and verify your project.`,
+      content: `### 🤖 Welcome to Project Copilot\n\nI am your dedicated AI assistant for **"${projectTitle}"**.\n\n* **Active Status:** \`${projectStatus.toUpperCase()}\`\n* **Vault Access:** Work DNA blueprint, technical architecture, deadline schedules, and PayPal escrow records.\n\nAsk any question below about deadlines, tech stack, milestones, or payments.`,
       timestamp: new Date().toISOString(),
       suggestedActions: [
+        { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+        { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+        { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
         { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
-        { label: '📊 Milestone Progress Summary', action: 'Summarize our active milestones and progress' },
-        { label: '🔍 Check Deliverable Readiness', action: 'Are deliverables ready for payment release?' },
-        { label: '🛡️ Plain-English Translation', action: 'Explain what was built in simple words' },
+        { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
       ],
     },
   ]);
