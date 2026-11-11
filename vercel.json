@@ -6,12 +6,8 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    },
-    {
-      "source": "/api",
-      "destination": "/api"
+      "source": "/api/:path*",
+      "destination": "https://clausora.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
