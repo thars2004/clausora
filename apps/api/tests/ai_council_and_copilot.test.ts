@@ -350,5 +350,60 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
       'Must contain financial/escrow perspective'
     );
   });
+
+  test('project copilot provides actionable execution chips for activation, payment, and work proof', async () => {
+    const project = {
+      id: 'proj_copilot_actions',
+      title: 'Smart Inventory Management System',
+      status: 'awaiting_approval',
+      totalAmountMinor: 250000,
+    };
+
+    // 1. Activation Action
+    const activateReply = await hfClient.runProjectCopilot({
+      project,
+      milestones: [{ id: 'ms_1', title: 'Phase 1', status: 'PENDING', amountMinor: 100000 }],
+      evidence: [],
+      payments: [],
+      userQuestion: 'How can I activate this project proposal right now?',
+      userRole: 'provider',
+      userName: 'Dev Lead',
+    });
+
+    assert.ok(activateReply);
+    const activateAction = activateReply.suggestedActions?.find((a: any) => a.type === 'execute_activate');
+    assert.ok(activateAction, 'Must offer execute_activate action chip');
+
+    // 2. Payment Action
+    const activeProject = { ...project, status: 'active' };
+    const paymentReply = await hfClient.runProjectCopilot({
+      project: activeProject,
+      milestones: [{ id: 'ms_1', title: 'Phase 1', status: 'APPROVED', amountMinor: 100000 }],
+      evidence: [],
+      payments: [],
+      userQuestion: 'I want to make a payment and release escrow funds',
+      userRole: 'client',
+      userName: 'Tharshini',
+    });
+
+    assert.ok(paymentReply);
+    const paymentAction = paymentReply.suggestedActions?.find((a: any) => a.type === 'execute_payment');
+    assert.ok(paymentAction, 'Must offer execute_payment action chip');
+
+    // 3. Submit Proof Action
+    const proofReply = await hfClient.runProjectCopilot({
+      project: activeProject,
+      milestones: [{ id: 'ms_1', title: 'Phase 1', status: 'IN_PROGRESS', amountMinor: 100000 }],
+      evidence: [],
+      payments: [],
+      userQuestion: 'How do I submit deliverable work proof for milestone 1?',
+      userRole: 'provider',
+      userName: 'Dev Lead',
+    });
+
+    assert.ok(proofReply);
+    const proofAction = proofReply.suggestedActions?.find((a: any) => a.type === 'execute_submit_proof');
+    assert.ok(proofAction, 'Must offer execute_submit_proof action chip');
+  });
 });
 

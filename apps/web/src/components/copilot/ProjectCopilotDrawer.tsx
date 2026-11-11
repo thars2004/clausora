@@ -9,6 +9,10 @@ import {
   Loader2,
   User,
   ArrowUpRight,
+  CreditCard,
+  Upload,
+  ThumbsUp,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface ProjectCopilotDrawerProps {
@@ -17,6 +21,10 @@ interface ProjectCopilotDrawerProps {
   projectId: string;
   projectTitle: string;
   projectStatus: string;
+  onActivateProject?: () => Promise<void> | void;
+  onMakePayment?: (milestoneId?: string) => void;
+  onSubmitProof?: (milestoneId?: string) => void;
+  onRunCouncilReview?: (milestoneId?: string) => void;
 }
 
 // Inline parser for bold, code, and text styling
@@ -129,19 +137,32 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
   projectId,
   projectTitle,
   projectStatus,
+  onActivateProject,
+  onMakePayment,
+  onSubmitProof,
+  onRunCouncilReview,
 }) => {
+  const isAwaitingApproval = projectStatus === 'awaiting_approval';
+
+  const initialActions = [
+    ...(isAwaitingApproval
+      ? [{ label: '⚡ Approve & Activate Project', action: 'activate_project', type: 'execute_activate' as const }]
+      : [
+          { label: '💳 Make a Payment (PayPal Sandbox)', action: 'make_payment', type: 'execute_payment' as const },
+          { label: '📤 Submit Work Proof', action: 'submit_proof', type: 'execute_submit_proof' as const },
+        ]),
+    { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+    { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+    { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+    { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+  ];
+
   const [messages, setMessages] = useState<CopilotMessage[]>([
     {
       role: 'assistant',
-      content: `### 🌐 Welcome to Clausora AI Copilot\n\nI am your interactive AI assistant for **"${projectTitle}"**, equipped with multi-perspective reasoning across internal workspace data and external technical knowledge.\n\n* **Active Status:** \`${projectStatus.toUpperCase()}\`\n* **Live Data Coverage:** Internal Work DNA blueprint, milestone acceptance criteria, Evidence Graph, SHA-256 agreement hashes, and PayPal escrow records.\n* **Knowledge Engine:** Ask normal conversational questions, technical architecture queries (React, Node, MongoDB, APIs, Security), or request a 360-degree multi-perspective review.\n\nType any question or select an action below to begin:`,
+      content: `### 🌐 Welcome to Clausora AI Agent\n\nI am your interactive AI assistant for **"${projectTitle}"**, powered by multi-perspective intelligence (Gemini & Hugging Face).\n\n* **Live Status:** \`${projectStatus.toUpperCase()}\`\n* **Direct Action Execution:** You can **make payments**, **submit deliverable proofs**, and **activate projects** directly with me.\n* **Knowledge Engine:** Ask normal questions, deep technical architecture queries (React, Node, MongoDB, APIs), or request a 360-degree multi-perspective review.\n\nSelect an action or ask any question to begin:`,
       timestamp: new Date().toISOString(),
-      suggestedActions: [
-        { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
-        { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
-        { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
-        { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
-        { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
-      ],
+      suggestedActions: initialActions,
     },
   ]);
 
@@ -169,6 +190,69 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
       document.body.style.overflow = 'unset';
     }
   }, [isOpen, messages, onClose]);
+
+  const handleActionClick = async (chip: {
+    label: string;
+    action: string;
+    type?: 'chat' | 'execute_activate' | 'execute_payment' | 'execute_submit_proof' | 'execute_council';
+    targetId?: string;
+  }) => {
+    if (chip.type === 'execute_activate') {
+      if (onActivateProject) {
+        try {
+          await onActivateProject();
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: 'user',
+              content: '⚡ Execute Project Activation',
+              timestamp: new Date().toISOString(),
+            },
+            {
+              role: 'assistant',
+              content: `### ✅ Project Successfully Activated!\n\n* **Updated State:** \`ACTIVE\`\n* **Milestone Pipeline:** Unlocked for deliverable execution.\n* **Escrow Engine:** Deterministic milestone tracking is now active.`,
+              timestamp: new Date().toISOString(),
+              suggestedActions: [
+                { label: '💳 Make a Payment (PayPal Sandbox)', action: 'make_payment', type: 'execute_payment' },
+                { label: '📤 Submit Work Proof', action: 'submit_proof', type: 'execute_submit_proof' },
+                { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+                { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+              ],
+            },
+          ]);
+        } catch {
+          // Handled by parent toast
+        }
+      }
+      return;
+    }
+
+    if (chip.type === 'execute_payment') {
+      if (onMakePayment) {
+        onMakePayment(chip.targetId);
+        onClose();
+      }
+      return;
+    }
+
+    if (chip.type === 'execute_submit_proof') {
+      if (onSubmitProof) {
+        onSubmitProof(chip.targetId);
+        onClose();
+      }
+      return;
+    }
+
+    if (chip.type === 'execute_council') {
+      if (onRunCouncilReview) {
+        onRunCouncilReview(chip.targetId);
+        onClose();
+      }
+      return;
+    }
+
+    handleSendMessage(chip.action);
+  };
 
   const handleSendMessage = async (textToSend?: string) => {
     const question = textToSend || inputQuestion.trim();
@@ -236,10 +320,10 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
-                  Clausora AI Copilot
+                  Clausora AI Agent
                 </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 font-bold">
-                  ● Live Data Active
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 font-bold">
+                  ● Action Agent (Gemini & HF)
                 </span>
               </div>
               <p className="text-xs text-slate-300 font-semibold truncate max-w-[240px] sm:max-w-[320px]">
@@ -289,20 +373,79 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
                   )}
                 </div>
 
-                {/* Suggested Action Quick Chips */}
+                {/* Suggested Action & Execution Chips */}
                 {msg.suggestedActions && msg.suggestedActions.length > 0 && (
                   <div className="pt-2.5 mt-2 border-t border-slate-800/80 flex flex-wrap gap-1.5">
-                    {msg.suggestedActions.map((chip, chipIdx) => (
-                      <button
-                        key={chipIdx}
-                        onClick={() => handleSendMessage(chip.action)}
-                        disabled={loading}
-                        className="text-[10px] px-2.5 py-1 bg-slate-950 hover:bg-indigo-950 border border-slate-700/80 hover:border-indigo-500/60 text-indigo-300 font-bold rounded-lg transition text-left flex items-center gap-1 disabled:opacity-50 hover:scale-[1.02]"
-                      >
-                        <span>{chip.label}</span>
-                        <ArrowUpRight className="w-2.5 h-2.5 text-indigo-400" />
-                      </button>
-                    ))}
+                    {msg.suggestedActions.map((chip, chipIdx) => {
+                      if (chip.type === 'execute_activate') {
+                        return (
+                          <button
+                            key={chipIdx}
+                            onClick={() => handleActionClick(chip)}
+                            disabled={loading}
+                            className="text-[10px] px-3 py-1.5 bg-gradient-to-r from-emerald-950 to-teal-950 hover:from-emerald-900 hover:to-teal-900 border border-emerald-500/80 text-emerald-200 font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-emerald-950/60 hover:scale-[1.03] active:scale-95 cursor-pointer disabled:opacity-50"
+                            title="Execute Project Activation"
+                          >
+                            <ThumbsUp className="w-3 h-3 text-emerald-400" />
+                            <span>{chip.label}</span>
+                          </button>
+                        );
+                      }
+                      if (chip.type === 'execute_payment') {
+                        return (
+                          <button
+                            key={chipIdx}
+                            onClick={() => handleActionClick(chip)}
+                            disabled={loading}
+                            className="text-[10px] px-3 py-1.5 bg-gradient-to-r from-blue-950 via-indigo-950 to-cyan-950 hover:from-blue-900 hover:to-cyan-900 border border-cyan-400/80 text-cyan-200 font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-cyan-950/60 hover:scale-[1.03] active:scale-95 cursor-pointer disabled:opacity-50"
+                            title="Open PayPal Sandbox Escrow Payment Modal"
+                          >
+                            <CreditCard className="w-3 h-3 text-cyan-400" />
+                            <span>{chip.label}</span>
+                          </button>
+                        );
+                      }
+                      if (chip.type === 'execute_submit_proof') {
+                        return (
+                          <button
+                            key={chipIdx}
+                            onClick={() => handleActionClick(chip)}
+                            disabled={loading}
+                            className="text-[10px] px-3 py-1.5 bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 hover:from-purple-900 hover:to-indigo-900 border border-purple-400/80 text-purple-200 font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-purple-950/60 hover:scale-[1.03] active:scale-95 cursor-pointer disabled:opacity-50"
+                            title="Open Submit Work Proof Modal"
+                          >
+                            <Upload className="w-3 h-3 text-purple-400" />
+                            <span>{chip.label}</span>
+                          </button>
+                        );
+                      }
+                      if (chip.type === 'execute_council') {
+                        return (
+                          <button
+                            key={chipIdx}
+                            onClick={() => handleActionClick(chip)}
+                            disabled={loading}
+                            className="text-[10px] px-3 py-1.5 bg-gradient-to-r from-teal-950 to-emerald-950 hover:from-teal-900 hover:to-emerald-900 border border-teal-400/80 text-teal-200 font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-teal-950/60 hover:scale-[1.03] active:scale-95 cursor-pointer disabled:opacity-50"
+                            title="Run Multi-Agent Review Council Audit"
+                          >
+                            <ShieldCheck className="w-3 h-3 text-teal-400" />
+                            <span>{chip.label}</span>
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <button
+                          key={chipIdx}
+                          onClick={() => handleActionClick(chip)}
+                          disabled={loading}
+                          className="text-[10px] px-2.5 py-1 bg-slate-950 hover:bg-indigo-950 border border-slate-700/80 hover:border-indigo-500/60 text-indigo-300 font-bold rounded-lg transition text-left flex items-center gap-1 disabled:opacity-50 hover:scale-[1.02] cursor-pointer"
+                        >
+                          <span>{chip.label}</span>
+                          <ArrowUpRight className="w-2.5 h-2.5 text-indigo-400" />
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -818,14 +818,14 @@ export const ProjectDetailPage: React.FC = () => {
 
         {/* Action Buttons Row (Placed directly below title) */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Ask Copilot Button (Directly near project title with Clausora Logo) */}
+          {/* Ask Clausora AI Agent Button (Directly near project title with Clausora Logo) */}
           <button
             onClick={() => setIsCopilotOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition shadow-lg shadow-cyan-950/60 border border-cyan-400/50 hover:scale-[1.02] active:scale-95 cursor-pointer tracking-wide"
-            title="Ask Project Vault Copilot about deadlines, tech stack, milestones, or payments"
+            title="Ask Clausora AI Agent: Take actions, check deadlines, tech stack, milestones, or payments"
           >
             <LogoIcon className="w-4 h-4 shrink-0 drop-shadow" />
-            <span>Ask Copilot</span>
+            <span>Ask Clausora AI</span>
             <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-pulse" />
           </button>
 
@@ -2760,7 +2760,7 @@ export const ProjectDetailPage: React.FC = () => {
         </Modal>
       )}
 
-      {/* Project Vault Copilot Slide-Over Drawer */}
+      {/* Clausora AI Agent Slide-Over Drawer with Action Execution */}
       {project && (
         <ProjectCopilotDrawer
           isOpen={isCopilotOpen}
@@ -2768,6 +2768,25 @@ export const ProjectDetailPage: React.FC = () => {
           projectId={project.id}
           projectTitle={project.title}
           projectStatus={project.status}
+          onActivateProject={handleAcceptProject}
+          onMakePayment={(msId) => {
+            const target = msId ? milestones.find((m) => m.id === msId) : null;
+            if (target) {
+              setSelectedMilestone(target);
+              setIsPayPalModalOpen(true);
+            } else {
+              handleOpenDirectPaymentModal();
+            }
+          }}
+          onSubmitProof={(msId) => {
+            const target = msId
+              ? milestones.find((m) => m.id === msId)
+              : milestones.find((m) => m.status !== 'PAID') || milestones[0];
+            if (target) openSubmitProofModal(target);
+          }}
+          onRunCouncilReview={() => {
+            setTab('evidence');
+          }}
         />
       )}
     </div>

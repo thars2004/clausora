@@ -607,5 +607,7 @@ export interface CopilotMessage {
   suggestedActions?: Array<{
     label: string;
     action: string;
+    type?: 'chat' | 'execute_activate' | 'execute_payment' | 'execute_submit_proof' | 'execute_council';
+    targetId?: string;
   }>;
 }
