@@ -5,30 +5,91 @@ import { dbStore } from '../../database/store';
 export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private isConfigured = false;
+  private lastError: string | null = null;
 
   constructor() {
     this.initTransporter();
   }
 
-  private initTransporter() {
-    if (env.SMTP_HOST && env.SMTP_USER) {
+  public initTransporter(customConfig?: {
+    host?: string;
+    port?: number;
+    user?: string;
+    pass?: string;
+    secure?: boolean;
+    service?: string;
+  }) {
+    const smtpUser = customConfig?.user || process.env.SMTP_USER || env.SMTP_USER;
+    const smtpPass = customConfig?.pass || process.env.SMTP_PASS || env.SMTP_PASS;
+    const smtpHost = customConfig?.host || process.env.SMTP_HOST || env.SMTP_HOST;
+    const smtpPort = customConfig?.port || (process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : env.SMTP_PORT) || 465;
+    const smtpSecure = customConfig?.secure !== undefined
+      ? customConfig.secure
+      : (process.env.SMTP_SECURE === 'true' || env.SMTP_SECURE || smtpPort === 465);
+    const smtpService = customConfig?.service || process.env.SMTP_SERVICE || env.SMTP_SERVICE;
+
+    if (smtpUser && smtpPass) {
       try {
-        this.transporter = nodemailer.createTransport({
-          host: env.SMTP_HOST,
-          port: env.SMTP_PORT,
-          secure: env.SMTP_SECURE,
-          auth: {
-            user: env.SMTP_USER,
-            pass: env.SMTP_PASS,
-          },
-        });
+        let transportConfig: any;
+
+        // Smart Gmail detection (either explicit service or @gmail.com user / smtp.gmail.com)
+        const isGmail =
+          smtpService === 'gmail' ||
+          (smtpHost && smtpHost.includes('gmail')) ||
+          (!smtpHost && smtpUser.includes('@gmail.com'));
+
+        if (isGmail) {
+          transportConfig = {
+            service: 'gmail',
+            auth: {
+              user: smtpUser,
+              pass: smtpPass,
+            },
+            tls: {
+              rejectUnauthorized: process.env.NODE_ENV === 'production',
+            },
+          };
+        } else {
+          transportConfig = {
+            host: smtpHost || 'smtp.gmail.com',
+            port: smtpPort,
+            secure: smtpSecure,
+            auth: {
+              user: smtpUser,
+              pass: smtpPass,
+            },
+            tls: {
+              rejectUnauthorized: process.env.NODE_ENV === 'production',
+            },
+          };
+        }
+
+        this.transporter = nodemailer.createTransport(transportConfig);
         this.isConfigured = true;
-        console.log(`📧 [EmailService] SMTP Transporter initialized (${env.SMTP_HOST}:${env.SMTP_PORT})`);
+        this.lastError = null;
+
+        const providerLabel = isGmail ? 'Gmail Service' : `${smtpHost}:${smtpPort}`;
+        console.log(`📧 [EmailService] SMTP Transporter initialized (${providerLabel} for account: ${smtpUser})`);
+
+        // Asynchronous connectivity & credentials verification
+        this.transporter.verify((err) => {
+          if (err) {
+            this.lastError = err.message;
+            console.warn('⚠️ [EmailService] SMTP verification notice:', err.message);
+          } else {
+            this.lastError = null;
+            console.log('✅ [EmailService] Live SMTP transport verified & ready to deliver real emails in both DEV and PROD!');
+          }
+        });
       } catch (err: any) {
+        this.isConfigured = false;
+        this.lastError = err.message;
         console.warn('⚠️ [EmailService] Failed to initialize SMTP transporter:', err.message);
       }
     } else {
-      console.log('📧 [EmailService] Running in simulated mode (emails logged & persisted to audit store)');
+      this.transporter = null;
+      this.isConfigured = false;
+      console.log('📧 [EmailService] Running in simulated mode (emails logged & persisted to audit store). To send live emails in dev/prod, configure SMTP_USER and SMTP_PASS in .env.');
     }
   }
 
@@ -123,26 +184,39 @@ export class EmailService {
       html: options.html,
     });
 
+    // Re-check configuration dynamically if credentials were provided after startup
+    if (!this.isConfigured && (process.env.SMTP_USER || env.SMTP_USER)) {
+      this.initTransporter();
+    }
+
     if (this.transporter && this.isConfigured) {
       try {
-        await this.transporter.sendMail({
+        const info = await this.transporter.sendMail({
           from: fromAddress,
           to: options.to,
           subject: options.subject,
           text: options.text,
           html: options.html,
         });
-        console.log(`✉️ [Email Sent] Successfully delivered to ${options.to}: "${options.subject}"`);
+        console.log(`✉️ [Live Email Sent] Successfully delivered to ${options.to} (MessageId: ${info.messageId || 'ok'})`);
       } catch (err: any) {
-        console.warn(`⚠️ [Email Delivery Failed] to ${options.to}:`, err.message);
+        console.warn(`⚠️ [Live Email Delivery Failed] to ${options.to}:`, err.message);
         log.status = 'failed';
+        this.lastError = err.message;
       }
-    } else {
-      // In development / demo: log cleanly to terminal
+    }
+
+    // In development mode, always print email details to console for instant developer feedback
+    const isDev = process.env.NODE_ENV !== 'production' || env.NODE_ENV !== 'production';
+    if (isDev || !this.isConfigured) {
       console.log('──────────────────────────────────────────────────────────────────────────────');
-      console.log(`📧 [Simulated Email] Type: [${options.type}]`);
+      console.log(`📧 [Email Dispatched] Mode: [${this.isConfigured ? 'LIVE_SMTP' : 'SIMULATED'}] | Status: [${log.status.toUpperCase()}]`);
       console.log(`   To:      ${options.to}`);
+      console.log(`   From:    ${fromAddress}`);
       console.log(`   Subject: ${options.subject}`);
+      if (log.status === 'failed' && this.lastError) {
+        console.log(`   Error:   ${this.lastError}`);
+      }
       console.log(`   Content: ${options.text.substring(0, 160)}...`);
       console.log('──────────────────────────────────────────────────────────────────────────────');
     }
@@ -395,6 +469,91 @@ export class EmailService {
       type: 'payment_settled',
     });
   }
+
+  /**
+   * Send a test verification email to confirm SMTP connectivity in DEV or PROD
+   */
+  async sendTestEmail(toEmail: string): Promise<{
+    success: boolean;
+    mode: 'live_smtp' | 'simulated';
+    message: string;
+    logId: string;
+    details?: any;
+  }> {
+    const fromAddress = process.env.EMAIL_FROM || env.EMAIL_FROM || 'Clausora <notifications@clausora.dev>';
+    const isLive = this.isConfigured && this.transporter !== null;
+
+    const htmlContent = `
+      <h2 style="margin: 0 0 16px 0; font-size: 18px; color: #FFFFFF; font-weight: 700;">
+        Email Dispatch System Test
+      </h2>
+      <p style="margin: 0 0 14px 0; font-size: 14px; color: #CBD5E1;">
+        Hello,
+      </p>
+      <p style="margin: 0 0 16px 0; font-size: 14px; color: #E2E8F0; line-height: 1.6;">
+        This is an official verification email from your <strong>Clausora Work Execution Platform</strong>.
+        If this message has arrived in your inbox, your email sending integration is operating correctly in
+        <strong>${(process.env.NODE_ENV || env.NODE_ENV).toUpperCase()}</strong> mode!
+      </p>
+      <div style="background-color: #1E293B; border-left: 4px solid #10B981; padding: 14px 18px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; font-size: 13px; color: #A7F3D0; font-family: monospace; line-height: 1.6;">
+          <strong>Mode:</strong> ${isLive ? 'Live SMTP Transport' : 'Simulated / Logged'}<br>
+          <strong>Environment:</strong> ${process.env.NODE_ENV || env.NODE_ENV}<br>
+          <strong>Timestamp:</strong> ${new Date().toISOString()}<br>
+          <strong>Sender:</strong> ${fromAddress}
+        </p>
+      </div>
+      <p style="margin: 0; font-size: 12px; color: #94A3B8;">
+        Deterministic escrow releases, Work DNA blueprints, and 6-digit password recovery codes will be reliably delivered through this channel.
+      </p>
+    `;
+
+    const res = await this.sendMail({
+      to: toEmail,
+      subject: `Clausora: Email Delivery Test [${(process.env.NODE_ENV || env.NODE_ENV).toUpperCase()}]`,
+      text: `Clausora Email Delivery Test\n\nYour Clausora email sending integration is active and operating in ${(process.env.NODE_ENV || env.NODE_ENV).toUpperCase()} mode.\n\nTimestamp: ${new Date().toISOString()}\nSender: ${fromAddress}`,
+      html: this.wrapTemplate('Email System Test', htmlContent),
+      type: 'system_test',
+    });
+
+    return {
+      success: res.success,
+      mode: isLive ? 'live_smtp' : 'simulated',
+      message: isLive
+        ? (res.success ? `Live test email successfully dispatched to ${toEmail}!` : `SMTP delivery failed: ${this.lastError || 'Unknown error'}`)
+        : `Email recorded in simulated mode (no SMTP configured). Set SMTP_USER and SMTP_PASS in .env to send real emails.`,
+      logId: res.logId,
+      details: {
+        configured: isLive,
+        smtpHost: process.env.SMTP_HOST || env.SMTP_HOST || 'gmail',
+        sender: fromAddress,
+        lastError: this.lastError,
+      },
+    };
+  }
+
+  /**
+   * Check SMTP configuration status
+   */
+  getStatus() {
+    const smtpUser = process.env.SMTP_USER || env.SMTP_USER;
+    const maskedUser = smtpUser
+      ? `${smtpUser.substring(0, 3)}***@${smtpUser.split('@')[1] || ''}`
+      : undefined;
+
+    return {
+      isConfigured: this.isConfigured,
+      mode: this.isConfigured ? ('live_smtp' as const) : ('simulated' as const),
+      service: process.env.SMTP_SERVICE || env.SMTP_SERVICE || (env.SMTP_HOST?.includes('gmail') ? 'gmail' : undefined),
+      host: process.env.SMTP_HOST || env.SMTP_HOST || (this.isConfigured ? 'smtp.gmail.com' : undefined),
+      port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : env.SMTP_PORT,
+      secure: process.env.SMTP_SECURE === 'true' || env.SMTP_SECURE,
+      user: maskedUser,
+      from: process.env.EMAIL_FROM || env.EMAIL_FROM,
+      lastError: this.lastError,
+    };
+  }
 }
 
 export const emailService = new EmailService();
+

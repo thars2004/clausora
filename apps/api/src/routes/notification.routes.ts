@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { dbStore } from '../database/store';
+import { emailService } from '../services/email/email.service';
 
 const router = Router();
 
@@ -39,6 +40,37 @@ router.get('/emails', authMiddleware, (req: AuthRequest, res: Response) => {
     success: true,
     data: { emails },
   });
+});
+
+// GET /api/notifications/email-status - Status of SMTP / email dispatch system
+router.get('/email-status', authMiddleware, (_req: AuthRequest, res: Response) => {
+  const status = emailService.getStatus();
+  return res.json({
+    success: true,
+    data: { status },
+  });
+});
+
+// POST /api/notifications/test-email - Trigger a live test email to any recipient
+router.post('/test-email', authMiddleware, async (req: AuthRequest, res: Response, next) => {
+  try {
+    const toEmail = req.body?.to?.trim() || req.user?.email;
+    if (!toEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Recipient email address is required.',
+      });
+    }
+
+    const result = await emailService.sendTestEmail(toEmail);
+    return res.json({
+      success: result.success,
+      message: result.message,
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

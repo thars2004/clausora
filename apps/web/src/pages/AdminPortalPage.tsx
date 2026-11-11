@@ -28,6 +28,8 @@ import {
   ArrowRight,
   Sparkles,
   FolderGit2,
+  Mail,
+  Send,
 } from 'lucide-react';
 
 export const AdminPortalPage: React.FC = () => {
@@ -59,6 +61,12 @@ export const AdminPortalPage: React.FC = () => {
   const [editPassword, setEditPassword] = useState('');
   const [savingUser, setSavingUser] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  // Email Service Status & Live Testing State
+  const [emailStatus, setEmailStatus] = useState<any>(null);
+  const [testEmailRecipient, setTestEmailRecipient] = useState('');
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<any>(null);
 
   const fetchAdminData = async () => {
     setLoading(true);
@@ -95,6 +103,38 @@ export const AdminPortalPage: React.FC = () => {
   useEffect(() => {
     fetchAdminData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'system') {
+      api
+        .get('/notifications/email-status')
+        .then((res) => setEmailStatus(res.data?.data?.status))
+        .catch(() => {});
+    }
+  }, [activeTab]);
+
+  const handleSendTestEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testEmailRecipient.trim()) return;
+    setSendingTestEmail(true);
+    setTestEmailResult(null);
+    try {
+      const res = await api.post('/notifications/test-email', {
+        to: testEmailRecipient.trim(),
+      });
+      setTestEmailResult({
+        success: res.data?.success,
+        message: res.data?.message || 'Test email dispatched!',
+      });
+      toast.success(res.data?.message || 'Test email dispatched!', 'Email System');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to dispatch test email.';
+      setTestEmailResult({ success: false, message: msg });
+      toast.error(msg, 'Email Error');
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
 
   const handleOpenEdit = (user: any) => {
     setEditingUser(user);
@@ -912,6 +952,95 @@ export const AdminPortalPage: React.FC = () => {
               <div className="flex justify-between">
                 <span className="text-slate-400">Autonomy Guard:</span>
                 <span className="text-amber-400">Advisory Only</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Email Notification & SMTP Dispatch Engine */}
+          <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl space-y-4 md:col-span-2 shadow-xl">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Mail className="w-4 h-4 text-indigo-400" />
+                <span>Email Notification & SMTP Dispatch Engine (DEV & PROD)</span>
+              </h3>
+              <Badge variant={emailStatus?.isConfigured ? 'success' : 'warning'}>
+                {emailStatus?.isConfigured ? 'Live SMTP Transport Active' : 'Simulated / Logged Mode'}
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs font-mono">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Delivery Mode:</span>
+                  <span className={emailStatus?.isConfigured ? 'text-emerald-400 font-bold' : 'text-amber-400'}>
+                    {emailStatus?.isConfigured ? 'Real Inbox Delivery' : 'Simulated (Logged to Console & Store)'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Service / Host:</span>
+                  <span className="text-slate-200">{emailStatus?.service || emailStatus?.host || 'smtp.gmail.com'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Port & Security:</span>
+                  <span className="text-slate-200">{emailStatus?.port || 465} ({emailStatus?.secure ? 'SSL 465' : 'TLS 587'})</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Sender Account:</span>
+                  <span className="text-indigo-300 font-semibold">{emailStatus?.user || 'Not configured in .env'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Sender Header:</span>
+                  <span className="text-slate-300 text-[11px] truncate max-w-[220px]">{emailStatus?.from || 'Clausora <notifications@clausora.dev>'}</span>
+                </div>
+              </div>
+
+              {/* Live Test Email Sender */}
+              <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3 text-xs">
+                <div>
+                  <h4 className="font-bold text-white flex items-center gap-1.5">
+                    <Send className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Send Test Verification Email</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Test live dispatch directly to any inbox in development or production.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSendTestEmail} className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={testEmailRecipient}
+                      onChange={(e) => setTestEmailRecipient(e.target.value)}
+                      placeholder="Enter recipient email (e.g. you@gmail.com)"
+                      className="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={sendingTestEmail || !testEmailRecipient.trim()}
+                      className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl transition shadow flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+                    >
+                      {sendingTestEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                      <span>Send Test</span>
+                    </button>
+                  </div>
+                </form>
+
+                {testEmailResult && (
+                  <div className={`p-2.5 rounded-lg border text-[11px] flex items-start gap-2 ${
+                    testEmailResult.success
+                      ? 'bg-emerald-950/50 border-emerald-800/60 text-emerald-300'
+                      : 'bg-rose-950/50 border-rose-800/60 text-rose-300'
+                  }`}>
+                    {testEmailResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+                    )}
+                    <span>{testEmailResult.message}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

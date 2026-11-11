@@ -38,6 +38,7 @@ const envSchema = z.object({
   PAYPAL_WEBHOOK_ID: z.string().optional(),
   EMAIL_PROVIDER: z.string().default('console'),
   EMAIL_FROM: z.string().default('Clausora <notifications@clausora.dev>'),
+  SMTP_SERVICE: z.string().optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_USER: z.string().optional(),
