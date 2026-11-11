@@ -15,6 +15,7 @@ import {
   AuditEvent,
 } from '@clausora/shared';
 import { Badge } from '../components/common/Badge';
+import { LogoIcon } from '../components/common/Logo';
 import { EvidenceGraph } from '../components/evidence/EvidenceGraph';
 import { MultiAgentCouncilView } from '../components/evidence/MultiAgentCouncilView';
 import { ProjectCopilotDrawer } from '../components/copilot/ProjectCopilotDrawer';
@@ -817,15 +818,15 @@ export const ProjectDetailPage: React.FC = () => {
 
         {/* Action Buttons Row (Placed directly below title) */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Ask Copilot Button (Directly near project title) */}
+          {/* Ask Copilot Button (Directly near project title with Clausora Logo) */}
           <button
             onClick={() => setIsCopilotOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs font-bold transition shadow-lg shadow-purple-900/40 border border-purple-400/40 hover:scale-[1.02] active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs font-bold transition shadow-lg shadow-purple-900/40 border border-purple-400/40 hover:scale-[1.02] active:scale-95 cursor-pointer"
             title="Ask Project Vault Copilot about deadlines, tech stack, milestones, or payments"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <LogoIcon className="w-4 h-4 shrink-0" />
             <span>Ask Copilot</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           </button>
 
           {isPendingAcceptance && canAcceptProject && (
@@ -2758,19 +2759,6 @@ export const ProjectDetailPage: React.FC = () => {
           </div>
         </Modal>
       )}
-
-      {/* Floating Action Trigger: Project Vault AI Copilot */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <button
-          onClick={() => setIsCopilotOpen(true)}
-          className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-xs rounded-2xl shadow-2xl shadow-indigo-900/60 transition hover:scale-105 active:scale-95 border border-white/20 group backdrop-blur-sm"
-          title="Open Project Vault AI Copilot"
-        >
-          <Sparkles className="w-4 h-4 text-amber-300 animate-pulse group-hover:rotate-12 transition" />
-          <span className="font-semibold tracking-wide">AI Copilot</span>
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-        </button>
-      </div>
 
       {/* Project Vault Copilot Slide-Over Drawer */}
       {project && (

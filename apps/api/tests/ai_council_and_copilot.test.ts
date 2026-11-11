@@ -240,5 +240,115 @@ describe('Multi-Agent Review Council & Project Vault Copilot', () => {
     );
     assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
   });
+
+  test('project copilot responds helpfully to normal conversational questions', async () => {
+    const project = {
+      id: 'proj_copilot_5',
+      title: 'Smart Inventory Management System',
+      status: 'active',
+      totalAmountMinor: 250000,
+    };
+
+    const reply = await hfClient.runProjectCopilot({
+      project,
+      milestones: [],
+      evidence: [],
+      payments: [],
+      userQuestion: 'Hello, who are you and what can you help me with?',
+      userRole: 'client',
+      userName: 'Tharshini',
+    });
+
+    assert.ok(reply);
+    assert.equal(reply.role, 'assistant');
+    assert.ok(reply.content.includes('Tharshini') || reply.content.includes('Hello'));
+    assert.ok(reply.content.includes('Smart Inventory Management System'));
+    assert.ok(reply.suggestedActions && reply.suggestedActions.length > 0);
+  });
+
+  test('project copilot provides operational step-by-step guidance for platform how-to questions', async () => {
+    const project = {
+      id: 'proj_copilot_6',
+      title: 'Smart Inventory Management System',
+      status: 'active',
+      totalAmountMinor: 250000,
+    };
+
+    const reply = await hfClient.runProjectCopilot({
+      project,
+      milestones: [{ id: 'ms_1', title: 'Phase 1', status: 'SUBMITTED', amountMinor: 100000 }],
+      evidence: [],
+      payments: [],
+      userQuestion: 'How do I approve a milestone and release payment?',
+      userRole: 'client',
+      userName: 'Tharshini',
+    });
+
+    assert.ok(reply);
+    assert.equal(reply.role, 'assistant');
+    assert.ok(
+      reply.content.toLowerCase().includes('approve') &&
+      (reply.content.toLowerCase().includes('paypal') || reply.content.toLowerCase().includes('escrow') || reply.content.toLowerCase().includes('evidence')),
+      'Must explain approval and escrow release workflow'
+    );
+  });
+
+  test('project copilot explains external technical concepts with project context', async () => {
+    const project = {
+      id: 'proj_copilot_7',
+      title: 'Smart Inventory Management System',
+      status: 'active',
+      totalAmountMinor: 250000,
+    };
+
+    const reply = await hfClient.runProjectCopilot({
+      project,
+      milestones: [],
+      evidence: [],
+      payments: [],
+      userQuestion: 'What is React and how does it work in our system?',
+      userRole: 'provider',
+      userName: 'Dev Lead',
+    });
+
+    assert.ok(reply);
+    assert.equal(reply.role, 'assistant');
+    assert.ok(reply.content.toLowerCase().includes('react'));
+    assert.ok(reply.content.includes('Smart Inventory Management System') || reply.content.toLowerCase().includes('frontend'));
+  });
+
+  test('project copilot answers general inquiries with multi-perspective analysis', async () => {
+    const project = {
+      id: 'proj_copilot_8',
+      title: 'Smart Inventory Management System',
+      status: 'active',
+      totalAmountMinor: 250000,
+    };
+
+    const reply = await hfClient.runProjectCopilot({
+      project,
+      milestones: [],
+      evidence: [],
+      payments: [],
+      userQuestion: 'What is your assessment of our general project readiness and safety?',
+      userRole: 'client',
+      userName: 'Tharshini',
+    });
+
+    assert.ok(reply);
+    assert.equal(reply.role, 'assistant');
+    assert.ok(
+      reply.content.includes('💼') || reply.content.toLowerCase().includes('business'),
+      'Must contain business perspective'
+    );
+    assert.ok(
+      reply.content.includes('🛠️') || reply.content.toLowerCase().includes('technical'),
+      'Must contain technical perspective'
+    );
+    assert.ok(
+      reply.content.includes('⚖️') || reply.content.toLowerCase().includes('financial') || reply.content.toLowerCase().includes('escrow'),
+      'Must contain financial/escrow perspective'
+    );
+  });
 });
 

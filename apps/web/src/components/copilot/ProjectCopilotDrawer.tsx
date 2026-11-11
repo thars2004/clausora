@@ -2,12 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../../api/client';
 import { CopilotMessage } from '@clausora/shared';
+import { LogoIcon } from '../common/Logo';
 import {
-  Sparkles,
   X,
   Send,
   Loader2,
-  Bot,
   User,
   ArrowUpRight,
 } from 'lucide-react';
@@ -134,7 +133,7 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
   const [messages, setMessages] = useState<CopilotMessage[]>([
     {
       role: 'assistant',
-      content: `### 🤖 Welcome to Project Copilot\n\nI am your dedicated AI assistant for **"${projectTitle}"**.\n\n* **Active Status:** \`${projectStatus.toUpperCase()}\`\n* **Vault Access:** Work DNA blueprint, technical architecture, deadline schedules, and PayPal escrow records.\n\nAsk any question below about deadlines, tech stack, milestones, or payments.`,
+      content: `### 🌐 Welcome to Clausora AI Copilot\n\nI am your interactive AI assistant for **"${projectTitle}"**, equipped with multi-perspective reasoning across internal workspace data and external technical knowledge.\n\n* **Active Status:** \`${projectStatus.toUpperCase()}\`\n* **Live Data Coverage:** Internal Work DNA blueprint, milestone acceptance criteria, Evidence Graph, SHA-256 agreement hashes, and PayPal escrow records.\n* **Knowledge Engine:** Ask normal conversational questions, technical architecture queries (React, Node, MongoDB, APIs, Security), or request a 360-degree multi-perspective review.\n\nType any question or select an action below to begin:`,
       timestamp: new Date().toISOString(),
       suggestedActions: [
         { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
@@ -231,16 +230,16 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
         {/* Sticky Fixed Header (Always visible at top of window) */}
         <div className="shrink-0 p-4 sm:p-5 border-b border-slate-800 bg-[#111827] flex items-center justify-between sticky top-0 z-20 shadow-md">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-indigo-900/40 shrink-0">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-indigo-900/40 shrink-0 p-1.5">
+              <LogoIcon className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
-                  Project Vault Copilot
+                  Clausora AI Copilot
                 </h3>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 font-bold">
-                  ● Live Context
+                  ● Live Data Active
                 </span>
               </div>
               <p className="text-xs text-slate-300 font-semibold truncate max-w-[240px] sm:max-w-[320px]">
@@ -269,8 +268,8 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
               }`}
             >
               {msg.role !== 'user' && (
-                <div className="w-8 h-8 rounded-xl bg-indigo-950 border border-indigo-700/60 flex items-center justify-center text-indigo-400 shrink-0 mt-0.5 shadow-sm">
-                  <Bot className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-xl bg-indigo-950 border border-indigo-700/60 flex items-center justify-center shrink-0 mt-0.5 shadow-sm p-1">
+                  <LogoIcon className="w-5 h-5" />
                 </div>
               )}
 
@@ -318,12 +317,12 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
 
           {loading && (
             <div className="flex gap-3 justify-start animate-fade-in">
-              <div className="w-8 h-8 rounded-xl bg-indigo-950 border border-indigo-700/60 flex items-center justify-center text-indigo-400 shrink-0">
-                <Loader2 className="w-4 h-4 animate-spin" />
+              <div className="w-8 h-8 rounded-xl bg-indigo-950 border border-indigo-700/60 flex items-center justify-center shrink-0 p-1">
+                <LogoIcon className="w-5 h-5 animate-pulse" />
               </div>
               <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-none text-slate-300 text-xs font-semibold flex items-center gap-2 shadow-md">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-                <span>Analyzing project vault and synthesizing response...</span>
+                <span>Analyzing vault data & synthesizing multi-perspective answer...</span>
               </div>
             </div>
           )}
@@ -344,7 +343,7 @@ export const ProjectCopilotDrawer: React.FC<ProjectCopilotDrawerProps> = ({
               type="text"
               value={inputQuestion}
               onChange={(e) => setInputQuestion(e.target.value)}
-              placeholder="Ask anything about milestones, deliverables, code, or payments..."
+              placeholder="Ask anything (normal questions, tech stack, deadlines, multi-perspective review)..."
               className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-medium placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
               disabled={loading}
               autoFocus

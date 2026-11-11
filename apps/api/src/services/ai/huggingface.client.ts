@@ -1429,18 +1429,18 @@ Input: ${JSON.stringify({ title: input.projectTitle, summary: input.projectSumma
     const pendingCount = milestones.filter((m: any) => m.status === 'PENDING').length;
     const nextMilestone = milestones.find((m: any) => m.status !== 'PAID') || milestones[0];
 
-    // Build LLM System Prompt with rich context
-    const prompt = `You are Clausora Project Vault Copilot, the authoritative AI assistant dedicated to project "${project.title}" (ID: ${project.id}).
+    // Build LLM System Prompt with rich internal vault data & external knowledge instructions
+    const prompt = `You are Clausora Project Vault Copilot, an omniscient, highly capable AI assistant dedicated to project "${project.title}" (ID: ${project.id}).
 Current User: ${userName || 'User'} (Role: ${userRole.toUpperCase()})
 Project Status: ${project.status}
 Kickoff Date: ${kickoffDate}
 Target Completion Deadline: ${deadlineText} (${daysRemainingText})
 
-Financial Overview:
+Financial & Escrow Vault Data:
 - Agreed Contract Value: $${agreedBudgetDollars} USD
 - Settled via PayPal Sandbox: $${settledDollars} USD (${settledPercent}%)
 - Remaining In-Escrow: $${remainingDollars} USD (${remainingPercent}%)
-- Gateway & Escrow Method: ${project.paymentDetails?.paymentMethod || 'PayPal Sandbox Orders v2'}
+- Payment Method & Terms: ${project.paymentDetails?.paymentMethod || 'PayPal Sandbox Orders v2'} (Deterministic Milestone Escrow)
 
 Technical Architecture & Stack:
 - Architecture Pattern: ${architecturePattern}
@@ -1451,7 +1451,7 @@ Technical Architecture & Stack:
 - Security: SHA-256 canonical agreement hashing, bcrypt 12-round salt, JWT auth
 - Integration Complexity: ${complexity}
 
-Business Objectives & Purpose:
+Business Objectives & Scope:
 - Objective: ${businessObjective}
 - Target Audience: ${targetAudience}
 - Problems Solved: ${userProblemsSolved}
@@ -1464,19 +1464,100 @@ Evidence Artifacts (${evidence.length}): ${evidence.map((e: any) => `"${e.title}
 User Question: "${userQuestion}"
 
 Instructions:
-1. When asked for a "summary" or "multiple perspectives", provide 4 distinct, bold sections:
-   - 💼 1. Business & Client Perspective (Commercial Value, Objective, Problems Solved)
-   - 🛠️ 2. Technical & Architecture Perspective (Tech Stack, Frontend, Backend, Database, Security)
-   - ⚖️ 3. Financial & Escrow Perspective (Agreed Budget, Settled via PayPal, In-Escrow Balance)
-   - ⏱️ 4. Delivery & Timeline Perspective (Deadline, Days Remaining, Milestone Schedule)
-2. When asked about "deadline", "when is it due", "dates", or "timeline", cite the exact target deadline, days remaining, kickoff date, and individual milestone due dates.
-3. When asked about "tech stack", "technologies", "frameworks", "database", "backend", or "frontend", cite the exact layers and components listed above.
-4. Maintain a clean, professional, markdown format with bold headings and bullet points. Never hallucinate fake tech or figures not rooted in this project context.`;
+1. You have full access to internal workspace vault data AND external knowledge (software engineering, modern frameworks, PayPal escrow protocols, testing, security, and project management).
+2. Answer ANY question asked — including normal conversational questions ('hi', 'who are you', 'how does escrow work'), technical queries ('what is React 19', 'explain REST API'), platform workflows ('how to approve a milestone', 'how to submit evidence'), or project specifics ('deadline', 'tech stack', 'budget').
+3. For evaluative, scoping, or summary questions, provide a MULTI-PERSPECTIVE answer:
+   - 💼 1. Business & Client Perspective (Commercial Value, UX, ROI)
+   - 🛠️ 2. Technical & Architecture Perspective (Stack, Code Quality, Security)
+   - ⚖️ 3. Financial & Escrow Perspective (Budget, PayPal Settlement, Escrow Safety)
+   - ⏱️ 4. Delivery & Timeline Perspective (Deadlines, Critical Path, Milestone Schedule)
+4. Use clean markdown formatting with bold headings (### and ####) and bullet points (* ). Always ground project figures in the vault data above.`;
 
     let responseText = await this.callLlmText(prompt, 'You are the Clausora Project Copilot.');
 
     // Intelligent Deterministic Handler for Dev/Offline/Fallback or Precise Intent Matching
     const lower = userQuestion.toLowerCase().trim();
+
+    const isGreetingQuery =
+      lower === 'hi' ||
+      lower === 'hello' ||
+      lower === 'hey' ||
+      lower.startsWith('hi ') ||
+      lower.startsWith('hello ') ||
+      lower.startsWith('hey ') ||
+      lower.includes('good morning') ||
+      lower.includes('good afternoon') ||
+      lower.includes('good evening') ||
+      lower === 'greetings' ||
+      lower.includes('who are you') ||
+      lower.includes('what are you') ||
+      lower.includes('what can you do') ||
+      lower === 'help' ||
+      lower === 'what is clausora';
+
+    const isHowToQuery =
+      lower.includes('how to approve') ||
+      lower.includes('how do i approve') ||
+      lower.includes('how to pay') ||
+      lower.includes('how do i pay') ||
+      lower.includes('how to release') ||
+      lower.includes('how to submit') ||
+      lower.includes('how to upload') ||
+      lower.includes('how do i upload') ||
+      lower.includes('how to edit') ||
+      lower.includes('how to change') ||
+      lower.includes('how to download') ||
+      lower.includes('how does payment work') ||
+      lower.includes('how does escrow work') ||
+      lower.includes('how do i get paid');
+
+    const isGeneralTechQuery =
+      lower.includes('what is react') ||
+      lower.includes('what is node') ||
+      lower.includes('what is mongodb') ||
+      lower.includes('what is typescript') ||
+      lower.includes('what is express') ||
+      lower.includes('what is rest') ||
+      lower.includes('what is jwt') ||
+      lower.includes('what is sha') ||
+      lower.includes('what is paypal') ||
+      lower.includes('what is vite') ||
+      lower.includes('what is docker') ||
+      lower.includes('best practices') ||
+      lower.includes('explain escrow') ||
+      lower.includes('explain react') ||
+      lower.includes('explain node') ||
+      lower.includes('explain mongodb');
+
+    const isStakeholderQuery =
+      lower.includes('who is the owner') ||
+      lower.includes('who owns') ||
+      lower.includes('who created') ||
+      lower.includes('who is working') ||
+      lower.includes('provider') ||
+      lower.includes('client') ||
+      lower.includes('team') ||
+      lower.includes('stakeholder');
+
+    const isRiskOrQualityQuery =
+      lower.includes('risk') ||
+      lower.includes('quality') ||
+      lower.includes('score') ||
+      lower.includes('issue') ||
+      lower.includes('problem') ||
+      lower.includes('bug') ||
+      lower.includes('danger') ||
+      lower.includes('safe') ||
+      lower.includes('security') ||
+      lower.includes('dispute');
+
+    const isNextStepsQuery =
+      lower.includes('next step') ||
+      lower.includes('what next') ||
+      lower.includes('what should i do') ||
+      lower.includes('recommendation') ||
+      lower.includes('action') ||
+      lower.includes('todo');
 
     const isSummaryQuery =
       lower.includes('summar') ||
@@ -1544,7 +1625,164 @@ Instructions:
     ];
 
     if (!responseText) {
-      if (isSummaryQuery) {
+      if (isGreetingQuery) {
+        // GREETING & CONVERSATIONAL INTRODUCTION
+        responseText = `### 🌐 Hello, ${userName || 'User'}! I am your Clausora AI Copilot
+
+I am your dedicated intelligence partner for **"${project.title}"** (State: \`${project.status.toUpperCase()}\`), synthesizing both internal vault records and universal software engineering knowledge.
+
+#### 🧠 What I Bring to Your Workspace:
+* **Internal Vault Records:** Live access to project deadlines (**${deadlineText}**), escrow financials (**$${agreedBudgetDollars} USD** budget, **$${settledDollars} USD** settled), milestone criteria, and Evidence Graph proofs.
+* **External Technical & Escrow Advisory:** Guidance on modern web engineering (${frontendList[0] || 'React 19'}, ${backendList[0] || 'Node.js'}, ${databaseList[0] || 'MongoDB'}, REST APIs), test coverage, cryptographic verification, and PayPal Sandbox escrow.
+* **Multi-Perspective Question Answering:** Every inquiry can be analyzed through **Business**, **Technical**, **Financial**, and **Timeline** lenses.
+
+#### 💡 Suggested Topics to Explore:
+* Ask about **deadlines and timeline schedule**
+* Inspect our **tech stack and architecture layers**
+* Request a **360° multi-perspective summary**
+* Inquire about **how to approve milestones and release PayPal payouts**`;
+
+        dynamicActions = [
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+          { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+        ];
+      } else if (isHowToQuery) {
+        // HOW-TO OPERATIONAL GUIDANCE
+        responseText = `### 📖 Clausora Platform Guide: Milestone Approval & Escrow Release
+
+Here is how the deterministic milestone escrow release works for **"${project.title}"**:
+
+#### 1. 📤 Submitting Deliverables (Provider Workflow):
+* Navigate to the active milestone card or the **Evidence Graph** tab.
+* Click **Submit Proof** to attach verifiable code evidence (e.g. GitHub Pull Request URL, repository commit link, or automated test report).
+
+#### 2. 🤖 AI Deliverable Review Council:
+* Once evidence is logged, run the **Multi-Agent Review Council** (Technical Lead, Client Advocate, and Compliance Auditor).
+* The Council audits the evidence against the canonical SHA-256 acceptance criteria and provides an instant score and readiness verdict.
+
+#### 3. 💳 Authorizing Escrow Payout (Client Workflow):
+* Once deliverables are verified, the Client clicks **Approve** on the milestone.
+* Click **Make a Payment** to trigger server-side PayPal Sandbox capture, instantly releasing funds from escrow to the provider.
+
+#### 4. 📄 Exporting Compliance Documentation:
+* Click the **Documentation** tab in the sidebar or the **PDF** badge to download a cryptographically signed contract agreement and audit report.`;
+
+        dynamicActions = [
+          { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+        ];
+      } else if (isGeneralTechQuery) {
+        // GENERAL TECH EXPLANATION + PROJECT CONTEXT
+        let techName = 'Modern Web Technologies';
+        let techExplanation = 'A modern full-stack web architecture separating client rendering, backend API services, and persistent database storage.';
+
+        if (lower.includes('react')) {
+          techName = 'React 19 & Modern Component Architecture';
+          techExplanation = 'React is the industry-standard UI library for building interactive, component-based user interfaces with declarative state management.';
+        } else if (lower.includes('node') || lower.includes('express')) {
+          techName = 'Node.js & Express REST Engine';
+          techExplanation = 'Node.js provides an asynchronous, non-blocking JavaScript runtime, paired with Express to expose performant RESTful endpoints.';
+        } else if (lower.includes('mongodb')) {
+          techName = 'MongoDB Atlas & Mongoose ODM';
+          techExplanation = 'MongoDB is a high-performance document database providing flexible JSON-like schemas, ideal for storing dynamic project blueprints, milestone state machines, and audit logs.';
+        } else if (lower.includes('typescript')) {
+          techName = 'TypeScript 5 (Type Safety & Contracts)';
+          techExplanation = 'TypeScript adds static type definitions to JavaScript, eliminating runtime errors and ensuring strict interface contracts across shared data models.';
+        } else if (lower.includes('escrow') || lower.includes('paypal')) {
+          techName = 'PayPal Sandbox Orders v2 & Deterministic Escrow';
+          techExplanation = 'Clausora locks project milestone funds in escrow using PayPal Sandbox Orders v2. Payouts are guarded by bilateral cryptographic signatures and cannot be disbursed without verified milestone evidence.';
+        } else if (lower.includes('sha')) {
+          techName = 'SHA-256 Canonical Agreement Fingerprinting';
+          techExplanation = 'A cryptographic hash function that produces a unique 256-bit signature of the agreed contract terms. If any party attempts to alter the budget or scope unilaterally, the fingerprint changes immediately, alerting all stakeholders.';
+        }
+
+        responseText = `### 💡 Technical Deep Dive: ${techName}
+
+${techExplanation}
+
+#### 🛠️ Application in "${project.title}":
+* **Role in Stack:** Configured as part of the project's recommended **${architecturePattern}**.
+* **Frontend Layer:** ${frontendList.join(', ')}
+* **Backend Services:** ${backendList.join(', ')}
+* **Persistence & Database:** ${databaseList.join(', ')}
+* **Integration Benefits:** Ensures low-latency UI responsiveness, strict validation against malformed payloads, and end-to-end cryptographic auditability.`;
+
+        dynamicActions = [
+          { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+        ];
+      } else if (isStakeholderQuery) {
+        // STAKEHOLDERS & GOVERNANCE
+        responseText = `### 👥 Stakeholders & Workspace Governance: "${project.title}"
+
+* **Project Owner / Client:** **${project.ownerName || project.clientName || 'Workspace Client'}**
+* **Assigned Provider / Developer:** **${project.assignedProviderName || 'Assigned Technical Provider'}**
+* **Active Status:** \`${project.status.toUpperCase()}\`
+* **Kickoff Date:** ${kickoffDate}
+
+#### ⚖️ Bilateral Governance Rules:
+* **Anti-Collusion Safety:** Neither counterparty can unilaterally approve their own milestone proposals or modify agreement budgets.
+* **Escrow Protection:** The Client deposits funds into PayPal Sandbox escrow; the Provider delivers verifiable work proofs to the Evidence Graph; funds are released only upon bilateral counterpart acceptance.`;
+
+        dynamicActions = [
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+        ];
+      } else if (isRiskOrQualityQuery) {
+        // RISKS & MULTI-PERSPECTIVE QUALITY SAFEGUARDS
+        responseText = `### 🛡️ Risk Assessment & Multi-Perspective Quality Safeguards: "${project.title}"
+
+#### 💼 1. Business & Contractual Safety:
+* **Scope Creep Prevention:** Guarded by Clausora's Scope Drift engine. Unplanned tasks cannot be introduced without mutual counterpart re-approval.
+* **Commercial ROI Protection:** Ensures delivered software directly satisfies primary business objectives: *${businessObjective}*.
+
+#### 🛠️ 2. Technical & Deliverable Integrity:
+* **Multi-Agent Review Council:** Pre-payout audits by 3 specialized AI agents (Architecture Lead, Client Advocate, Compliance Auditor) verify evidence artifacts.
+* **Architecture Robustness:** Built on **${architecturePattern}** with verified test coverage.
+
+#### ⚖️ 3. Financial & Escrow Safeguards:
+* **Canonical SHA-256 Fingerprint:** Immutable cryptographic hashing prevents unauthorized modifications to terms or milestone budgets.
+* **Deterministic Escrow Lock:** **$${remainingDollars} USD** remains securely protected in PayPal Sandbox escrow, released only upon verified milestone acceptance.
+
+#### ⏱️ 4. Delivery & Timeline Risk Mitigation:
+* **Schedule Monitoring:** Target deadline is **${deadlineText}** (${daysRemainingText}).
+* **Sequential Phase Unlock:** Payouts and dependencies are strictly sequenced to guarantee deliverables are achieved on schedule.`;
+
+        dynamicActions = [
+          { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+        ];
+      } else if (isNextStepsQuery) {
+        // NEXT STEPS
+        const activeMs = nextMilestone;
+        responseText = `### 🎯 Recommended Next Actions for "${project.title}"
+
+* **Current Status:** \`${project.status.toUpperCase()}\`
+* **Active Phase:** ${activeMs ? `**"${activeMs.title}"** (Due: \`${activeMs.dueDate || 'Phase Scheduled'}\`)` : 'All phases completed'}
+* **Evidence Uploaded:** **${evidence.length} verified item(s)**
+
+#### 💼 If you are the Client:
+1. Review submitted evidence in the **Evidence Graph** tab.
+2. Check the **Multi-Agent Review Council** consensus score.
+3. If criteria are met, click **Approve** and authorize PayPal Sandbox payout.
+
+#### 🛠️ If you are the Provider:
+1. Finalize deliverables for **"${activeMs?.title || 'Active Milestone'}"**.
+2. Click **Submit Proof** on the milestone card and link your GitHub PR or test report.
+3. Trigger the AI Review Council to verify acceptance criteria compliance.`;
+
+        dynamicActions = [
+          { label: '🔍 Check Deliverables', action: 'Are deliverables ready for payment release?' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+        ];
+      } else if (isSummaryQuery) {
         // MULTI-PERSPECTIVE SUMMARY
         responseText = `### 🌐 Multi-Perspective Project Summary: "${project.title}"
 
@@ -1661,13 +1899,26 @@ There are currently **${evidence.length} evidence artifact(s)** logged in the Ev
           { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
         ];
       } else {
-        // GENERAL FALLBACK
-        responseText = `### 🤖 Project Cockpit Assistant: "${project.title}"
+        // UNIVERSAL MULTI-PERSPECTIVE INTELLIGENT EVALUATION FOR ANY INQUIRY
+        responseText = `### 🌐 Project Intelligence Assessment: "${project.title}"
 
-* **Current Status:** \`${project.status.toUpperCase()}\`
-* **Target Deadline:** **${deadlineText}** (${daysRemainingText})
-* **Milestone Pipeline:** **${paidCount} of ${milestones.length} Milestones Paid** ($${settledDollars} of $${agreedBudgetDollars} USD released)
-* **Recommended Next Step:** ${userRole === 'client' ? 'Review submitted evidence in the Evidence Graph or authorize approved milestone payouts.' : 'Submit verifiable deliverables (repository link, pull request, or test report) for the active milestone to initiate AI Council Review.'}`;
+Regarding your inquiry: *"${userQuestion}"*
+
+#### 💼 1. Business & Client Perspective:
+* **Objective Alignment:** This project targets **${businessObjective}**, providing direct ROI for **${targetAudience}**.
+* **Current Operational State:** Status is \`${project.status.toUpperCase()}\` with **${paidCount} of ${milestones.length} milestones completed**.
+
+#### 🛠️ 2. Technical & Architecture Perspective:
+* **Core Architecture:** Powered by **${architecturePattern}** utilizing ${frontendList.slice(0, 2).join(', ')} and ${backendList.slice(0, 2).join(', ')}.
+* **Deliverable Integrity:** Verified through automated testing and the Multi-Agent Review Council before any escrow disbursement.
+
+#### ⚖️ 3. Financial & Escrow Perspective:
+* **Escrow Protection:** **$${remainingDollars} USD** remains securely locked in PayPal Sandbox escrow. Total contract value is **$${agreedBudgetDollars} USD**.
+* **Disbursement Safeguards:** Funds can never be released without explicit acceptance criteria fulfillment.
+
+#### ⏱️ 4. Timeline & Execution Perspective:
+* **Target Delivery:** **${deadlineText}** (${daysRemainingText}).
+* **Immediate Priority:** Progressing phase **"${nextMilestone?.title || 'Active Milestone'}"** towards delivery and verification.`;
 
         dynamicActions = [
           { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
@@ -1677,7 +1928,14 @@ There are currently **${evidence.length} evidence artifact(s)** logged in the Ev
         ];
       }
     } else {
-      if (isDeadlineQuery) {
+      if (isGreetingQuery) {
+        dynamicActions = [
+          { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
+          { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
+          { label: '⏱️ Deadlines & Timeline', action: 'What is the project deadline and milestone schedule?' },
+          { label: '💰 Financial & Escrow Status', action: 'What is our financial and escrow status?' },
+        ];
+      } else if (isDeadlineQuery) {
         dynamicActions = [
           { label: '🛠️ Inspect Tech Stack', action: 'What is the tech stack and architecture of this project?' },
           { label: '🌐 Multi-Perspective Summary', action: 'Give me a multi-perspective summary of this project' },
