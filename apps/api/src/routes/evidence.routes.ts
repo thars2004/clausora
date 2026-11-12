@@ -16,7 +16,7 @@ router.post('/milestones/:milestoneId/evidence', authMiddleware, upload.single('
       return res.status(404).json({ success: false, message: 'Milestone not found' });
     }
 
-    const { type, title, description, urlOrContent } = req.body;
+    const { type, title, description, urlOrContent, autoCompleteTasks } = req.body;
     let finalUrlOrContent = urlOrContent || '';
     let sha256 = '';
 
@@ -47,6 +47,31 @@ router.post('/milestones/:milestoneId/evidence', authMiddleware, upload.single('
       milestone.status = 'SUBMITTED';
       milestone.updatedAt = new Date().toISOString();
       await dbStore.saveMilestone(milestone);
+    }
+
+    // If requested, automatically advance all tasks associated with this milestone to 'done' (100% progress)
+    if (autoCompleteTasks === true || autoCompleteTasks === 'true') {
+      const blueprints = Array.from(dbStore.blueprints.values()).filter((b) => b.projectId === milestone.projectId);
+      const blueprint = blueprints[blueprints.length - 1];
+      if (blueprint) {
+        let taskCount = 0;
+        for (const ws of blueprint.workstreams) {
+          for (const t of ws.tasks || []) {
+            if (milestone.taskIds && milestone.taskIds.includes(t.id)) {
+              t.status = 'done';
+              taskCount++;
+            }
+          }
+        }
+        milestone.progressPercent = 100;
+        if (milestone.status !== 'PAID') {
+          milestone.status = 'APPROVED_FOR_PAYMENT';
+        }
+        milestone.updatedAt = new Date().toISOString();
+        blueprint.updatedAt = new Date().toISOString();
+        await dbStore.saveMilestone(milestone);
+        await dbStore.saveBlueprint(blueprint);
+      }
     }
 
     dbStore.addAuditEvent({

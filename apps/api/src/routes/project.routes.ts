@@ -1114,6 +1114,126 @@ router.post('/:projectId/tasks', authMiddleware, async (req: AuthRequest, res: R
   });
 });
 
+// PATCH /api/projects/:projectId/tasks-batch - Bulk update tasks (e.g. for milestones with 100+ tasks)
+router.patch('/:projectId/tasks-batch', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { projectId } = req.params;
+  const { status: newStatus, milestoneId, taskIds } = req.body;
+
+  if (!newStatus) {
+    return res.status(400).json({ success: false, message: 'Status is required for batch update.' });
+  }
+
+  const project = dbStore.projects.get(projectId);
+  if (!project) {
+    return res.status(404).json({ success: false, message: 'Project not found.' });
+  }
+
+  if (project.status === 'awaiting_approval') {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot update task progress: Project proposal is awaiting counterpart acceptance.',
+      reason: 'Project proposal must be accepted and activated first before task progress can be updated.',
+    });
+  }
+
+  if (project.status === 'completed' || (project.status as string) === 'closed') {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot modify task: Project is completed and closed.',
+      reason: 'Closed project tasks are immutable.',
+    });
+  }
+
+  const blueprints = Array.from(dbStore.blueprints.values()).filter((b) => b.projectId === projectId);
+  const blueprint = blueprints[blueprints.length - 1];
+  if (!blueprint) {
+    return res.status(404).json({ success: false, message: 'Blueprint not found.' });
+  }
+
+  const milestones = Array.from(dbStore.milestones.values()).filter((m) => m.projectId === projectId);
+  const affectedMilestone = milestoneId ? milestones.find((m) => m.id === milestoneId) : null;
+
+  if (affectedMilestone && affectedMilestone.status === 'PAID' && newStatus !== 'done') {
+    return res.status(409).json({
+      success: false,
+      message: `Cannot revert tasks: Associated milestone '${affectedMilestone.title}' is already PAID and settled.`,
+      reason: 'Paid milestone tasks cannot be reverted away from done.',
+    });
+  }
+
+  // Determine which tasks to update
+  let updatedCount = 0;
+  const allTasks = blueprint.workstreams.flatMap((ws) => ws.tasks || []);
+
+  for (const t of allTasks) {
+    const isTarget =
+      (Array.isArray(taskIds) && taskIds.includes(t.id)) ||
+      (affectedMilestone && affectedMilestone.taskIds && affectedMilestone.taskIds.includes(t.id)) ||
+      (!affectedMilestone && !taskIds);
+
+    if (isTarget) {
+      t.status = newStatus;
+      updatedCount++;
+    }
+  }
+
+  // Recalculate milestone statuses and progress
+  const targetMilestones = affectedMilestone ? [affectedMilestone] : milestones;
+  for (const m of targetMilestones) {
+    const msTasks = allTasks.filter((t: any) => m.taskIds && m.taskIds.includes(t.id));
+    if (m.status !== 'PAID') {
+      if (newStatus === 'done') {
+        const allDone = msTasks.length > 0 && msTasks.every((t: any) => t.status === 'done');
+        if (allDone) {
+          m.status = 'APPROVED_FOR_PAYMENT';
+        }
+      } else if (newStatus === 'submitted') {
+        m.status = 'SUBMITTED';
+      } else if (newStatus === 'in_progress' && m.status === 'CREATED') {
+        m.status = 'IN_PROGRESS';
+      }
+    }
+
+    if (m.status === 'PAID') {
+      m.progressPercent = 100;
+    } else if (msTasks.length > 0) {
+      const totalScore = msTasks.reduce((sum: number, t: any) => {
+        const score = t.status === 'done' ? 100 : t.status === 'submitted' ? 80 : t.status === 'in_progress' ? 50 : 0;
+        return sum + score;
+      }, 0);
+      m.progressPercent = Math.round(totalScore / msTasks.length);
+    }
+
+    m.updatedAt = new Date().toISOString();
+    dbStore.milestones.set(m.id, m);
+    await dbStore.saveMilestone(m);
+  }
+
+  blueprint.updatedAt = new Date().toISOString();
+  dbStore.blueprints.set(blueprint.id, blueprint);
+  await dbStore.saveBlueprint(blueprint);
+
+  dbStore.addAuditEvent({
+    projectId,
+    actorId: req.user!.id,
+    actorName: req.user!.name,
+    actorRole: req.user!.role,
+    eventType: 'TASK_UPDATED',
+    entityType: 'task',
+    entityId: milestoneId || 'batch',
+    summary: `Batch updated ${updatedCount} task(s) to status "${newStatus}".`,
+  });
+
+  return res.json({
+    success: true,
+    data: {
+      count: updatedCount,
+      milestone: affectedMilestone,
+    },
+    message: `Batch updated ${updatedCount} task(s) to "${newStatus}". Milestone synchronized!`,
+  });
+});
+
 // PATCH /api/projects/:projectId/tasks/:taskId - Update task status/progress and synchronize milestone
 router.patch('/:projectId/tasks/:taskId', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { projectId, taskId } = req.params;

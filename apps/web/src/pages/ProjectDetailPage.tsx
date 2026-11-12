@@ -21,6 +21,7 @@ import { MultiAgentCouncilView } from '../components/evidence/MultiAgentCouncilV
 import { ProjectClausoraAIDrawer } from '../components/ai/ProjectClausoraAIDrawer';
 import { PayPalModal } from '../components/payment/PayPalModal';
 import { WorkflowVisualizer } from '../components/workflow/WorkflowVisualizer';
+import { MilestoneTaskOrganizer } from '../components/milestone/MilestoneTaskOrganizer';
 import { Modal } from '../components/common/Modal';
 import {
   FileText,
@@ -90,6 +91,7 @@ export const ProjectDetailPage: React.FC = () => {
   const [proofTitle, setProofTitle] = useState('');
   const [proofUrl, setProofUrl] = useState('');
   const [proofDesc, setProofDesc] = useState('');
+  const [autoCompletePhaseTasks, setAutoCompletePhaseTasks] = useState(true);
   const [submittingProof, setSubmittingProof] = useState(false);
 
   // New Task Modal state
@@ -451,6 +453,7 @@ export const ProjectDetailPage: React.FC = () => {
         description: proofDesc.trim(),
         urlOrContent: proofUrl.trim(),
         type: proofUrl.includes('github') ? 'repository' : 'url',
+        autoCompleteTasks: autoCompletePhaseTasks,
       });
       toast.success(
         res.data?.message || 'Work proof submitted successfully! Client payment is now unlocked.',
@@ -1736,9 +1739,11 @@ export const ProjectDetailPage: React.FC = () => {
                 const msDollars = (ms.amountMinor / 100).toFixed(2);
                 const msPaidDollars = ((ms.paidMinor || (isPaid ? ms.amountMinor : 0)) / 100).toFixed(2);
 
-                // Find matching workstream tasks if available
+                // Find matching workstream tasks (by milestone taskIds or matching index)
                 const matchingWs = blueprint?.workstreams?.[idx];
-                const wsTasks = matchingWs?.tasks || [];
+                const wsTasks = (ms.taskIds && ms.taskIds.length > 0)
+                  ? (blueprint?.workstreams?.flatMap((ws) => ws.tasks || []).filter((t) => ms.taskIds?.includes(t.id)) || [])
+                  : (matchingWs?.tasks || []);
 
                 // Calculate progress based on tasks
                 const taskProgress = ms.progressPercent !== undefined
@@ -1804,56 +1809,22 @@ export const ProjectDetailPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Task Content Breakdown with Interactive Status Dropdown */}
-                        <div className="text-xs text-slate-300 space-y-1.5 pt-1">
-                          {wsTasks.length > 0 ? (
-                            <div className="flex flex-wrap gap-2 items-center">
-                              <span className="text-[11px] text-slate-400 font-medium">Included Tasks:</span>
-                              {wsTasks.map((t) => (
-                                <div
-                                  key={t.id}
-                                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200"
-                                >
-                                  <span className="font-mono text-[10px] text-indigo-400 font-bold">{t.id}</span>
-                                  <span className="text-[11px] text-slate-300 truncate max-w-[140px]" title={t.title}>
-                                    {t.title}
-                                  </span>
-                                  <span className="text-[9px] text-slate-500 font-mono">
-                                    {t.estimatedEffortHours ? `${t.estimatedEffortHours}h` : ''}
-                                  </span>
-                                  <select
-                                    value={t.status || 'todo'}
-                                    disabled={isProjectClosed || ms.status === 'PAID' || isPendingAcceptance}
-                                    onChange={(e) => handleUpdateTaskStatus(t.id, e.target.value)}
-                                    className={`text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-teal-300 font-semibold focus:outline-none transition ${
-                                      isProjectClosed || ms.status === 'PAID' || isPendingAcceptance
-                                        ? 'opacity-60 cursor-not-allowed text-slate-500'
-                                        : 'cursor-pointer hover:border-slate-500'
-                                    }`}
-                                    title={
-                                      isProjectClosed
-                                        ? 'Status locked: Project is completed and closed.'
-                                        : ms.status === 'PAID'
-                                        ? 'Status locked: Associated deliverable milestone is already paid and settled.'
-                                        : isPendingAcceptance
-                                        ? 'Status locked: Project proposal must be accepted and activated first.'
-                                        : 'Update task progress (synchronizes milestone)'
-                                    }
-                                  >
-                                    <option value="todo">Todo (0%)</option>
-                                    <option value="in_progress">In Progress (50%)</option>
-                                    <option value="submitted">Submitted (80%)</option>
-                                    <option value="done">Done (100%)</option>
-                                  </select>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-[11px] text-slate-400 truncate max-w-2xl">
-                              {ms.description}
-                            </p>
-                          )}
-                        </div>
+                        {/* Milestone Task Deliverables Organizer (Handles 100+ tasks with search, pagination, bulk submit & accordions) */}
+                        {wsTasks.length > 0 ? (
+                          <MilestoneTaskOrganizer
+                            milestone={ms}
+                            tasks={wsTasks}
+                            projectId={projectId || ''}
+                            isProjectClosed={isProjectClosed}
+                            isPendingAcceptance={isPendingAcceptance}
+                            onTasksUpdated={fetchProjectData}
+                            onQuickSubmitProof={() => openSubmitProofModal(ms)}
+                          />
+                        ) : (
+                          <p className="text-[11px] text-slate-400 truncate max-w-2xl mt-1">
+                            {ms.description}
+                          </p>
+                        )}
 
                         {/* Submitted Proof Display if any */}
                         {msEvidence.length > 0 && (
@@ -2267,6 +2238,21 @@ export const ProjectDetailPage: React.FC = () => {
                 placeholder="Describe key deliverable outcomes, test results, and verified specifications..."
                 className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
               />
+            </div>
+
+            {/* One-Click Easy Submit All Tasks Toggle */}
+            <div className="p-3 bg-emerald-950/40 border border-emerald-800/50 rounded-xl flex items-center justify-between gap-3 text-xs">
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={autoCompletePhaseTasks}
+                  onChange={(e) => setAutoCompletePhaseTasks(e.target.checked)}
+                  className="rounded border-emerald-600 bg-slate-950 text-emerald-500 focus:ring-0 cursor-pointer w-4 h-4"
+                />
+                <span className="text-emerald-200 font-medium">
+                  ⚡ <strong>One-Click Easy Submit:</strong> Automatically advance all phase tasks to "Done" (100% progress)
+                </span>
+              </label>
             </div>
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
