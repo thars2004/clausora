@@ -134,7 +134,7 @@ def create_thank_you_card():
         {
             "badge": "GITHUB OPEN SOURCE",
             "title": "Clean Monorepo",
-            "url": "github.com/haritharshini2004/Clausora",
+            "url": "github.com/thars2004/clausora",
             "desc": "Full production codebase featuring npm workspaces (@clausora/shared, @clausora/api, @clausora/web) with 50 passing automated test suites.",
             "color": (99, 102, 241),
             "accent": (199, 210, 254),
@@ -234,3 +234,4 @@ def create_thank_you_card():
 
 if __name__ == "__main__":
     create_thank_you_card()
+
