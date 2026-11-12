@@ -169,45 +169,41 @@ export const MilestoneTaskOrganizer: React.FC<MilestoneTaskOrganizerProps> = ({
       {/* ============================================================== */}
       {/* 1. COMPACT ORGANIZER HEADER (Always Visible & Summary Badges)   */}
       {/* ============================================================== */}
-      <div className="p-3.5 sm:p-4 bg-slate-950/70 border-b border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="p-1.5 rounded-lg bg-indigo-950/80 border border-indigo-800/60 text-indigo-400">
+      <div className="p-3.5 bg-slate-950/80 border-b border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="p-1.5 rounded-lg bg-indigo-950/80 border border-indigo-800/60 text-indigo-400 shrink-0">
             <Layers className="w-4 h-4" />
           </div>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white tracking-wide">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-white tracking-wide shrink-0 whitespace-nowrap">
                 Phase Deliverables &amp; Work Tasks
               </span>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800/60">
-                {totalTasks} {totalTasks === 1 ? 'Task' : 'Tasks'}
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800/60 shrink-0 whitespace-nowrap">
+                {totalTasks} Tasks
               </span>
               {totalTasks >= 50 && (
-                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-950/70 border border-amber-800/50 text-amber-300 font-semibold">
-                  Large Deliverable (100+ Subtasks)
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-950/70 border border-amber-800/50 text-amber-300 font-semibold shrink-0 whitespace-nowrap">
+                  Large Deliverable (100+ Tasks)
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <p className="text-[11px] text-slate-400 mt-0.5 truncate max-w-sm hidden sm:block">
               Organized task breakdown synchronized with milestone verification and escrow release.
             </p>
           </div>
         </div>
 
-        {/* Quick Progress Breakdown & Action Pill */}
-        <div className="flex items-center gap-2 flex-wrap self-end md:self-auto">
-          {/* Status Breakdown Pills */}
-          <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono">
-            <span className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800/50 text-emerald-300">
-              {doneCount} Done
-            </span>
-            <span className="px-2 py-0.5 rounded bg-blue-950/80 border border-blue-800/50 text-blue-300">
-              {inProgressCount} Active
-            </span>
-            <span className="px-2 py-0.5 rounded bg-slate-800/90 border border-slate-700 text-slate-300">
-              {todoCount} Todo
-            </span>
+        {/* ALL BUTTONS IN A SINGLE HORIZONTAL LINE */}
+        <div className="flex items-center gap-2 flex-nowrap shrink-0 overflow-x-auto py-0.5 self-start lg:self-center">
+          {/* Status Breakdown Combined Pill */}
+          <div className="flex items-center gap-1.5 text-[10px] font-mono px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 shrink-0">
+            <span className="text-emerald-400 font-bold">{doneCount} Done</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-blue-400 font-bold">{inProgressCount} Active</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-slate-400 font-medium">{todoCount} Todo</span>
           </div>
 
           {/* ⚡ High-Efficiency Bulk Action: Quick Submit All Done (1-Click!) */}
@@ -215,7 +211,7 @@ export const MilestoneTaskOrganizer: React.FC<MilestoneTaskOrganizerProps> = ({
             <button
               onClick={() => handleBatchUpdate('done')}
               disabled={isBatchUpdating || doneCount === totalTasks}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition shadow-md shadow-emerald-950/50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition shadow-md shadow-emerald-950/50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap shrink-0"
               title="1-Click: Mark all tasks in this phase as Done (100%)"
             >
               {isBatchUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 text-amber-300" />}
@@ -227,7 +223,7 @@ export const MilestoneTaskOrganizer: React.FC<MilestoneTaskOrganizerProps> = ({
           {onQuickSubmitProof && !isPaid && (
             <button
               onClick={onQuickSubmitProof}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-white text-xs font-semibold transition border border-indigo-500/50"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-white text-xs font-semibold transition border border-indigo-500/50 whitespace-nowrap shrink-0"
               title="Submit verifiable deliverable proof artifact"
             >
               <FileCheck2 className="w-3.5 h-3.5 text-indigo-300" />
@@ -238,7 +234,7 @@ export const MilestoneTaskOrganizer: React.FC<MilestoneTaskOrganizerProps> = ({
           {/* Accordion Toggle */}
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition whitespace-nowrap shrink-0"
             title={isExpanded ? 'Collapse task details' : 'Expand full task list & search'}
           >
             <span>{isExpanded ? 'Hide Tasks' : `View ${totalTasks} Tasks`}</span>

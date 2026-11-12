@@ -22,6 +22,7 @@ import { ProjectClausoraAIDrawer } from '../components/ai/ProjectClausoraAIDrawe
 import { PayPalModal } from '../components/payment/PayPalModal';
 import { WorkflowVisualizer } from '../components/workflow/WorkflowVisualizer';
 import { MilestoneTaskOrganizer } from '../components/milestone/MilestoneTaskOrganizer';
+import { MilestoneScopeViewer } from '../components/milestone/MilestoneScopeViewer';
 import { Modal } from '../components/common/Modal';
 import {
   FileText,
@@ -1221,7 +1222,7 @@ export const ProjectDetailPage: React.FC = () => {
                   return (
                     <div
                       key={ms.id}
-                      className={`p-6 rounded-2xl border transition text-left flex flex-col justify-between space-y-4 ${
+                      className={`p-6 rounded-2xl border transition text-left flex flex-col justify-between space-y-4 h-full ${
                         isPaid
                           ? 'bg-emerald-950/20 border-emerald-800/60'
                           : isPartiallyPaid
@@ -1255,7 +1256,7 @@ export const ProjectDetailPage: React.FC = () => {
                           </Badge>
                         </div>
                         <h3 className="text-base font-bold text-white">{ms.title}</h3>
-                        <p className="text-xs text-slate-400">{ms.description}</p>
+                        <MilestoneScopeViewer description={ms.description} milestoneTitle={ms.title} />
 
                         {/* Split Progress Bar */}
                         {ms.amountMinor > 0 && (
@@ -1289,18 +1290,18 @@ export const ProjectDetailPage: React.FC = () => {
                       )}
 
                       {/* Amount and Actions */}
-                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
-                        <div>
+                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+                        <div className="shrink-0">
                           <span className="text-[11px] text-slate-500 block">Authorized Value</span>
                           <span className="text-xl font-bold font-mono text-white">
                             ${totalDollars} <span className="text-xs text-slate-400 font-normal">{ms.currency}</span>
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-nowrap shrink-0 overflow-x-auto py-0.5">
                           <button
                             onClick={() => setSelectedMilestone(ms)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border whitespace-nowrap shrink-0 ${
                               isSelected
                                 ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50'
                                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
@@ -1316,7 +1317,7 @@ export const ProjectDetailPage: React.FC = () => {
                                 setSelectedMilestone(ms);
                                 setIsPayPalModalOpen(true);
                               }}
-                              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5"
+                              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5 whitespace-nowrap shrink-0"
                               title="Enter custom or split payout amount"
                             >
                               <CreditCard className="w-3.5 h-3.5" />
@@ -1330,18 +1331,18 @@ export const ProjectDetailPage: React.FC = () => {
                                 setSelectedMilestone(ms);
                                 handleSubmitMilestone(ms.id);
                               }}
-                              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition"
+                              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition whitespace-nowrap shrink-0"
                             >
                               Submit Proof
                             </button>
                           )}
 
                           {isAwaiting && (
-                            <div className="flex items-center gap-1.5 flex-wrap">
+                            <div className="flex items-center gap-1.5 flex-nowrap shrink-0">
                               {(user?.role === 'client' || user?.role === 'admin' || isOwner) && !isProjectClosed && !isFullyPaid && (
                                 <button
                                   onClick={() => handleDirectMilestoneApprove(ms.id)}
-                                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-md shadow-emerald-600/30 flex items-center gap-1"
+                                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition shadow-md shadow-emerald-600/30 flex items-center gap-1 whitespace-nowrap shrink-0"
                                   title="Approve deliverable and authorize PayPal release"
                                 >
                                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -1753,7 +1754,7 @@ export const ProjectDetailPage: React.FC = () => {
                 return (
                   <div
                     key={ms.id}
-                    className={`p-4 rounded-xl border transition ${
+                    className={`p-4 rounded-xl border transition space-y-3.5 ${
                       isPaid
                         ? 'bg-slate-950/50 border-emerald-900/40'
                         : hasProof
@@ -1761,95 +1762,39 @@ export const ProjectDetailPage: React.FC = () => {
                         : 'bg-slate-950/60 border-amber-900/30'
                     }`}
                   >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                      <div className="space-y-2 flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-mono font-bold text-indigo-400">
-                            Phase {idx + 1}
+                    {/* Header Row: Phase, Title, Status, Deliverable Value, and Payment Release Button */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-slate-800/60">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        <span className="text-xs font-mono font-bold text-indigo-400 shrink-0">
+                          Phase {idx + 1}
+                        </span>
+                        <h4 className="text-sm font-semibold text-white truncate max-w-md">
+                          {ms.title}
+                        </h4>
+
+                        {/* Status Badge */}
+                        {isPaid ? (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/50 text-emerald-300 font-semibold flex items-center gap-1 shrink-0">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            Paid & Released (${msPaidDollars})
                           </span>
-                          <h4 className="text-sm font-semibold text-white truncate max-w-lg">
-                            {ms.title}
-                          </h4>
-
-                          {/* Status Badge */}
-                          {isPaid ? (
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/50 text-emerald-300 font-semibold flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                              Paid & Released (${msPaidDollars})
-                            </span>
-                          ) : hasProof ? (
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-950 border border-teal-700/50 text-teal-300 font-semibold flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3 text-teal-400" />
-                              Proof Submitted ({msEvidence.length} artifact{msEvidence.length !== 1 ? 's' : ''})
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-700/60 text-amber-300 font-semibold flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3 text-amber-400" />
-                              Proof Required Before Payment
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Task Progress Bar & Progress Indicator */}
-                        <div className="space-y-1 pt-0.5 max-w-md">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-slate-400 font-medium flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-indigo-400" />
-                              <span>Task Progress</span>
-                            </span>
-                            <span className="font-mono font-bold text-indigo-300">
-                              {taskProgress}% {taskProgress === 100 ? '• Done' : taskProgress >= 80 ? '• Submitted' : taskProgress >= 50 ? '• In Progress' : '• Pending'}
-                            </span>
-                          </div>
-                          <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800/80">
-                            <div
-                              className="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 h-full rounded-full transition-all duration-500"
-                              style={{ width: `${taskProgress}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Milestone Task Deliverables Organizer (Handles 100+ tasks with search, pagination, bulk submit & accordions) */}
-                        {wsTasks.length > 0 ? (
-                          <MilestoneTaskOrganizer
-                            milestone={ms}
-                            tasks={wsTasks}
-                            projectId={projectId || ''}
-                            isProjectClosed={isProjectClosed}
-                            isPendingAcceptance={isPendingAcceptance}
-                            onTasksUpdated={fetchProjectData}
-                            onQuickSubmitProof={() => openSubmitProofModal(ms)}
-                          />
+                        ) : hasProof ? (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-teal-950 border border-teal-700/50 text-teal-300 font-semibold flex items-center gap-1 shrink-0">
+                            <CheckCircle2 className="w-3 h-3 text-teal-400" />
+                            Proof Submitted ({msEvidence.length} artifact{msEvidence.length !== 1 ? 's' : ''})
+                          </span>
                         ) : (
-                          <p className="text-[11px] text-slate-400 truncate max-w-2xl mt-1">
-                            {ms.description}
-                          </p>
-                        )}
-
-                        {/* Submitted Proof Display if any */}
-                        {msEvidence.length > 0 && (
-                          <div className="flex items-center gap-2 flex-wrap pt-1 text-[11px]">
-                            <span className="text-slate-400 font-medium">Verified Proof:</span>
-                            {msEvidence.map((evi) => (
-                              <a
-                                key={evi.id}
-                                href={evi.urlOrContent}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-950/70 border border-indigo-800/40 text-indigo-300 hover:text-white transition font-mono"
-                              >
-                                <span>{evi.title}</span>
-                                <ExternalLink className="w-3 h-3 text-indigo-400" />
-                              </a>
-                            ))}
-                          </div>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-700/60 text-amber-300 font-semibold flex items-center gap-1 shrink-0">
+                            <AlertCircle className="w-3 h-3 text-amber-400" />
+                            Proof Required Before Payment
+                          </span>
                         )}
                       </div>
 
-                      {/* Right: Allocation Amount & Action Buttons */}
-                      <div className="flex items-center gap-3 shrink-0 self-end lg:self-center">
+                      {/* Right: Allocation Amount & Action Buttons (Single Line) */}
+                      <div className="flex items-center gap-3 shrink-0 self-start sm:self-center">
                         <div className="text-right">
-                          <span className="text-[9px] uppercase font-mono text-slate-400 block font-semibold">
+                          <span className="text-[9px] uppercase font-mono text-slate-400 block font-semibold leading-tight">
                             Deliverable Value
                           </span>
                           <span className="text-base font-bold font-mono text-white">
@@ -1857,50 +1802,105 @@ export const ProjectDetailPage: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-2">
-                          {/* Provider Action: Submit Work Proof */}
-                          {!isPaid && (
+                        {/* Client Payment Action or Lock Badge */}
+                        {!isPaid && (
+                          (user?.role === 'client' || user?.role === 'admin' || isOwner) ? (
+                            hasProof ? (
+                              <button
+                                onClick={() => {
+                                  setSelectedMilestone(ms);
+                                  setIsPayPalModalOpen(true);
+                                }}
+                                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-900/40 transition hover:scale-[1.02] whitespace-nowrap shrink-0"
+                                title="Release escrow payment for this verified deliverable"
+                              >
+                                <Zap className="w-3.5 h-3.5 text-amber-300" />
+                                <span>Pay Deliverable (${msDollars})</span>
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-slate-500 text-xs font-semibold rounded-xl border border-slate-800 cursor-not-allowed opacity-70 whitespace-nowrap shrink-0"
+                                title="Payment locked: Assigned provider must submit work proof before payment can be made"
+                              >
+                                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                                <span>Proof Required</span>
+                              </button>
+                            )
+                          ) : null
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Task Progress Bar & Progress Indicator (Full Width) */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 font-medium flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-indigo-400" />
+                          <span>Task Progress</span>
+                        </span>
+                        <span className="font-mono font-bold text-indigo-300">
+                          {taskProgress}% {taskProgress === 100 ? '• Done' : taskProgress >= 80 ? '• Submitted' : taskProgress >= 50 ? '• In Progress' : '• Pending'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800/80">
+                        <div
+                          className="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 h-full rounded-full transition-all duration-500"
+                          style={{ width: `${taskProgress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Milestone Task Deliverables Organizer (Full Width - All buttons on a single horizontal row!) */}
+                    {wsTasks.length > 0 ? (
+                      <MilestoneTaskOrganizer
+                        milestone={ms}
+                        tasks={wsTasks}
+                        projectId={projectId || ''}
+                        isProjectClosed={isProjectClosed}
+                        isPendingAcceptance={isPendingAcceptance}
+                        onTasksUpdated={fetchProjectData}
+                        onQuickSubmitProof={() => openSubmitProofModal(ms)}
+                      />
+                    ) : (
+                      <div className="space-y-2 pt-1">
+                        <MilestoneScopeViewer
+                          description={ms.description}
+                          milestoneTitle={ms.title}
+                        />
+                        {!isPaid && (
+                          <div className="flex items-center gap-2 pt-1">
                             <button
                               onClick={() => openSubmitProofModal(ms)}
-                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1.5"
+                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap shrink-0"
                               title="Provider: Submit or update proof artifact for this deliverable"
                             >
                               <FileText className="w-3.5 h-3.5 text-purple-400" />
                               <span>{hasProof ? 'Add More Proof' : 'Submit Work Proof'}</span>
                             </button>
-                          )}
-
-                          {/* Client Action: Make Payment / Release Escrow */}
-                          {!isPaid && (
-                            (user?.role === 'client' || user?.role === 'admin' || isOwner) ? (
-                              hasProof ? (
-                                <button
-                                  onClick={() => {
-                                    setSelectedMilestone(ms);
-                                    setIsPayPalModalOpen(true);
-                                  }}
-                                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-900/40 transition hover:scale-[1.02]"
-                                  title="Release escrow payment for this verified deliverable"
-                                >
-                                  <Zap className="w-3.5 h-3.5 text-amber-300" />
-                                  <span>Pay Deliverable (${msDollars})</span>
-                                </button>
-                              ) : (
-                                <button
-                                  disabled
-                                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-800 text-slate-500 text-xs font-semibold rounded-xl border border-slate-800 cursor-not-allowed opacity-60"
-                                  title="Payment locked: Assigned provider must submit work proof before payment can be made"
-                                >
-                                  <Lock className="w-3.5 h-3.5 text-amber-400" />
-                                  <span>Proof Required</span>
-                                </button>
-                              )
-                            ) : null
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    )}
+
+                    {/* Submitted Proof Display if any */}
+                    {msEvidence.length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap pt-1 text-[11px]">
+                        <span className="text-slate-400 font-medium">Verified Proof:</span>
+                        {msEvidence.map((evi) => (
+                          <a
+                            key={evi.id}
+                            href={evi.urlOrContent}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-950/70 border border-indigo-800/40 text-indigo-300 hover:text-white transition font-mono"
+                          >
+                            <span>{evi.title}</span>
+                            <ExternalLink className="w-3 h-3 text-indigo-400" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
