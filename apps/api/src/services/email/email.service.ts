@@ -28,7 +28,12 @@ export class EmailService {
       : (process.env.SMTP_SECURE === 'true' || env.SMTP_SECURE || smtpPort === 465);
     const smtpService = customConfig?.service || process.env.SMTP_SERVICE || env.SMTP_SERVICE;
 
-    if (smtpUser && smtpPass) {
+    const resendKey = process.env.RESEND_API_KEY || (env as any).RESEND_API_KEY;
+
+    if (resendKey) {
+      this.isConfigured = true;
+      console.log('📧 [EmailService] Resend HTTPS API configured & ready for instant cloud delivery (Port 443)!');
+    } else if (smtpUser && smtpPass) {
       try {
         let transportConfig: any;
 
@@ -45,6 +50,9 @@ export class EmailService {
               user: smtpUser,
               pass: smtpPass,
             },
+            connectionTimeout: 4000,
+            greetingTimeout: 3000,
+            socketTimeout: 5000,
             tls: {
               rejectUnauthorized: process.env.NODE_ENV === 'production',
             },
@@ -58,6 +66,9 @@ export class EmailService {
               user: smtpUser,
               pass: smtpPass,
             },
+            connectionTimeout: 4000,
+            greetingTimeout: 3000,
+            socketTimeout: 5000,
             tls: {
               rejectUnauthorized: process.env.NODE_ENV === 'production',
             },
@@ -189,6 +200,47 @@ export class EmailService {
       this.initTransporter();
     }
 
+    // 1. Try Resend HTTPS API first if API key is provided (never blocked by cloud host firewalls)
+    const resendKey = process.env.RESEND_API_KEY || (env as any).RESEND_API_KEY;
+    if (resendKey) {
+      try {
+        const configuredFrom = env.EMAIL_FROM || 'Clausora <notifications@clausora.dev>';
+        // Resend free tier sends from onboarding@resend.dev unless custom domain is verified
+        const sender = configuredFrom.includes('@resend.dev') ? configuredFrom : 'Clausora <onboarding@resend.dev>';
+
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: sender,
+            to: [options.to],
+            subject: options.subject,
+            html: options.html,
+            text: options.text,
+          }),
+        });
+
+        if (response.ok) {
+          const resData: any = await response.json();
+          console.log(`✉️ [Live Email Sent via Resend HTTPS] Delivered to ${options.to} (ID: ${resData?.id || 'ok'})`);
+          log.status = 'sent';
+          this.lastError = null;
+          return { success: true, logId: log.id };
+        } else {
+          const errText = await response.text();
+          console.warn(`⚠️ [Resend Delivery Failed]`, errText);
+          this.lastError = `Resend error: ${errText}`;
+        }
+      } catch (resendErr: any) {
+        console.warn('⚠️ [Resend API Error]:', resendErr.message);
+        this.lastError = resendErr.message;
+      }
+    }
+
+    // 2. Try Nodemailer SMTP
     if (this.transporter && this.isConfigured) {
       try {
         const info = await this.transporter.sendMail({
@@ -199,6 +251,9 @@ export class EmailService {
           html: options.html,
         });
         console.log(`✉️ [Live Email Sent] Successfully delivered to ${options.to} (MessageId: ${info.messageId || 'ok'})`);
+        log.status = 'sent';
+        this.lastError = null;
+        return { success: true, logId: log.id };
       } catch (err: any) {
         console.warn(`⚠️ [Live Email Delivery Failed] to ${options.to}:`, err.message);
         log.status = 'failed';

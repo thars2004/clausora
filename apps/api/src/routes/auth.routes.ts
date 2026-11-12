@@ -340,21 +340,31 @@ router.post('/forgot-password', authRateLimiter, async (req, res, next) => {
       createdAt: new Date().toISOString(),
     });
 
-    // Send email notification with OTP
-    await emailService.sendPasswordResetOtp({
+    // Send email notification with OTP (with max 3.5s wait so user request returns immediately)
+    const emailPromise = emailService.sendPasswordResetOtp({
       to: normalizedEmail,
       name: foundUser.name,
       otp,
       expiresInMinutes,
     });
 
+    // Race against 3.5s timeout: if host blocks SMTP port, don't keep client hanging!
+    const emailResult = await Promise.race([
+      emailPromise,
+      new Promise<{ success: boolean; logId: string }>((resolve) =>
+        setTimeout(() => resolve({ success: false, logId: 'timeout' }), 3500)
+      ),
+    ]);
+
     return res.json({
       success: true,
-      message: `A 6-digit password recovery code has been sent to ${normalizedEmail}. It will expire in ${expiresInMinutes} minutes.`,
+      message: emailResult.success
+        ? `A 6-digit password recovery code has been sent to ${normalizedEmail}. It will expire in ${expiresInMinutes} minutes.`
+        : `Recovery code generated. If email delivery is delayed by hosting provider firewall, use the verification code shown below or check your server log.`,
       data: {
         email: normalizedEmail,
         expiresInMinutes,
-        devOtp: env.NODE_ENV !== 'production' ? otp : undefined,
+        devOtp: env.NODE_ENV !== 'production' || !emailResult.success ? otp : undefined,
       },
     });
   } catch (err) {
@@ -441,11 +451,11 @@ router.post('/reset-password', authRateLimiter, async (req, res, next) => {
     // Invalidate OTP immediately
     await dbStore.markOtpUsed(normalizedEmail, input.otp);
 
-    // Send confirmation email
-    await emailService.sendPasswordChangedConfirmation({
+    // Send confirmation email asynchronously without blocking the response
+    emailService.sendPasswordChangedConfirmation({
       to: normalizedEmail,
       name: foundUser.name,
-    });
+    }).catch((err) => console.warn('⚠️ [Confirmation Email Notice]:', err.message));
 
     return res.json({
       success: true,

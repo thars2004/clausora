@@ -36,6 +36,7 @@ const envSchema = z.object({
   PAYPAL_CLIENT_SECRET: z.string().optional(),
   PAYPAL_BASE_URL: z.string().default('https://api-m.sandbox.paypal.com'),
   PAYPAL_WEBHOOK_ID: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
   EMAIL_PROVIDER: z.string().default('console'),
   EMAIL_FROM: z.string().default('Clausora <notifications@clausora.dev>'),
   SMTP_SERVICE: z.string().optional(),
