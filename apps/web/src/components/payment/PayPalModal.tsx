@@ -22,6 +22,7 @@ interface PayPalModalProps {
   assignedProviderName?: string;
   projectStatus?: string;
   onSelectMilestone?: (ms: Milestone) => void;
+  initialAmountDollars?: string;
   onPaymentSuccess: () => void;
 }
 
@@ -29,6 +30,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
   isOpen,
   onClose,
   milestone,
+  initialAmountDollars,
   fullProjectAmountDollars,
   projectRemainingDollars,
   hasProof = true,
@@ -55,14 +57,32 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
     ? projectRemainingDollars
     : (remainingMinor / 100).toFixed(2);
 
-  // Manually editable amount input (defaults to remaining due or full amount)
-  const [enteredAmount, setEnteredAmount] = useState<string>(remainingDollars);
+  // If opening button had a specific amount (e.g. "Pay Deliverable ($600.00)"), put that amount directly!
+  // If the button did NOT have an amount (e.g. "Make a Payment"), put the full amount!
+  const fullPayableAmount =
+    parseFloat(remainingDollars) > 0 && parseFloat(remainingDollars) < parseFloat(fullAmountToDisplay)
+      ? remainingDollars
+      : fullAmountToDisplay;
+
+  const defaultInitialAmount =
+    initialAmountDollars && parseFloat(initialAmountDollars) > 0
+      ? initialAmountDollars
+      : fullPayableAmount;
+
+  // Manually editable amount input (defaults to button amount or full amount)
+  const [enteredAmount, setEnteredAmount] = useState<string>(defaultInitialAmount);
   const [lastPaidDollars, setLastPaidDollars] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
+      // Direct amount mapping:
+      // If the button that opened the modal specifies an amount, directly use it.
+      // If that button has no amount, directly put the full amount.
       const initialAmount =
-        parseFloat(remainingDollars) > 0 ? remainingDollars : fullAmountToDisplay;
+        initialAmountDollars && parseFloat(initialAmountDollars) > 0
+          ? initialAmountDollars
+          : fullPayableAmount;
+
       setEnteredAmount(initialAmount);
       setStep('input');
       setError('');
@@ -72,9 +92,9 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
       setApproveUrl('');
       setCaptureId('');
     }
-  }, [isOpen, milestone.id, remainingDollars, fullAmountToDisplay]);
+  }, [isOpen, milestone.id, initialAmountDollars, fullPayableAmount]);
 
-  const maxAllowedMinor = Math.round((parseFloat(remainingDollars) || 0) * 100);
+  const maxAllowedMinor = Math.round((parseFloat(remainingDollars) || parseFloat(fullAmountToDisplay) || 0) * 100);
   const parsedMinor = Math.round((parseFloat(enteredAmount) || 0) * 100);
   const isTooHigh = maxAllowedMinor > 0 && parsedMinor > maxAllowedMinor;
   const isInputValid = !isNaN(parsedMinor) && parsedMinor > 0 && !isTooHigh;
@@ -220,22 +240,32 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
             <div className="space-y-1">
               <div className="flex justify-between items-center text-[11px]">
                 <label className="font-medium text-slate-300">Payment Amount</label>
-                <div className="flex items-center gap-1.5">
-                  {remainingDollars !== fullAmountToDisplay && parseFloat(remainingDollars) > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {initialAmountDollars && parseFloat(initialAmountDollars) > 0 && initialAmountDollars !== fullPayableAmount && (
+                    <button
+                      type="button"
+                      onClick={() => setEnteredAmount(initialAmountDollars)}
+                      className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold transition"
+                      title="Set to button deliverable amount"
+                    >
+                      Deliverable (${initialAmountDollars})
+                    </button>
+                  )}
+                  {remainingDollars !== fullPayableAmount && parseFloat(remainingDollars) > 0 && remainingDollars !== initialAmountDollars && (
                     <button
                       type="button"
                       onClick={() => setEnteredAmount(remainingDollars)}
                       className="text-[9px] font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition"
                     >
-                      Pay Remaining (${remainingDollars})
+                      Remaining (${remainingDollars})
                     </button>
                   )}
                   <button
                     type="button"
-                    onClick={() => setEnteredAmount(fullAmountToDisplay)}
+                    onClick={() => setEnteredAmount(fullPayableAmount)}
                     className="text-[9px] font-mono px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold transition"
                   >
-                    Pay Full (${fullAmountToDisplay})
+                    Pay Full (${fullPayableAmount})
                   </button>
                 </div>
               </div>

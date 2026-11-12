@@ -145,6 +145,7 @@ export const ProjectDetailPage: React.FC = () => {
   }, [activeSelectedMilestone?.id]);
 
   const [isPayPalModalOpen, setIsPayPalModalOpen] = useState(false);
+  const [paymentModalInitialAmount, setPaymentModalInitialAmount] = useState<string | undefined>(undefined);
 
   // Scope Drift form state
   const [newRequestText, setNewRequestText] = useState('');
@@ -235,7 +236,12 @@ export const ProjectDetailPage: React.FC = () => {
     }
   };
 
-  const handleOpenDirectPaymentModal = () => {
+  const handleOpenDirectPaymentModal = (preferredAmount?: string | React.MouseEvent) => {
+    // If preferredAmount is a string passed from button with an amount, use it directly.
+    // If omitted or a MouseEvent (button without amount, e.g. "Make a Payment"), keep undefined so modal inputs full project amount!
+    const cleanAmount = typeof preferredAmount === 'string' ? preferredAmount : undefined;
+    setPaymentModalInitialAmount(cleanAmount);
+
     // 1. Pick first unpaid or partially paid milestone
     const unpaidMs = milestones.find(
       (m) => m.status !== 'PAID' && (!m.paidMinor || m.paidMinor < m.amountMinor)
@@ -541,6 +547,8 @@ export const ProjectDetailPage: React.FC = () => {
       const res = await api.post(`/milestones/${selectedMilestone.id}/approve`);
       toast.success(res.data.message || 'Milestone approved! PayPal checkout authorized.', 'Milestone Approved');
       await fetchProjectData();
+      const msDue = ((selectedMilestone.amountMinor - (selectedMilestone.paidMinor || 0)) / 100).toFixed(2);
+      setPaymentModalInitialAmount(msDue);
       setIsPayPalModalOpen(true);
     } catch (err: any) {
       const reason = err.response?.data?.reason || err.response?.data?.message || 'Failed to approve milestone.';
@@ -878,7 +886,7 @@ export const ProjectDetailPage: React.FC = () => {
 
           {(user?.role === 'client' || user?.role === 'admin' || isOwner) && !isProjectClosed && !isFullyPaid && (
             <button
-              onClick={handleOpenDirectPaymentModal}
+              onClick={() => handleOpenDirectPaymentModal()}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold transition shadow-lg shadow-purple-900/40 border border-purple-400/30 hover:scale-[1.02]"
               title="Open payment modal to enter amount or full payout"
             >
@@ -1095,11 +1103,15 @@ export const ProjectDetailPage: React.FC = () => {
                 </div>
               </div>
               <button
-                onClick={() => setIsPayPalModalOpen(true)}
+                onClick={() => {
+                  const msDue = ((selectedMilestone.amountMinor - (selectedMilestone.paidMinor || 0)) / 100).toFixed(2);
+                  setPaymentModalInitialAmount(msDue);
+                  setIsPayPalModalOpen(true);
+                }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-900/30 transition animate-bounce shrink-0"
               >
                 <CreditCard className="w-4 h-4" />
-                <span>Release PayPal Payout</span>
+                <span>Release PayPal Payout (${((selectedMilestone.amountMinor - (selectedMilestone.paidMinor || 0)) / 100).toFixed(2)})</span>
               </button>
             </div>
           ) : (
@@ -1315,13 +1327,14 @@ export const ProjectDetailPage: React.FC = () => {
                             <button
                               onClick={() => {
                                 setSelectedMilestone(ms);
+                                setPaymentModalInitialAmount(remainingDollars);
                                 setIsPayPalModalOpen(true);
                               }}
                               className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5 whitespace-nowrap shrink-0"
-                              title="Enter custom or split payout amount"
+                              title="Release escrow payment for this deliverable"
                             >
                               <CreditCard className="w-3.5 h-3.5" />
-                              <span>Pay / Split</span>
+                              <span>Pay Deliverable (${remainingDollars})</span>
                             </button>
                           )}
 
@@ -1357,11 +1370,12 @@ export const ProjectDetailPage: React.FC = () => {
                               <button
                                 onClick={() => {
                                   setSelectedMilestone(ms);
+                                  setPaymentModalInitialAmount(remainingDollars);
                                   setIsPayPalModalOpen(true);
                                 }}
-                                className="px-4 py-2 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-lg transition shadow-lg shadow-blue-900/30"
+                                className="px-4 py-2 bg-[#0070BA] hover:bg-[#005ea6] text-white text-xs font-bold rounded-lg transition shadow-lg shadow-blue-900/30 whitespace-nowrap shrink-0"
                               >
-                                PayPal Sandbox
+                                PayPal Sandbox (${remainingDollars})
                               </button>
                             ) : (
                               <span className="text-[11px] font-mono text-amber-300 bg-amber-950/60 px-2.5 py-1 rounded border border-amber-800/40">
@@ -1648,7 +1662,7 @@ export const ProjectDetailPage: React.FC = () => {
 
               {(user?.role === 'client' || user?.role === 'admin' || isOwner) && !isProjectClosed && !isFullyPaid && (
                 <button
-                  onClick={handleOpenDirectPaymentModal}
+                  onClick={() => handleOpenDirectPaymentModal()}
                   className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-purple-900/40 border border-purple-400/30 self-start sm:self-auto hover:scale-[1.02]"
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-300" />
@@ -1809,6 +1823,7 @@ export const ProjectDetailPage: React.FC = () => {
                               <button
                                 onClick={() => {
                                   setSelectedMilestone(ms);
+                                  setPaymentModalInitialAmount(msDollars);
                                   setIsPayPalModalOpen(true);
                                 }}
                                 className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-900/40 transition hover:scale-[1.02] whitespace-nowrap shrink-0"
@@ -2174,8 +2189,12 @@ export const ProjectDetailPage: React.FC = () => {
       {selectedMilestone && (
         <PayPalModal
           isOpen={isPayPalModalOpen}
-          onClose={() => setIsPayPalModalOpen(false)}
+          onClose={() => {
+            setIsPayPalModalOpen(false);
+            setPaymentModalInitialAmount(undefined);
+          }}
           milestone={selectedMilestone}
+          initialAmountDollars={paymentModalInitialAmount}
           fullProjectAmountDollars={agreedBudgetDollars}
           projectRemainingDollars={((Math.max(0, agreedBudgetMinor - settledMinor)) / 100).toFixed(2)}
           hasProof={
