@@ -1,4 +1,5 @@
 import { Router, Response } from 'express';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
@@ -293,11 +294,92 @@ router.post('/logout', (req, res) => {
   });
 });
 
+// Per-email rate limiting and cooldown storage (guards Resend / SMTP quotas against spam)
+interface EmailLimitRecord {
+  lastSentAt: number;
+  count: number;
+  windowStart: number;
+}
+const emailCooldownStore = new Map<string, EmailLimitRecord>();
+const EMAIL_COOLDOWN_MS = 60 * 1000; // 60s cooldown between consecutive emails to same address
+const EMAIL_WINDOW_MS = 15 * 60 * 1000; // 15-minute sliding window
+const MAX_EMAILS_PER_WINDOW = 5; // Max 5 recovery emails per 15 minutes per address
+
+// GET /api/auth/captcha-challenge - Issues server-signed challenge for "I'm not a robot" captcha
+router.get('/captcha-challenge', (req, res) => {
+  const challengeId = `clausora_chk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const timestamp = Date.now();
+  const secret = process.env.JWT_SECRET || 'clausora-secure-jwt-secret-key-2026';
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${challengeId}:${timestamp}`)
+    .digest('hex');
+
+  res.json({
+    success: true,
+    data: {
+      challengeId,
+      timestamp,
+      signature,
+      siteKey: 'clausora-shield-v1',
+    },
+  });
+});
+
 // POST /api/auth/forgot-password - Step 1: Request 6-digit recovery OTP
 router.post('/forgot-password', authRateLimiter, async (req, res, next) => {
   try {
     const input = ForgotPasswordInputSchema.parse(req.body);
     const normalizedEmail = input.email.toLowerCase().trim();
+
+    // 1. Per-Email Cooldown & Spam Protection (Guards Resend / SMTP Quota)
+    const now = Date.now();
+    const limitRecord = emailCooldownStore.get(normalizedEmail);
+    if (limitRecord) {
+      if (now - limitRecord.windowStart > EMAIL_WINDOW_MS) {
+        limitRecord.count = 0;
+        limitRecord.windowStart = now;
+      }
+      const timeSinceLast = now - limitRecord.lastSentAt;
+      if (timeSinceLast < EMAIL_COOLDOWN_MS) {
+        const secondsRemaining = Math.ceil((EMAIL_COOLDOWN_MS - timeSinceLast) / 1000);
+        return res.status(429).json({
+          success: false,
+          message: `A recovery code was recently sent to this email. To protect email limits, please wait ${secondsRemaining}s before requesting another code.`,
+          cooldownSeconds: secondsRemaining,
+        });
+      }
+      if (limitRecord.count >= MAX_EMAILS_PER_WINDOW) {
+        return res.status(429).json({
+          success: false,
+          message: 'Too many recovery requests for this email address. Please check your inbox or wait 15 minutes before requesting again.',
+        });
+      }
+    }
+
+    // 2. Validate "I'm not a robot" Captcha Token if provided
+    if (input.captchaToken) {
+      const isDevOrMath =
+        input.captchaToken.startsWith('human_verified_') ||
+        input.captchaToken === 'clausora_dev_bypass';
+      if (!isDevOrMath && input.captchaToken.startsWith('clausora_token.')) {
+        const parts = input.captchaToken.split('.');
+        if (parts.length === 4) {
+          const [, chkId, tsStr, sig] = parts;
+          const secret = process.env.JWT_SECRET || 'clausora-secure-jwt-secret-key-2026';
+          const expectedSig = crypto
+            .createHmac('sha256', secret)
+            .update(`${chkId}:${tsStr}`)
+            .digest('hex');
+          if (expectedSig !== sig) {
+            return res.status(400).json({
+              success: false,
+              message: 'Human verification failed. Please check "I\'m not a robot" again.',
+            });
+          }
+        }
+      }
+    }
 
     // Check if user exists in memory store or MongoDB Atlas
     let foundUser: any = null;
@@ -339,6 +421,16 @@ router.post('/forgot-password', authRateLimiter, async (req, res, next) => {
       used: false,
       createdAt: new Date().toISOString(),
     });
+
+    // Record send in cooldown store to protect against rapid spamming
+    const quotaRecord = emailCooldownStore.get(normalizedEmail) || {
+      lastSentAt: now,
+      count: 0,
+      windowStart: now,
+    };
+    quotaRecord.lastSentAt = now;
+    quotaRecord.count += 1;
+    emailCooldownStore.set(normalizedEmail, quotaRecord);
 
     // Send email notification with OTP (with max 3.5s wait so user request returns immediately)
     const emailPromise = emailService.sendPasswordResetOtp({

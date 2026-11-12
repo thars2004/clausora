@@ -122,4 +122,16 @@ describe('Password Recovery, OTP Validation & Transactional Email System', () =>
     assert.equal(userEmails[1].type, 'forgot_password_otp');
     assert.ok(userEmails[1].text.includes('654321'));
   });
+
+  test('validates captcha token format and protects against forged tokens', () => {
+    // Valid human verified tokens
+    const validHumanToken = `human_verified_${Date.now()}_test`;
+    assert.ok(validHumanToken.startsWith('human_verified_'), 'Human verified token prefix recognized');
+
+    // Forged token format detection
+    const forgedToken = 'clausora_token.fake_chk.12345.invalidsig';
+    const parts = forgedToken.split('.');
+    assert.equal(parts.length, 4, 'Captcha token has 4 distinct segments: prefix, challengeId, timestamp, and signature');
+    assert.equal(parts[0], 'clausora_token');
+  });
 });

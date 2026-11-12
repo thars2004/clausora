@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { LogoIcon } from '../components/common/Logo';
+import { RobotCaptcha } from '../components/common/RobotCaptcha';
 import {
   ArrowLeft,
   Mail,
@@ -30,6 +31,11 @@ export const ForgotPasswordPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Human Captcha & Rate Limit State
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+
   // Dev helpers
   const [devOtp, setDevOtp] = useState<string | null>(null);
 
@@ -38,10 +44,24 @@ export const ForgotPasswordPage: React.FC = () => {
   const [error, setError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
 
+  // 60-second cooldown timer for email spam prevention
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
   // Step 1: Submit email to request OTP
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
+
+    if (!isCaptchaVerified) {
+      setError('Please check "I\'m not a robot" below to verify you are a human.');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -50,12 +70,14 @@ export const ForgotPasswordPage: React.FC = () => {
     try {
       const res = await api.post('/auth/forgot-password', {
         email: email.trim().toLowerCase(),
+        captchaToken,
       });
 
       if (res.data?.data?.devOtp) {
         setDevOtp(res.data.data.devOtp);
       }
       setInfoMessage(res.data?.message || 'Verification code sent to your email.');
+      setCooldown(60);
       setStep(2);
     } catch (err: any) {
       setError(
@@ -69,15 +91,19 @@ export const ForgotPasswordPage: React.FC = () => {
 
   // Step 2: Resend OTP
   const handleResendOtp = async () => {
+    if (cooldown > 0) return;
+
     setLoading(true);
     setError('');
     try {
       const res = await api.post('/auth/forgot-password', {
         email: email.trim().toLowerCase(),
+        captchaToken: captchaToken || 'clausora_resend_session',
       });
       if (res.data?.data?.devOtp) {
         setDevOtp(res.data.data.devOtp);
       }
+      setCooldown(60);
       setInfoMessage('A new recovery code has been sent to your email.');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to resend code.');
@@ -286,10 +312,27 @@ export const ForgotPasswordPage: React.FC = () => {
               </div>
             </div>
 
+            {/* "I'm not a robot" Bot & Email Quota Guard */}
+            <div className="pt-2">
+              <RobotCaptcha
+                isVerified={isCaptchaVerified}
+                onVerify={(token) => {
+                  setIsCaptchaVerified(true);
+                  setCaptchaToken(token);
+                  setError('');
+                }}
+                onReset={() => {
+                  setIsCaptchaVerified(false);
+                  setCaptchaToken('');
+                }}
+                disabled={loading}
+              />
+            </div>
+
             <button
               type="submit"
-              disabled={loading || !email.trim()}
-              className="w-full py-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.01]"
+              disabled={loading || !email.trim() || !isCaptchaVerified}
+              className="w-full py-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01]"
             >
               {loading ? (
                 <>
@@ -318,11 +361,12 @@ export const ForgotPasswordPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleResendOtp}
-                  disabled={loading}
-                  className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition"
+                  disabled={loading || cooldown > 0}
+                  className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={cooldown > 0 ? `Please wait ${cooldown}s before resending` : 'Resend code'}
                 >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Resend code</span>
+                  <RotateCcw className={`w-3 h-3 ${cooldown > 0 ? '' : 'hover:rotate-180 transition'}`} />
+                  <span>{cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}</span>
                 </button>
               </div>
               <input

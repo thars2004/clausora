@@ -272,6 +272,7 @@ export const LoginInputSchema = z.object({
 
 export const ForgotPasswordInputSchema = z.object({
   email: z.string().email('Valid email address is required'),
+  captchaToken: z.string().optional(),
 });
 
 export const VerifyOtpInputSchema = z.object({
