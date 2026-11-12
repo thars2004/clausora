@@ -86,6 +86,9 @@ export const DashboardPage: React.FC = () => {
 
   const totalSettledMinor = projects.reduce((sum, p) => sum + (p.settledAmountMinor || 0), 0);
   const totalSettledDollars = (totalSettledMinor / 100).toFixed(2);
+  const activeProjectsCount = projects.filter((p) => p.status === 'active').length;
+  const pendingDecisionsCount = projects.filter((p) => p.status === 'awaiting_approval' || (p as any).awaitingDecision).length;
+  const scopeDriftAlertsCount = projects.filter((p) => (p as any).scopeDriftDetected || (p as any).hasChangeRequests).length;
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -130,7 +133,7 @@ export const DashboardPage: React.FC = () => {
             <span className="text-xs font-medium uppercase tracking-wider">Active Projects</span>
             <FolderGit2 className="w-4 h-4 text-indigo-400" />
           </div>
-          <div className="text-2xl font-bold text-white font-mono">{projects.length || 1}</div>
+          <div className="text-2xl font-bold text-white font-mono">{activeProjectsCount}</div>
           <p className="text-[11px] text-slate-400">Workspaces in progress</p>
         </div>
 
@@ -150,7 +153,7 @@ export const DashboardPage: React.FC = () => {
             <span className="text-xs font-medium uppercase tracking-wider">Pending Client Decisions</span>
             <CheckCircle2 className="w-4 h-4 text-amber-400" />
           </div>
-          <div className="text-2xl font-bold text-amber-400 font-mono">1</div>
+          <div className="text-2xl font-bold text-amber-400 font-mono">{pendingDecisionsCount}</div>
           <p className="text-[11px] text-slate-400">Awaiting human sign-off</p>
         </div>
 
@@ -159,7 +162,7 @@ export const DashboardPage: React.FC = () => {
             <span className="text-xs font-medium uppercase tracking-wider">Scope Drift Alerts</span>
             <Radio className="w-4 h-4 text-purple-400" />
           </div>
-          <div className="text-2xl font-bold text-purple-400 font-mono">1</div>
+          <div className="text-2xl font-bold text-purple-400 font-mono">{scopeDriftAlertsCount}</div>
           <p className="text-[11px] text-purple-300/80">Detected by AI radar</p>
         </div>
       </div>

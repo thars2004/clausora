@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { authMiddleware, AuthRequest, requireRole } from '../middleware/auth';
 import { dbStore } from '../database/store';
 import { isDbConnected } from '../database/connection';
-import { UserModel } from '../database/models';
+import { UserModel, ProjectModel } from '../database/models';
 import { AdminOverviewStats, AnalyticsData } from '@clausora/shared';
 
 const router = Router();
@@ -61,9 +61,21 @@ router.get('/users', authMiddleware, requireRole(['admin']), async (req: AuthReq
     sourceUsers = Array.from(dbStore.users.values());
   }
 
+  let allProjects: any[] = [];
+  if (isDbConnected()) {
+    try {
+      allProjects = await ProjectModel.find({ isDeleted: { $ne: true } }).lean();
+      allProjects.forEach((p: any) => dbStore.projects.set(p.id, p));
+    } catch {
+      allProjects = Array.from(dbStore.projects.values()).filter((p: any) => !p.isDeleted);
+    }
+  } else {
+    allProjects = Array.from(dbStore.projects.values()).filter((p: any) => !p.isDeleted);
+  }
+
   const users = sourceUsers.map((u: any) => {
-    const projectCount = Array.from(dbStore.projects.values()).filter(
-      (p) => p.ownerId === u.id || p.providerIds.includes(u.id)
+    const projectCount = allProjects.filter(
+      (p) => p.ownerId === u.id || (p.providerIds && Array.isArray(p.providerIds) && p.providerIds.includes(u.id))
     ).length;
     return {
       id: u.id,

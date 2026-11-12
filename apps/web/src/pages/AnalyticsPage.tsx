@@ -477,7 +477,7 @@ export const AnalyticsPage: React.FC = () => {
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono tracking-tight">
-            {projects.length || 1}
+            {projects.length}
           </div>
           <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400">
             <span>

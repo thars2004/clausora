@@ -684,7 +684,7 @@ export const AdminPortalPage: React.FC = () => {
                           {u.role.toUpperCase()}
                         </Badge>
                       </td>
-                      <td className="px-5 py-3.5 text-slate-300 font-mono">{u.projectCount || 1}</td>
+                      <td className="px-5 py-3.5 text-slate-300 font-mono">{u.projectCount ?? 0}</td>
                       <td className="px-5 py-3.5 text-slate-500 font-mono">
                         {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'Active'}
                       </td>
