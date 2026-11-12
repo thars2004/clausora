@@ -230,3 +230,4 @@ export const RobotCaptcha: React.FC<RobotCaptchaProps> = ({
     </div>
   );
 };
+
