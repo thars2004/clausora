@@ -1,219 +1,410 @@
-# <img src="docs/logo.png" alt="Clausora Logo" width="38" height="38" style="vertical-align: middle; margin-right: 10px;" /> CLAUSORA ⚡
-### AI Work Intelligence, Evidence Verification & PayPal Milestone Payments
+<p align="center">
+  <img src="docs/logo.png" alt="Clausora Logo" width="46" height="46" style="vertical-align: middle; margin-right: 12px;" />
+  <span style="font-size: 32px; font-weight: 800; letter-spacing: -0.5px; vertical-align: middle;">CLAUSORA</span>
+</p>
 
-> *"Understand the work. Verify the outcome. Release the payment."*
+<p align="center">
+  <b>AI-Powered Deliverable Verification, Scope Drift Governance & PayPal Escrow Platform</b><br>
+  <i>"Understand the work. Verify the outcome. Release the payment."</i>
+</p>
 
-[![PayPal Sandbox](https://img.shields.io/badge/PayPal-Orders_v2_Sandbox-0070BA?logo=paypal&logoColor=white)](https://developer.paypal.com)
-[![Hugging Face](https://img.shields.io/badge/AI-Qwen2.5--VL--7B--Instruct-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/Monorepo-TypeScript-3178C6?logo=typescript&logoColor=white)](package.json)
-[![Deployed on Vercel](https://img.shields.io/badge/Frontend-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com)
-[![Deployed on Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render&logoColor=black)](https://render.com)
+<p align="center">
+  <b>Lead Architect & Author:</b> <b>Hari Tharshini T</b> (<a href="mailto:haritharshinibscit@gmail.com">haritharshinibscit@gmail.com</a>)
+</p>
+
+<p align="center">
+  <a href="https://vercel.com"><img src="https://img.shields.io/badge/Frontend-Vercel%20Edge%20SPA-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel"></a>
+  <a href="https://clausora.onrender.com/api/health"><img src="https://img.shields.io/badge/Backend-Render%20Web%20Service-46E3B7?style=for-the-badge&logo=render&logoColor=black" alt="Render"></a>
+  <a href="https://www.mongodb.com/atlas"><img src="https://img.shields.io/badge/Database-MongoDB%20Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB Atlas"></a>
+  <a href="https://resend.com"><img src="https://img.shields.io/badge/Email-Resend%20HTTPS%20API-000000?style=for-the-badge&logo=resend&logoColor=white" alt="Resend"></a>
+  <a href="https://developer.paypal.com"><img src="https://img.shields.io/badge/Escrow-PayPal%20Orders%20v2-0070BA?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Sandbox"></a>
+  <a href="https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct"><img src="https://img.shields.io/badge/AI-Gemini%20%2B%20Qwen2.5--VL-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="AI Models"></a>
+</p>
+
+---
+
+## 🧭 Table of Contents
+
+1. [What is Clausora?](#-what-is-clausora)
+2. [Production Cloud Architecture & Tech Stack](#-production-cloud-architecture--tech-stack)
+3. [Core Platform Functionalities](#-core-platform-functionalities)
+4. [App User Guide: How to Use Clausora](#-app-user-guide-how-to-use-clausora)
+   - [Client Workflow: Brief to Full Settlement](#1-client-workflow-from-raw-brief-to-project-closure)
+   - [Provider Workflow: Acceptance, Proof & Payout](#2-provider-workflow-acceptance-execution--getting-paid)
+   - [Admin Workflow: User Auditing & Telemetry](#3-admin-workflow-roster-management--platform-auditing)
+5. [Real-World Use Cases](#-real-world-use-cases)
+6. [Multi-Agent Review Council ("The AI Jury")](#-multi-agent-review-council-the-ai-jury)
+7. [PayPal Sandbox Escrow & Bilateral Governance](#-paypal-sandbox-escrow--bilateral-governance)
+8. [Local Developer Quickstart](#-local-developer-quickstart)
+9. [Automated Verification Ledger (50 Tests)](#-automated-verification-ledger-50-tests)
+10. [Author & License](#-author--license)
 
 ---
 
 ## 🌟 What is Clausora?
 
-Clausora bridges the trust gap between clients and service providers (developers, freelancers, agencies) by transforming unstructured briefs, documents, screenshots, and runtime traces into a verifiable execution pipeline with human-approved PayPal milestone payouts.
+**Clausora** bridges the trust and verification gap between clients and service providers (developers, freelancers, agencies) by transforming unstructured briefs, documents, wireframes, and runtime traces into a verifiable execution pipeline with human-approved PayPal milestone payouts.
 
-Client requests often begin as vague messages or scattered files. Clausora eliminates misunderstandings by maintaining a continuous, traceable relationship:
+Traditional freelance contracts suffer from two major vulnerabilities:
+1. **Subjective Scope Drift**: Clients change requirements verbally or through chat; providers perform unpaid work or enter disputes.
+2. **Unverified Escrow Releases**: Funds are disbursed based on blind percentages or dates, without cryptographic or verifiable proof that code runs or criteria are satisfied.
 
-$$\text{Raw Brief} \longrightarrow \text{AI Work DNA} \longrightarrow \text{SHA-256 Agreement} \longrightarrow \text{Evidence Graph} \longrightarrow \text{Client Verification} \longrightarrow \text{PayPal Sandbox Capture} \longrightarrow \text{Audit Timeline}$$
+Clausora replaces ambiguity with a deterministic lifecycle:
 
----
-
-## 🚀 Key Innovations & Distinctive Features
-
-1. **Work DNA Engine (Multimodal AI)**:
-   Powered by Hugging Face's vision-language model `Qwen/Qwen2.5-VL-7B-Instruct`. Ingests plain text briefs, statement of work PDFs, UI screenshots, repository links, or reverse-engineered REA traces to synthesize structured workstreams, verifiable deliverables, observable acceptance criteria, and risk assumptions.
-
-2. **Tamper-Evident Agreement Fingerprints (SHA-256)**:
-   Agreed blueprints are canonicalized and fingerprinted with `SHA-256`. Any scope change requires a formal mutual amendment and increments the version (`v1` $\rightarrow$ `v2`), preventing historical revisionism.
-
-3. **Evidence Graph & Limitation Disclosures**:
-   Every deliverable criterion is linked to submitted proof artifacts (images, URLs, code commits, REA traces) and AI advisory observations. Unlike misleading black-box "percentage scores", Clausora discloses clear verification limitations (e.g. *"A visual screenshot proves layout presence but does not verify load testing or live runtime payment execution"*).
-
-4. **Scope Drift Radar**:
-   A live diff scanner that evaluates incoming client instructions against the approved agreement. It categorizes items into 6 states (`in_scope`, `clarification`, `likely_scope_change`, `deadline_change`, `conflict`, `uncertain`), estimates cost/time impact, and drafts formal amendments instead of silent budget creep.
-
-5. **Deterministic PayPal Orders v2 Sandbox Integration**:
-   **Non-negotiable rule**: AI is advisory and never touches money. Only an authenticated client can approve a milestone. Clausora calculates amounts in integer minor currency units (cents), initiates PayPal Sandbox Orders, and confirms server-side capture verification before transitioning a milestone to `PAID`.
-
-6. **REA (Reverse Engineer Anything) Inspector**:
-   Integrates seamlessly with [`morluto/rea`](https://github.com/morluto/rea) to import local application runtime inspection reports and map observed behaviors into verifiable project deliverables.
+$$\text{Raw Brief} \longrightarrow \text{AI Work DNA} \longrightarrow \text{SHA-256 Agreement} \longrightarrow \text{Evidence Graph} \longrightarrow \text{3-Agent AI Jury} \longrightarrow \text{PayPal Capture} \longrightarrow \text{Full Closure}$$
 
 ---
 
-## 🏗️ Architecture & Data Flow
+## ☁️ Production Cloud Architecture & Tech Stack
+
+Clausora is deployed across production cloud infrastructure with high availability, firewall resilience, and role isolation:
+
+| Infrastructure Layer | Cloud Platform | Technology Stack | Production URL / Details |
+| :--- | :--- | :--- | :--- |
+| **Frontend Web App** | **Vercel** | React 19, Vite, Tailwind CSS, Lucide Icons | Production Edge SPA with reverse proxy routing `/api/:path*` directly to backend |
+| **Backend REST API** | **Render** | Node.js 20 LTS, Express, TypeScript, Zod | `https://clausora.onrender.com`<br>Reverse proxy trust, dynamic rate limiting, secure cookies |
+| **Cloud Database** | **MongoDB Atlas** | MongoDB 7.0 (M0 Replica Set Cloud Cluster) | Multi-tenant user, project, milestone collections with automatic in-memory cache sync |
+| **Transactional Email** | **Resend & SMTP** | Resend HTTPS REST API (Port 443) + Nodemailer | Instant 6-digit OTP delivery immune to cloud firewall port 587/465 blocks; 3.5s race timeout |
+| **Multimodal AI** | **Google & Hugging Face** | Gemini 1.5 Flash + Qwen2.5-VL-7B-Instruct | Tamil & multilingual token parsing, 9-dim quality radar, AI Review Council |
+| **Escrow & Payments** | **PayPal Developer** | PayPal Orders v2 REST API (Sandbox) | Instant server-side capture, split milestone payouts, settled ledger tracking |
+| **Universal Monorepo** | **npm Workspaces** | `@clausora/shared`, `@clausora/api`, `@clausora/web` | Unified TypeScript type contracts, shared Zod validators, SHA-256 canonical hashing |
+
+---
+
+## ⚡ Core Platform Functionalities
+
+### 1. Multimodal AI Work DNA Generator
+- Ingests freeform client briefs, technical RFPs, UI wireframes, architecture diagrams, or REA traces.
+- Powered by dual engines: **Google Gemini 1.5 Flash** and **Hugging Face Qwen2.5-VL-7B-Instruct**.
+- Generates structured workstreams, modular deliverables, and verifiable acceptance criteria.
+- **Multilingual & Tamil Token Support**: Natively extracts deliverables from Tamil script (`[\u0B80-\u0BFF]`), Hindi, Spanish, French, German, Arabic, and Japanese.
+- **Financial & Timeline Conservatism**: Never hallucinates unconfirmed budgets or speculative deadlines.
+
+### 2. Bilateral Counterpart Governance (Anti-Self-Approval Theorem)
+- Eliminates unilateral contract manipulation.
+- When a Client creates a project proposal, it enters an immutable `awaiting_approval` state.
+- **Mathematical Rule**: The creator cannot approve or activate their own proposal (returns HTTP 403 Forbidden).
+- The designated counterpart (e.g. assigned Provider) must review and click **Approve & Activate Project**.
+
+### 3. Proof-Before-Payout Enforcement & Evidence Hub
+- Milestone escrow funds remain physically locked.
+- The **Approve & Release Payment** button is disabled until the Provider submits verifiable proof artifacts.
+- Supports 4 verification modalities:
+  - 🌐 **Live URL / Staging**: Interactive endpoints, deployed websites.
+  - 💻 **Git Commit / SHA**: Repository pull requests, commit hashes.
+  - 📸 **Visual Screenshots**: UI layout, responsive 375px mobile proofs.
+  - 📄 **Technical Documentation**: Architecture runbooks, schema definitions.
+
+### 4. Multi-Agent AI Review Council ("The AI Jury")
+- Autonomous 3-agent review council auditing deliverables in parallel:
+  - 🏛️ **Architecture Auditor**: Validates contract adherence, API design, and modularity.
+  - 🛡️ **Security Verifier**: Checks authentication, TLS transport, and injection vectors.
+  - 🧪 **QA Test Specialist**: Audits automated test coverage, proof validity, and bug surface.
+- Rejects unproven claims with immediate warnings and computes a consensus verdict: `APPROVED`, `REVISE`, or `REJECT`.
+
+### 5. Interactive Scope Drift Radar & Budget Impact Estimator
+- Evaluates incoming change requests against the frozen SHA-256 agreement baseline.
+- Categorizes each request into 6 deterministic states:
+  - `in_scope`: Covered by existing milestones (no charge).
+  - `clarification`: Minor specification detail (no charge).
+  - `likely_scope_change`: Net-new scope requiring additional budget and days.
+  - `deadline_change`: Timeline modification affecting roadmap delivery.
+  - `conflict`: Direct contradiction with signed contract terms.
+  - `uncertain`: Ambiguous request requiring human clarification.
+- Generates formal mutual amendment proposals instead of silent budget creep.
+
+### 6. Deterministic PayPal Sandbox Escrow & Split Settlement
+- Direct integration with PayPal Orders v2 REST API (`https://api-m.sandbox.paypal.com`).
+- Creates escrow orders with capture intent.
+- Executes instant server-side capture upon client sign-off.
+- Supports flexible split milestone installments (e.g. 50% deposit, 50% final deliverable).
+
+### 7. Clausora AI Advisory Drawer (Floating Copilot)
+- Context-aware intelligence drawer accessible from any project screen.
+- Answers questions citing exact project parameters, budgets, deadlines, and technical architecture.
+- Generates multi-perspective summaries and actionable governance guidance.
+
+### 8. Full Payment Project Closure Protocol
+- Enforces financial completion before contract archiving:
+  $$\text{CanClose} \iff (\text{SettledMinor} \ge \text{TotalBudgetMinor} > 0) \lor (\forall m \in \text{Milestones}, m.\text{status} = \text{'PAID'})$$
+- Once 100% funded and paid, the **Close Project** button is enabled in the cockpit.
+- Transitions project to `completed`, removes it from active navigation, and preserves permanent audit history.
+
+---
+
+## 📖 App User Guide: How to Use Clausora
+
+Clausora includes 1-click **Fast-Pass buttons** directly on the Login page and Navigation bar to switch between the three roles instantly:
+
+| Persona | Role | Email | Password | Primary Scope & Authority |
+| :--- | :--- | :--- | :--- | :--- |
+| **Sarah Chen** | `client` | `client@clausora.dev` | `Password123!` | Proposes projects, reviews Work DNA, funds PayPal escrow, inspects proofs, approves payouts. |
+| **Alex Rivera** | `provider` | `provider@clausora.dev` | `Password123!` | Reviews proposals, activates contracts, executes tasks, submits proof, receives disbursements. |
+| **Marcus Vance** | `admin` | `admin@clausora.dev` | `Password123!` | System-wide admin portal, user roster management, platform escrow ledger, health diagnostics. |
+
+---
+
+### 1. Client Workflow: From Raw Brief to Project Closure
 
 ```mermaid
-flowchart TD
-    subgraph Client Journey
-        Brief["Unstructured Brief / Screenshot / REA Report"] --> WorkDNA["Hugging Face AI Work DNA Engine\n(Qwen2.5-VL-7B-Instruct)"]
-        WorkDNA --> Blueprint["Work Blueprint\n(Tasks & Acceptance Criteria)"]
-        Blueprint --> Agreement["Canonical Agreement v1\n(SHA-256 Fingerprint)"]
-    end
+flowchart LR
+    A[1. Enter Raw Brief\nText / RFP / Tamil] --> B[2. AI Work DNA\nSynthesis]
+    B --> C[3. Counterpart\nActivation]
+    C --> D[4. Fund Escrow\nPayPal Sandbox]
+    D --> E[5. Inspect Proof\n& AI Jury]
+    E --> F[6. Approve Payout\n& Close Project]
+```
 
-    subgraph Milestone Execution
-        Agreement --> Milestones["Milestones State Machine\n(CREATED -> IN_PROGRESS)"]
-        Evidence["Provider Submits Proof\n(Screenshot / URL / Code Artifact)"] --> EvidenceGraph["Evidence Graph\n(Proof <-> Acceptance Criteria)"]
-        EvidenceGraph --> AIReview["AI Advisory Review\n(Observations & Limitations)"]
-        AIReview --> ClientSignOff{"Client Review &\nExplicit Decision"}
-    end
+1. **Create Project Proposal**:
+   - Log in as **Sarah Chen** (Client).
+   - Click **New Project** in the sidebar.
+   - Enter your project brief (e.g., *"Build an E-commerce Mobile App with Tamil & English localization"*).
+   - Click **Generate Work DNA**. Dual AI engines synthesize the tasks, milestones, acceptance criteria, and quality scores.
+   - Enter the budget (e.g. `$2,500`) and select **Alex Rivera** as the assigned provider.
+   - Click **Create Project Proposal**.
 
-    subgraph FinTech Settlement Layer
-        ClientSignOff -->|Approved| PayPalOrder["PayPal Orders v2 Sandbox\n(POST /v2/checkout/orders)"]
-        PayPalOrder --> ClientApprove["Buyer Sandbox Approval"]
-        ClientApprove --> ServerCapture["Backend Capture Verification\n(POST /v2/checkout/orders/{id}/capture)"]
-        ServerCapture --> PaidStatus["Milestone Status: PAID"]
-        PaidStatus --> Audit["Tamper-Evident Audit Timeline"]
-    end
+2. **Wait for Counterpart Activation**:
+   - The project status displays `awaiting_approval`.
+   - As the creator, you cannot self-approve. Your assigned provider (Alex) receives a notification to review and activate the contract.
+
+3. **Fund Milestone Escrow**:
+   - Once activated, navigate to the **Milestones** tab in the project cockpit.
+   - On Milestone 1, click **Fund Escrow (PayPal)**.
+   - The PayPal Sandbox modal launches. Log in with a sandbox personal account or click **Demo Sandbox Capture** to lock funds into escrow.
+
+4. **Inspect Proof & Review AI Jury Verdict**:
+   - When the provider submits proof, open the **Evidence Hub**.
+   - Review submitted live URLs, git repository links, or screenshots.
+   - Click **Run Council Review** to view the 3-agent AI consensus scores (Architecture, Security, QA).
+
+5. **Approve Payout & Close Project**:
+   - If satisfied, click **Approve & Release Payment**.
+   - The PayPal backend executes instant capture, marking Milestone 1 as `PAID`.
+   - Once all milestones are paid, the **Close Project** button turns green in the top action bar. Click it to officially complete and archive the project.
+
+---
+
+### 2. Provider Workflow: Acceptance, Execution & Getting Paid
+
+1. **Review & Activate Proposal**:
+   - Log in as **Alex Rivera** (Provider).
+   - Projects awaiting your approval appear in your dashboard with an orange badge (`Awaiting Your Approval`).
+   - Open the project, review the deliverable milestones, and click **Approve & Activate Project**.
+   - Status updates to `active` and generates a tamper-evident SHA-256 agreement baseline.
+
+2. **Execute Deliverable Tasks**:
+   - Under the **Tasks & Deliverables** tab, track your progress.
+   - Move tasks across states (`Todo` $\rightarrow$ `In Progress` $\rightarrow$ `Submitted` $\rightarrow$ `Done`).
+   - Milestone progress bars calculate completion mathematically in real-time.
+
+3. **Submit Verifiable Work Proof**:
+   - Under the milestone you are completing, click **Submit Proof**.
+   - Select the artifact type: `live_url`, `code_review` (Git SHA), `visual_inspection` (screenshot), or `document_audit`.
+   - Enter the link and deliverable description.
+
+4. **Trigger AI Review Council**:
+   - Click **Run Council Review**. The 3-agent jury inspects the evidence and gives an advisory consensus rating.
+
+5. **Receive Settlement Disbursement**:
+   - The client receives the notification, reviews the proof, and clicks approve.
+   - PayPal disburses the milestone payout directly to your provider balance.
+
+---
+
+### 3. Admin Workflow: Roster Management & Platform Auditing
+
+1. **User Roster Management**:
+   - Log in as **Marcus Vance** (Admin).
+   - Open the **Admin Portal** from the navigation bar.
+   - View all registered platform users. You can edit user names, emails, and roles (`client`, `provider`, `admin`) or delete test accounts.
+
+2. **Global Escrow Settlement Ledger**:
+   - View total platform escrow volume, captured payouts, active project balances, and payment transaction hashes.
+
+3. **System Telemetry & Health Diagnostics**:
+   - Verify live connection to **MongoDB Atlas**, Render server uptime, and email delivery queue status.
+
+---
+
+## 💼 Real-World Use Cases
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│ 💼 Use Case 1: Freelance Web Application Contract                          │
+│                                                                            │
+│ Problem: A client hires a remote developer for $4,000 across 3 milestones. │
+│ The client worries about paying upfront; the developer worries about not   │
+│ getting paid after writing code.                                           │
+│                                                                            │
+│ Clausora Solution:                                                         │
+│ 1. AI synthesizes 3 milestones (Auth/DB, Core UI, Production Deploy).     │
+│ 2. Client funds Milestone 1 into PayPal escrow.                            │
+│ 3. Developer submits staging link + GitHub commit SHA.                     │
+│ 4. AI Jury verifies security and tests; client inspects proof.             │
+│ 5. Funds released instantly. Both parties are 100% protected.              │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│ 🎨 Use Case 2: Digital Marketing & Creative Agency Deliverables            │
+│                                                                            │
+│ Problem: Client constantly adds requests ("Can you also make 5 more banner │
+│ variations and 2 landing pages?") without increasing the agreed budget.     │
+│                                                                            │
+│ Clausora Solution:                                                         │
+│ The Scope Drift Radar evaluates the client's chat messages against the    │
+│ frozen SHA-256 agreement. It flags the requests as `likely_scope_change`,  │
+│ computes +$600 and +3 days estimated impact, and generates a formal        │
+│ change order for mutual signature.                                         │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│ 🌐 Use Case 3: Offshore Multilingual Outsourcing (Tamil / English)         │
+│                                                                            │
+│ Problem: A regional business owner submits a specification in Tamil script │
+│ to an international agency that communicates exclusively in English.       │
+│                                                                            │
+│ Clausora Solution:                                                         │
+│ The multimodal Work DNA engine detects Unicode Tamil characters            │
+│ ([\u0B80-\u0BFF]), parses the business intent, and synthesizes standard    │
+│ English technical deliverables while preserving Tamil domain terminology.  │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📦 Project Structure
+## ⚖️ Multi-Agent Review Council ("The AI Jury")
 
-```
-Clausora/
-├── apps/
-│   ├── api/                     # Node.js + Express + TypeScript Backend
-│   │   ├── src/
-│   │   │   ├── config/          # Zod environment validation
-│   │   │   ├── database/        # Mongoose connection + MemoryStore fallback
-│   │   │   ├── middleware/      # JWT auth, role guard, error handler
-│   │   │   ├── routes/          # Auth, Projects, Blueprint, Agreements, Milestones, Payments, REA
-│   │   │   ├── services/
-│   │   │   │   ├── ai/          # Hugging Face client (Qwen2.5-VL)
-│   │   │   │   ├── paypal/      # PayPal Orders v2 Sandbox direct REST client
-│   │   │   │   ├── rea/         # REA inspection ingestion & parsing
-│   │   │   │   ├── storage/     # Upload handler & SHA-256 calculation
-│   │   │   │   └── notifications/# Transactional notifications
-│   │   │   ├── seed.ts          # Demo seeder for evaluators
-│   │   │   └── server.ts        # Entry point & health check
-│   │   └── tests/               # State machine & agreement hash tests
-│   │
-│   └── web/                     # React 18 + Vite + Tailwind CSS Frontend
-│       ├── src/
-│       │   ├── api/             # Axios client with bearer interceptor
-│       │   ├── components/      # Evidence Graph, PayPal Modal, Navbar, Sidebar
-│       │   ├── context/         # Auth & Fast-Pass persona context
-│       │   └── pages/           # Landing, Dashboard, NewProject, ProjectDetail, Auth
-│       ├── index.html
-│       └── vite.config.ts
-│
-├── packages/
-│   └── shared/                  # Shared Zod schemas, types, constants, canonical hash
-│
-├── docs/                        # Architecture, Deployment guide, <3 min Demo script
-├── render.yaml                  # Render deployment blueprint for API
-├── vercel.json                  # Vercel deployment blueprint for Frontend
-├── .env.example                 # Environment variables specification
-├── LICENSE                      # MIT Open Source License
-└── SECURITY.md                  # Security & Hackathon Sandbox Guardrails
-```
+Clausora rejects fallible single-prompt AI evaluation in favor of an **adversarial 3-agent deliberative jury**:
+
+| Juror | Persona Role | Audit Focus | Evaluation Methodology |
+| :--- | :--- | :--- | :--- |
+| **Juror 1** | 🏛️ **Architecture Auditor** | Contract & System Design | Verifies schema consistency, RESTful API conventions, database integrity, and separation of concerns. |
+| **Juror 2** | 🛡️ **Security Verifier** | Defensive Protection | Audits JWT lifetimes, CORS, input sanitization, rate limiting, and defensive credentials storage. |
+| **Juror 3** | 🧪 **QA Test Specialist** | Deliverable & Acceptance Verification | Checks test suite coverage, verifies submitted staging URLs / git commits, and audits visual UI proofs. |
+
+> **Consensus Threshold**:
+> - Score $\ge 80$: **APPROVED** (Recommended for immediate client payment release).
+> - Score $50 - 79$: **REVISE** (Minor issues flagged; provider asked for revision).
+> - Score $< 50$ or Zero Evidence: **REJECT / WARNING** (Payout button blocked; evidence required).
 
 ---
 
-## 🛠️ Quickstart (Run Locally in 60 Seconds)
+## 🔒 PayPal Sandbox Escrow & Bilateral Governance
 
-### 1. Clone & Install Dependencies
+### Security Theorems Implemented:
+
+1. **Anti-Self-Approval Theorem**:
+   $$\forall p \in \text{Projects}, \quad \text{CanAccept}(u, p) \implies u.\text{id} \ne p.\text{createdBy}$$
+   Prevents any user from unilaterally activating a contract without counterpart consent.
+
+2. **Zero-Unverified-Payout Theorem**:
+   $$\forall m \in \text{Milestones}, \quad \text{CanReleasePayout}(m) \implies |\text{Evidence}(m)| > 0$$
+   Guarantees that escrow funds cannot be captured until at least one verifiable proof artifact is submitted.
+
+3. **Tamper-Evident SHA-256 Canonical Agreement Freezing**:
+   $$\text{AgreementHash} = \text{SHA-256}\left(\text{AlphabeticallySortedJSON}(\text{Terms})\right)$$
+   Any change to budget, milestones, or deadlines alters the hash digest, alerting all parties immediately.
+
+---
+
+## 💻 Local Developer Quickstart
+
+### 1. Prerequisites
+- **Node.js**: v18.0.0 or higher (v20 LTS recommended)
+- **npm**: v9.0.0 or higher
+- **Git**
+
+### 2. Clone & Install Dependencies
 ```bash
 git clone https://github.com/your-username/clausora.git
 cd clausora
 npm install
 ```
 
-### 2. Configure Environment (Optional)
+### 3. Configure Environment Variables
 Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
-> **Zero-Setup Guarantee**: Clausora is pre-configured with resilient intelligent fallbacks and an automatic in-memory collection store. It runs **immediately out-of-the-box** even before you enter external API tokens!
+Key configuration items:
+```env
+# Server
+PORT=5000
+NODE_ENV=development
+JWT_SECRET=clausora_secure_production_secret_2026
+JWT_EXPIRATION=86400
 
-### 3. Build & Run Concurrently
+# Cloud Database (MongoDB Atlas)
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/clausora?retryWrites=true&w=majority
+
+# Transactional Email (Resend HTTPS API)
+RESEND_API_KEY=re_your_resend_api_key_here
+EMAIL_FROM="Clausora <notifications@clausora.dev>"
+
+# Escrow & Payments (PayPal Sandbox)
+PAYPAL_MODE=sandbox
+PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id
+PAYPAL_CLIENT_SECRET=your_paypal_sandbox_secret
+PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
+
+# AI Models (Google Gemini & Hugging Face)
+GEMINI_API_KEY=your_gemini_api_key_here
+HF_TOKEN=hf_your_huggingface_token_here
+HF_MODEL=Qwen/Qwen2.5-VL-7B-Instruct
+```
+*(Note: Clausora includes built-in in-memory stores and resilient fallback generators; it starts cleanly out-of-the-box even before external credentials are populated!)*
+
+### 4. Build and Run Concurrently
 ```bash
-# Build all packages
+# Build all monorepo packages (@clausora/shared, @clausora/api, @clausora/web)
 npm run build
 
 # Start both API (port 5000) and Web (port 5173) concurrently
 npm run dev
 ```
 
-- **Frontend App**: [http://localhost:5173](http://localhost:5173)
-- **Backend API & Health Check**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
+- **Web Frontend**: [http://localhost:5173](http://localhost:5173)
+- **API Health Check**: [http://localhost:5000/api/health](http://localhost:5000/api/health)
 
 ---
 
-## 🧪 Testing
+## 🧪 Automated Verification Ledger (50 Tests)
 
-Run backend business logic, milestone state machine, and agreement fingerprint tests:
+Run the complete native test suite across business logic, state machines, and security:
 ```bash
-npm run test
+npm run test -w @clausora/api
 ```
-All tests run natively using Node.js test runner with zero extra test-harness overhead.
+
+```
+▶ Multi-Agent Review Council & Clausora AI Intelligence (12 Tests)     PASS ✔
+▶ Security, Auth & Role Isolation Tests (4 Tests)                     PASS ✔
+▶ Password Recovery, OTP & Resend/SMTP Email System (5 Tests)         PASS ✔
+▶ AI Work DNA Blueprint Synthesis & Workflow Tests (1 Test)           PASS ✔
+▶ Clausora API Server Health & Routes (2 Tests)                       PASS ✔
+▶ Project Permissions & Bilateral Acceptance (12 Tests)               PASS ✔
+▶ Milestone State Machine Safety (3 Tests)                            PASS ✔
+▶ Canonical Agreement Fingerprint SHA-256 (2 Tests)                   PASS ✔
+▶ Admin User Edit & Delete Capabilities (2 Tests)                     PASS ✔
+▶ Advanced Work DNA Intelligence Engine (Tamil & 9-Dim) (7 Tests)     PASS ✔
+─────────────────────────────────────────────────────────────────────────────
+TOTAL: 50 Passing Tests | 10 Suites | 0 Failures | 100% Green
+```
 
 ---
 
-## 👥 3-Role Architecture & Credentials (1-Click Fast Pass)
+## 👩‍💻 Author & Lead Architect
 
-Clausora includes 1-click **Fast-Pass buttons** directly on the Login page, Landing page, and Navbar to instantly switch roles with secure 1-day JWT tokens:
-
-| Persona | Role | Email | Password | Scope & Authority |
-|---|---|---|---|---|
-| **Sarah Chen** | `client` | `client@clausora.dev` | `Password123!` | Approves deliverables, requests revisions, initiates PayPal Sandbox payments for owned projects. |
-| **Alex Rivera** | `provider` | `provider@clausora.dev` | `Password123!` | Submits deliverable evidence, code artifacts, and inspects assigned tasks. |
-| **Marcus Vance** | `admin` | `admin@clausora.dev` | `Password123!` | System-wide admin portal: user roster, global tasks master, PayPal settlement ledger, live telemetry. |
-
-> **Security & Tenant Isolation Guarantee**: Clients strictly see and manage only their own projects. Providers strictly see and submit to their assigned tasks. Platform administrators have comprehensive monitoring access across all tenants. All data is continuously synchronized with **MongoDB Atlas**.
-
----
-
-## 💳 PayPal Sandbox Integration Setup
-
-1. Sign into [PayPal Developer Dashboard](https://developer.paypal.com).
-2. Under **Apps & Credentials > Sandbox**, create a REST App named `Clausora`.
-3. Copy your Sandbox **Client ID** and **Secret** to your backend environment:
-   ```env
-   PAYPAL_MODE=sandbox
-   PAYPAL_CLIENT_ID=your_sandbox_client_id
-   PAYPAL_CLIENT_SECRET=your_sandbox_secret
-   PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
-   ```
-4. All test orders are created using PayPal Orders v2 (`POST /v2/checkout/orders`) with intent `CAPTURE` and verified server-side via `POST /v2/checkout/orders/{id}/capture`.
-
----
-
-## 🤖 Hugging Face AI Model Setup
-
-1. Clausora utilizes **`Qwen/Qwen2.5-VL-7B-Instruct`** for multimodal vision-language understanding.
-2. Obtain a free User Access Token from [Hugging Face Settings](https://huggingface.co/settings/tokens).
-3. Add it to your backend environment:
-   ```env
-   HF_TOKEN=hf_your_token_here
-   HF_MODEL=Qwen/Qwen2.5-VL-7B-Instruct
-   ```
-
----
-
-## ☁️ Deployment (Vercel + Render + MongoDB Atlas)
-
-See the full step-by-step instructions in [docs/deployment-guide.md](docs/deployment-guide.md).
-
-- **Frontend on Vercel**: `npm run build:web` outputting to `apps/web/dist`. Set `VITE_API_BASE_URL` to your Render API.
-- **Backend on Render**: `render.yaml` pre-configured with health check path `/api/health`.
-
----
-
-## 📜 Security & Sandbox Disclaimer
-
-- **No Escrow or Legal Protection Claimed**: Clausora is a project understanding, verification, and payment orchestration layer. It is not a bank, escrow provider, or legal court.
-- **Sandbox Only**: All hackathon transactions occur within the PayPal Sandbox environment. No real funds or card numbers are accepted.
-- **Advisory AI Boundaries**: AI cannot trigger payments, approve deliverables, modify budgets, or unilaterally alter contracts. Human client approval is strictly required.
+**Hari Tharshini T**  
+- **Role:** Creator & Lead System Architect  
+- **Email:** [haritharshinibscit@gmail.com](mailto:haritharshinibscit@gmail.com)  
+- **Project:** Clausora — AI Work DNA, Multi-Agent Review Council & Deliverable-Verified PayPal Escrow
 
 ---
 
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
-

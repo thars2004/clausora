@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
-Clausora Professional Technical Specification & Whitepaper Generator
+Clausora Professional Technical Specification & Comprehensive App User Guide Generator
 Generates a publication-grade, human-authored architectural document in PDF format
-featuring prominent colored headers, Hugging Face AI dataset details, and PayPal Sandbox escrow mechanics.
+featuring prominent headers, deployment platform architecture (Vercel, Render, MongoDB Atlas, Resend, PayPal),
+AI Work DNA engine, multi-agent review council, and step-by-step user workflows.
+
+Lead Architect & Author: Hari Tharshini T (haritharshinibscit@gmail.com)
 """
 
 import os
@@ -46,11 +49,9 @@ class NumberedCanvas(canvas.Canvas):
         # =====================================================================
         # PROMINENT COLORED RUNNING HEADER (High-Contrast Deep Indigo Bar)
         # =====================================================================
-        # Solid colored header bar across full content width
         self.setFillColor(colors.HexColor("#1E1B4B"))  # Deep Royal Indigo
         self.roundRect(54, 742, 504, 24, 4, stroke=0, fill=1)
 
-        # Check if logo exists to draw in running header
         logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "logo.png")
         if os.path.exists(logo_path):
             try:
@@ -69,7 +70,7 @@ class NumberedCanvas(canvas.Canvas):
         # Subtitle in Light Indigo Accent
         self.setFillColor(colors.HexColor("#C7D2FE"))
         self.setFont("Helvetica-Bold", 8)
-        self.drawString(title_x + 58, 751, "— Architecture & Feature Spec: Hugging Face AI & PayPal Escrow")
+        self.drawString(title_x + 58, 751, "— Architecture, App User Guide & Cloud Deployment Matrix")
 
         # Version Pill (Gold)
         self.setFillColor(colors.HexColor("#FCD34D"))
@@ -77,7 +78,7 @@ class NumberedCanvas(canvas.Canvas):
         self.drawRightString(548, 751, "v1.0.0-GA")
 
         # Accent Rule directly beneath header bar
-        self.setStrokeColor(colors.HexColor("#4F46E5"))  # Vibrant Indigo
+        self.setStrokeColor(colors.HexColor("#4F46E5"))
         self.setLineWidth(1.5)
         self.line(54, 738, 558, 738)
 
@@ -90,7 +91,7 @@ class NumberedCanvas(canvas.Canvas):
 
         self.setFont("Helvetica", 8)
         self.setFillColor(colors.HexColor("#475569"))
-        self.drawString(54, 32, "Confidential — Clausora Architecture, AI Engine & PayPal Escrow Specification")
+        self.drawString(54, 32, "Confidential — Clausora Architecture & User Guide | Author: Hari Tharshini T")
         
         page_str = f"Page {self._pageNumber} of {page_count}"
         self.setFillColor(colors.HexColor("#4338CA"))
@@ -103,14 +104,14 @@ class NumberedCanvas(canvas.Canvas):
 def create_section_header(number_str, title_str):
     """Creates a bold, high-contrast colored section header block."""
     p = Paragraph(f"<b>{number_str}. {title_str.upper()}</b>", ParagraphStyle(
-        'SecHdr', fontName='Helvetica-Bold', fontSize=10, leading=14, textColor=colors.white
+        'SecHdr', fontName='Helvetica-Bold', fontSize=9.5, leading=13, textColor=colors.white
     ))
     tbl = Table([[p]], colWidths=[504])
     tbl.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#1E1B4B")),
         ('LINELEFT', (0, 0), (0, -1), 4, colors.HexColor("#6366F1")),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 4.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4.5),
         ('LEFTPADDING', (0, 0), (-1, -1), 10),
         ('RIGHTPADDING', (0, 0), (-1, -1), 10),
     ]))
@@ -120,20 +121,20 @@ def create_section_header(number_str, title_str):
 def create_callout_box(title, text, primary_color="#1E1B4B", bg_color="#F8FAFC", border_color="#CBD5E1"):
     """Creates a beautifully styled human-looking callout block."""
     p_title = Paragraph(f"<b>{title}</b>", ParagraphStyle(
-        'CalloutTitle', fontName='Helvetica-Bold', fontSize=9.5, leading=13, textColor=colors.HexColor(primary_color)
+        'CalloutTitle', fontName='Helvetica-Bold', fontSize=9, leading=12.5, textColor=colors.HexColor(primary_color)
     ))
     p_text = Paragraph(text, ParagraphStyle(
-        'CalloutText', fontName='Helvetica', fontSize=8.5, leading=12, textColor=colors.HexColor("#334155")
+        'CalloutText', fontName='Helvetica', fontSize=8, leading=11.5, textColor=colors.HexColor("#334155")
     ))
     tbl = Table([[p_title], [p_text]], colWidths=[504])
     tbl.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor(bg_color)),
-        ('LEFTPADDING', (0, 0), (-1, -1), 12),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-        ('TOPPADDING', (0, 0), (0, 0), 7),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (0, 0), 6),
         ('BOTTOMPADDING', (0, 0), (0, 0), 2),
         ('TOPPADDING', (0, 1), (0, 1), 0),
-        ('BOTTOMPADDING', (0, 1), (0, 1), 7),
+        ('BOTTOMPADDING', (0, 1), (0, 1), 6),
         ('LINELEFT', (0, 0), (0, -1), 3.5, colors.HexColor(primary_color)),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor(border_color)),
     ]))
@@ -141,73 +142,55 @@ def create_callout_box(title, text, primary_color="#1E1B4B", bg_color="#F8FAFC",
 
 
 def generate_pdf(output_path):
+    """Compiles the complete technical specification and user guide PDF document."""
     doc = SimpleDocTemplate(
         output_path,
         pagesize=letter,
         leftMargin=54,
         rightMargin=54,
-        topMargin=64,  # Clears the running header comfortably
+        topMargin=54,
         bottomMargin=54
     )
 
     styles = getSampleStyleSheet()
 
-    # Typographic Hierarchy
     style_cover_title = ParagraphStyle(
         'CoverTitle',
+        parent=styles['Heading1'],
         fontName='Helvetica-Bold',
         fontSize=30,
-        leading=36,
+        leading=34,
         textColor=colors.HexColor("#0F172A"),
-        spaceAfter=6
+        spaceAfter=4
     )
+
     style_cover_sub = ParagraphStyle(
-        'CoverSubtitle',
-        fontName='Helvetica',
-        fontSize=12.5,
-        leading=18,
-        textColor=colors.HexColor("#475569"),
-        spaceAfter=18
-    )
-    style_h2 = ParagraphStyle(
-        'Heading2_Custom',
+        'CoverSub',
+        parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=10.5,
-        leading=14,
-        textColor=colors.HexColor("#312E81"),
-        spaceBefore=8,
-        spaceAfter=3,
-        keepWithNext=True
+        fontSize=12,
+        leading=16,
+        textColor=colors.HexColor("#4338CA"),
+        spaceAfter=14
     )
+
     style_body = ParagraphStyle(
         'Body_Custom',
+        parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=8.5,
-        leading=12.5,
-        textColor=colors.HexColor("#334155"),
+        fontSize=8,
+        leading=11.5,
+        textColor=colors.HexColor("#1E293B"),
         spaceAfter=5
     )
-    # Table Header Style: Crisp pure white text on dark header background
+
     style_th = ParagraphStyle(
-        'TableHeader_Custom',
+        'TH_Custom',
+        parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=8.5,
-        leading=12.5,
-        textColor=colors.white,
-        spaceAfter=0
-    )
-    style_code = ParagraphStyle(
-        'Code_Custom',
-        fontName='Courier',
         fontSize=7.8,
         leading=10.5,
-        textColor=colors.HexColor("#0F172A"),
-        backColor=colors.HexColor("#F1F5F9"),
-        borderColor=colors.HexColor("#CBD5E1"),
-        borderWidth=0.5,
-        borderPadding=5,
-        spaceBefore=3,
-        spaceAfter=5
+        textColor=colors.white
     )
 
     story = []
@@ -217,17 +200,17 @@ def generate_pdf(output_path):
     # =========================================================================
     logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs", "logo.png")
     if os.path.exists(logo_path):
-        story.append(Spacer(1, 14))
+        story.append(Spacer(1, 10))
         # Top Header: Logo on the left side + CLAUSORA in a single line
         title_para = Paragraph("<b>CLAUSORA</b>", ParagraphStyle(
             'CoverTitleInline',
             fontName='Helvetica-Bold',
-            fontSize=34,
-            leading=38,
+            fontSize=32,
+            leading=36,
             textColor=colors.HexColor("#0F172A")
         ))
-        logo_img = RLImage(logo_path, width=44, height=44)
-        top_bar = Table([[logo_img, title_para]], colWidths=[54, 450])
+        logo_img = RLImage(logo_path, width=40, height=40)
+        top_bar = Table([[logo_img, title_para]], colWidths=[48, 456])
         top_bar.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ALIGN', (0, 0), (0, 0), 'LEFT'),
@@ -238,104 +221,106 @@ def generate_pdf(output_path):
             ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
         ]))
         story.append(top_bar)
-        story.append(Spacer(1, 6))
+        story.append(Spacer(1, 4))
     else:
-        story.append(Spacer(1, 24))
+        story.append(Spacer(1, 18))
         story.append(Paragraph("CLAUSORA", style_cover_title))
 
-    story.append(Paragraph("Deliverable-Verified Escrow & AI Work DNA Execution Platform", style_cover_sub))
-    story.append(HRFlowable(width="100%", thickness=2.5, color=colors.HexColor("#4338CA"), spaceAfter=18))
+    story.append(Paragraph("AI-Powered Deliverable Verification, Scope Drift Governance & PayPal Escrow Platform", style_cover_sub))
+    story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#4338CA"), spaceAfter=12))
 
     meta_data = [
-        [Paragraph("<b>Document Classification</b>", style_body), Paragraph("Official Engineering Technical Whitepaper & Specification", style_body)],
-        [Paragraph("<b>System Version</b>", style_body), Paragraph("1.0.0 (Production Release / Vercel & Cloud Ready)", style_body)],
-        [Paragraph("<b>AI Foundation Model</b>", style_body), Paragraph("Google Gemini 1.5 Flash & Hugging Face Qwen/Qwen2.5-VL-7B-Instruct", style_body)],
-        [Paragraph("<b>Escrow Infrastructure</b>", style_body), Paragraph("PayPal Orders v2 REST API (Sandbox Verified & Split Payouts)", style_body)],
-        [Paragraph("<b>Deployment Target</b>", style_body), Paragraph("Vercel (Production Web SPA & Serverless) + Render/Container (API)", style_body)],
-        [Paragraph("<b>Target Stack</b>", style_body), Paragraph("Node.js 20 LTS, Express, TypeScript, Vite, React 19, MongoDB Atlas", style_body)],
-        [Paragraph("<b>Publication Date</b>", style_body), Paragraph("November 2026", style_body)],
-        [Paragraph("<b>Status</b>", style_body), Paragraph("Production Verified & Passing All 50 Automated Test Suites (100% Green)", style_body)]
+        [Paragraph("<b>Lead Architect & Author</b>", style_body), Paragraph("<b>Hari Tharshini T</b> &lt;haritharshinibscit@gmail.com&gt;", style_body)],
+        [Paragraph("<b>Document Classification</b>", style_body), Paragraph("Official Engineering Specification & Comprehensive App User Guide", style_body)],
+        [Paragraph("<b>System Version</b>", style_body), Paragraph("1.0.0-GA (Production Verified & Cloud Deployed)", style_body)],
+        [Paragraph("<b>Frontend Platform</b>", style_body), Paragraph("<b>Vercel Edge SPA</b> (React 19, Vite, Tailwind CSS, Reverse Proxy)", style_body)],
+        [Paragraph("<b>Backend Platform</b>", style_body), Paragraph("<b>Render Cloud Web Service</b> (Node.js 20 LTS, Express, TypeScript)", style_body)],
+        [Paragraph("<b>Database Platform</b>", style_body), Paragraph("<b>MongoDB Atlas Cloud</b> (Multi-tenant M0 Cluster + In-Memory Fallback)", style_body)],
+        [Paragraph("<b>Email Platform</b>", style_body), Paragraph("<b>Resend HTTPS REST API (Port 443)</b> + Gmail SMTP Fallback", style_body)],
+        [Paragraph("<b>AI Foundation Models</b>", style_body), Paragraph("Google Gemini 1.5 Flash & Hugging Face Qwen/Qwen2.5-VL-7B-Instruct", style_body)],
+        [Paragraph("<b>Escrow Infrastructure</b>", style_body), Paragraph("PayPal Developer Orders v2 REST API (Sandbox Capture & Split Payouts)", style_body)],
+        [Paragraph("<b>Verification Status</b>", style_body), Paragraph("100% Passing — All 50 Automated Native Test Suites Verified Green", style_body)]
     ]
-    meta_table = Table(meta_data, colWidths=[150, 354])
+    meta_table = Table(meta_data, colWidths=[140, 364])
     meta_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
         ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor("#E2E8F0")),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#EDF2F7")),
-        ('TOPPADDING', (0, 0), (-1, -1), 4.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4.5),
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
     ]))
     story.append(meta_table)
 
-    story.append(Spacer(1, 18))
+    story.append(Spacer(1, 14))
     story.append(create_callout_box(
         "Executive Abstract",
         "Clausora establishes a deterministic bilateral contract execution protocol for high-value software engineering deliverables. "
-        "By binding multimodal Work DNA blueprint synthesis powered by Hugging Face's Qwen2.5-VL foundation model, cryptographic SHA-256 "
-        "agreement baselines, proof-required milestone inspection, and automated PayPal Sandbox Orders v2 split settlement into a unified "
-        "state machine, Clausora eliminates scope drift disputes and guarantees verifiable proof before escrow release.",
+        "Created and architected by <b>Hari Tharshini T</b>, Clausora unifies multimodal Work DNA synthesis (Google Gemini & Hugging Face Qwen2.5-VL), "
+        "cryptographic SHA-256 agreement baselines, proof-required milestone inspection, multi-agent AI Jury consensus review, "
+        "and automated PayPal Orders v2 escrow settlement into a seamless, human-centered web application. "
+        "Clausora completely resolves scope drift disputes and guarantees verifiable proof before any funds are released.",
         primary_color="#4338CA", bg_color="#EEF2FF", border_color="#C7D2FE"
     ))
 
     story.append(PageBreak())
 
     # =========================================================================
-    # SECTION 1: ARCHITECTURE
+    # SECTION 1: ARCHITECTURE & DEPLOYMENT MATRIX
     # =========================================================================
-    story.append(create_section_header("1", "System Architecture & High-Level Design"))
+    story.append(create_section_header("1", "Production Cloud Architecture & Tech Stack Matrix"))
     story.append(Spacer(1, 6))
     story.append(Paragraph(
-        "Clausora is architected as an enterprise monorepo with strict layer boundaries between presentation, "
-        "business logic, payment orchestration, and persistence tiers. Cross-tier communication utilizes strongly typed "
-        "TypeScript schema contracts defined in the universal <code>@clausora/shared</code> package.",
+        "Clausora is engineered with strict separation of concerns, enterprise security isolation, and multi-cloud resilience. "
+        "The production deployment spans Vercel, Render, MongoDB Atlas, and Resend:",
         style_body
     ))
 
-    arch_data = [
-        [Paragraph("<b>Subsystem Tier</b>", style_th), Paragraph("<b>Technology Foundation</b>", style_th), Paragraph("<b>Key Architectural Responsibilities</b>", style_th)],
-        [Paragraph("Web Application", style_body), Paragraph("React 18, Vite, Tailwind CSS, Lucide", style_body), Paragraph("Client-side cockpit, responsive navigation drawer, interactive Work DNA visualizer, real-time sync.", style_body)],
-        [Paragraph("REST API Gateway", style_body), Paragraph("Express.js, TypeScript, JWT (86.4k TTL)", style_body), Paragraph("Authentication middleware, role-based isolation, bilateral approval gates, audit event bus.", style_body)],
-        [Paragraph("AI Intelligence Engine", style_body), Paragraph("Hugging Face Qwen2.5-VL-7B-Instruct", style_body), Paragraph("Multilingual brief parsing, 9-dimensional quality radar assessment, testable criteria generation.", style_body)],
-        [Paragraph("Escrow Engine", style_body), Paragraph("PayPal Orders v2 REST Client (Sandbox)", style_body), Paragraph("Cryptographic order creation, instant capture, split milestone installment math, settled accounting.", style_body)],
-        [Paragraph("Dual Persistence", style_body), Paragraph("MongoDB Atlas & Live In-Memory Cache", style_body), Paragraph("Zero-downtime persistence with optimistic local memory cache and automated Atlas reconciliation.", style_body)]
+    platform_data = [
+        [Paragraph("<b>Layer / Tier</b>", style_th), Paragraph("<b>Cloud Platform</b>", style_th), Paragraph("<b>Technology Stack</b>", style_th), Paragraph("<b>Production Responsibilities</b>", style_th)],
+        [Paragraph("Frontend Client", style_body), Paragraph("<b>Vercel</b> (Edge SPA)", style_body), Paragraph("React 19, Vite, Tailwind CSS, Lucide", style_body), Paragraph("Interactive cockpit, Work DNA visualizer, real-time sync, reverse proxy (/api/ -> Render).", style_body)],
+        [Paragraph("Backend API", style_body), Paragraph("<b>Render</b> (Web Service)", style_body), Paragraph("Node.js 20 LTS, Express, TypeScript", style_body), Paragraph("REST API gateway, JWT auth, bilateral approval gates, rate limiter with trust proxy.", style_body)],
+        [Paragraph("Cloud Database", style_body), Paragraph("<b>MongoDB Atlas</b>", style_body), Paragraph("M0 Cloud Cluster, Mongoose ODM", style_body), Paragraph("Multi-tenant collections, ACID project preservation, zero-downtime memory cache fallback.", style_body)],
+        [Paragraph("Transactional Email", style_body), Paragraph("<b>Resend & SMTP</b>", style_body), Paragraph("Resend HTTPS API (Port 443), Nodemailer", style_body), Paragraph("Instant 6-digit recovery OTP codes, firewall-immune HTTPS delivery, 3.5s race timeout.", style_body)],
+        [Paragraph("AI Intelligence", style_body), Paragraph("<b>Google & Hugging Face</b>", style_body), Paragraph("Gemini 1.5 Flash + Qwen2.5-VL-7B", style_body), Paragraph("Multilingual parsing (Tamil/English), 9-dim quality radar, 3-agent AI Review Council.", style_body)],
+        [Paragraph("Escrow & Payments", style_body), Paragraph("<b>PayPal Developer</b>", style_body), Paragraph("Orders v2 REST API (Sandbox)", style_body), Paragraph("Cryptographic escrow order creation, instant server-side capture, split milestone payouts.", style_body)],
+        [Paragraph("Shared Core", style_body), Paragraph("Universal Monorepo", style_body), Paragraph("@clausora/shared, Zod, SHA-256", style_body), Paragraph("Universal contracts, canonical agreement hashing, mathematical milestone progress logic.", style_body)]
     ]
-    arch_table = Table(arch_data, colWidths=[100, 145, 259])
-    arch_table.setStyle(TableStyle([
+    platform_table = Table(platform_data, colWidths=[80, 95, 115, 214])
+    platform_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E1B4B")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")]),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
         ('LEFTPADDING', (0, 0), (-1, -1), 6),
         ('RIGHTPADDING', (0, 0), (-1, -1), 6),
     ]))
-    story.append(arch_table)
+    story.append(platform_table)
 
     # =========================================================================
-    # SECTION 2: HUGGING FACE AI INTEGRATION
+    # SECTION 2: AI FOUNDATION MODELS
     # =========================================================================
-    story.append(Spacer(1, 10))
-    story.append(create_section_header("2", "Hugging Face AI Vision-Language Foundation Model Integration"))
+    story.append(Spacer(1, 8))
+    story.append(create_section_header("2", "AI Work DNA Engine & Multimodal Foundation Models"))
     story.append(Spacer(1, 6))
     story.append(Paragraph(
-        "Clausora utilizes Hugging Face's premier multimodal open model, <b>Qwen/Qwen2.5-VL-7B-Instruct</b>, accessed through the official "
-        "<code>@huggingface/inference</code> SDK (v2.8.1). This model provides state-of-the-art vision and language understanding for technical specifications:",
+        "Clausora utilizes dual enterprise AI engines: <b>Google Gemini 1.5 Flash</b> and Hugging Face's premier vision-language foundation model, "
+        "<b>Qwen/Qwen2.5-VL-7B-Instruct</b> via the official <code>@huggingface/inference</code> SDK. Key intelligence capabilities:",
         style_body
     ))
-
-    story.append(Paragraph("• <b>Hugging Face Hub Model ID</b>: <code>Qwen/Qwen2.5-VL-7B-Instruct</code> and <code>Qwen/Qwen2.5-7B-Instruct</code>.", style_body))
-    story.append(Paragraph("• <b>Multimodal Technical Dataset Pretraining</b>: Capable of ingesting complex software architecture diagrams, UI mockups, database ER schemas, and unstructured client text briefs.", style_body))
-    story.append(Paragraph("• <b>Multilingual & Tamil Token Dataset Extraction</b>: Natively extracts requirements across Tamil (<code>[\\u0B80-\\u0BFF]</code>), Hindi, Spanish, French, German, Arabic, and Japanese without translation loss.", style_body))
-    story.append(Paragraph("• <b>Financial & Timeline Safety Gates</b>: Enforces strict financial conservatism. If the brief does not provide an explicit budget, the engine outputs 0 and requires human confirmation before agreement freezing.", style_body))
-    story.append(Paragraph("• <b>Controlled Zod Self-Repair Pipeline</b>: A dedicated single-pass parser balances brackets, strips markdown fences, and verifies compliance against <code>WorkBlueprintSchema</code>.", style_body))
+    story.append(Paragraph("• <b>Multilingual & Tamil Token Parsing</b>: Natively extracts requirements across Tamil (<code>[\\u0B80-\\u0BFF]</code>), Hindi, Spanish, French, German, Arabic, and Japanese without translation loss.", style_body))
+    story.append(Paragraph("• <b>Multimodal Technical Dataset Ingestion</b>: Understands software architecture diagrams, UI mockups, database schemas, and conversational client briefs.", style_body))
+    story.append(Paragraph("• <b>Financial & Timeline Conservatism</b>: The AI is prohibited from inventing speculative budgets or unconfirmed dates. If missing, it outputs null/0 and mandates human confirmation before contract freezing.", style_body))
+    story.append(Paragraph("• <b>9-Dimensional Quality Assessment Radar</b>: Evaluates Requirement Coverage, Technical Completeness, Task Clarity, Acceptance Criteria Quality, Dependency Consistency, Timeline Consistency, Risk Identification, Evidence Readiness, and Language Accuracy.", style_body))
 
     # =========================================================================
-    # SECTION 3: PAYPAL SANDBOX ESCROW SETTLEMENT
+    # SECTION 3: DETERMINISTIC PAYPAL SANDBOX ESCROW
     # =========================================================================
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
     story.append(create_section_header("3", "Deterministic PayPal Sandbox Escrow Settlement Engine"))
     story.append(Spacer(1, 6))
     story.append(Paragraph(
@@ -347,20 +332,20 @@ def generate_pdf(output_path):
     paypal_data = [
         [Paragraph("<b>Workflow Phase</b>", style_th), Paragraph("<b>API Endpoint / Operation</b>", style_th), Paragraph("<b>Settlement Function</b>", style_th)],
         [Paragraph("OAuth2 Authentication", style_body), Paragraph("<code>POST /v1/oauth2/token</code>", style_body), Paragraph("Generates cached bearer access token with 3600-second TTL.", style_body)],
-        [Paragraph("Escrow Order Creation", style_body), Paragraph("<code>POST /v2/checkout/orders</code>", style_body), Paragraph("Initializes capture order with milestone reference ID, amount, and currency.", style_body)],
+        [Paragraph("Escrow Order Creation", style_body), Paragraph("<code>POST /v2/checkout/orders</code>", style_body), Paragraph("Initializes capture order with milestone reference ID, amount in minor units, and currency.", style_body)],
         [Paragraph("Sandbox Order Capture", style_body), Paragraph("<code>POST /v2/checkout/orders/{id}/capture</code>", style_body), Paragraph("Executes instant escrow capture upon client approval; transitions milestone to PAID.", style_body)],
-        [Paragraph("Split Installments", style_body), Paragraph("<code>RemainingMinor = max(0, Total - Paid)</code>", style_body), Paragraph("Permits partial installment disbursements while updating live project balance.", style_body)],
-        [Paragraph("Direct Sandbox Simulator", style_body), Paragraph("<code>POST /api/payments/sandbox-capture</code>", style_body), Paragraph("Developer demo simulator updating MongoDB and in-memory caches instantly.", style_body)]
+        [Paragraph("Split Installments", style_body), Paragraph("<code>Remaining = max(0, Total - Paid)</code>", style_body), Paragraph("Permits partial installment disbursements while updating live project balance.", style_body)],
+        [Paragraph("Direct Sandbox Simulator", style_body), Paragraph("<code>POST /api/payments/sandbox-capture</code>", style_body), Paragraph("Instant developer sandbox simulator updating MongoDB and in-memory caches.", style_body)]
     ]
-    paypal_table = Table(paypal_data, colWidths=[110, 155, 239])
+    paypal_table = Table(paypal_data, colWidths=[110, 150, 244])
     paypal_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E1B4B")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")]),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
         ('LEFTPADDING', (0, 0), (-1, -1), 6),
         ('RIGHTPADDING', (0, 0), (-1, -1), 6),
     ]))
@@ -369,111 +354,51 @@ def generate_pdf(output_path):
     story.append(PageBreak())
 
     # =========================================================================
-    # SECTION 4: BILATERAL GOVERNANCE & PROPOSAL ACTIVATION
+    # SECTION 4: BILATERAL GOVERNANCE & PROOF ENFORCEMENT
     # =========================================================================
-    story.append(create_section_header("4", "Bilateral Counterpart Governance & Contract Activation"))
+    story.append(create_section_header("4", "Bilateral Governance & Proof-Before-Payout Protocol"))
     story.append(Spacer(1, 6))
     story.append(Paragraph(
-        "To prevent fraudulent or unilateral contract manipulation, Clausora implements an inviolable bilateral governance protocol. "
-        "When any stakeholder creates a project proposal, it enters an immutable <code>awaiting_approval</code> state.",
+        "To prevent fraudulent or unilateral contract manipulation, Clausora implements two inviolable governance rules:",
         style_body
     ))
 
     story.append(create_callout_box(
-        "Bilateral Governance Rule (Anti-Self-Approval Theorem)",
+        "1. Bilateral Governance Rule (Anti-Self-Approval Theorem)",
         "The project creator is mathematically and programmatically prohibited from activating their own proposal. "
         "If a Client creates a project, the assigned Provider must review the deliverables and execute activation. "
-        "If a Provider initiates the proposal, the Client owner must activate. Violations are rejected with HTTP 403 Forbidden.",
+        "If a Provider initiates the proposal, the Client owner must activate. Unilateral self-activations are rejected with HTTP 403 Forbidden.",
         primary_color="#D97706", bg_color="#FFFBEB", border_color="#FDE68A"
     ))
-
-    story.append(Spacer(1, 6))
-    story.append(Paragraph(
-        "Once approved by the opponent counterpart, the project achieves <code>active</code> status, generating a canonical "
-        "SHA-256 fingerprint baseline: <code>Hash = SHA-256(CanonicalJSON(AgreementTerms))</code>. Any mid-project modification "
-        "is immediately flagged by the Scope Drift Radar.",
-        style_body
-    ))
-
-    # =========================================================================
-    # SECTION 5: EVIDENCE HUB & PROOF BEFORE PAYOUT
-    # =========================================================================
-    story.append(Spacer(1, 10))
-    story.append(create_section_header("5", "Verifiable Deliverables & Work Proof Inspection Hub"))
-    story.append(Spacer(1, 6))
-    story.append(Paragraph(
-        "Clausora enforces an uncompromised condition: <b>Proof Before Payout</b>. The platform renders the payment release button "
-        "strictly unclickable until the assigned provider has submitted verifiable proof artifacts.",
-        style_body
-    ))
-
-    proof_data = [
-        [Paragraph("<b>Artifact Type</b>", style_th), Paragraph("<b>Verification Method</b>", style_th), Paragraph("<b>Inspection Scope</b>", style_th)],
-        [Paragraph("Repository Link", style_body), Paragraph("<code>code_review</code> / Git SHA", style_body), Paragraph("Git commit hash, branch review, CI build test status.", style_body)],
-        [Paragraph("Live URL / Staging", style_body), Paragraph("<code>api_verification</code> / E2E", style_body), Paragraph("Interactive smoke tests, live endpoints, TLS certificate validation.", style_body)],
-        [Paragraph("Visual Screenshot", style_body), Paragraph("<code>visual_inspection</code>", style_body), Paragraph("UI design compliance, mobile responsiveness on 375px viewports.", style_body)],
-        [Paragraph("Technical Doc", style_body), Paragraph("<code>document_audit</code>", style_body), Paragraph("API specs, schema definitions, system architecture runbooks.", style_body)]
-    ]
-    proof_table = Table(proof_data, colWidths=[110, 140, 254])
-    proof_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E1B4B")),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")]),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    story.append(proof_table)
-
-    # =========================================================================
-    # SECTION 6: FULL PAYMENT PROJECT CLOSURE
-    # =========================================================================
-    story.append(Spacer(1, 10))
-    story.append(create_section_header("6", "Project Finalization & Closure Workflow"))
-    story.append(Spacer(1, 6))
-    story.append(Paragraph(
-        "A critical lifecycle governance rule is enforced: projects cannot be closed prematurely while milestone funds remain unsettled. "
-        "Upon reaching 100% full payment settlement, the platform enables official project closure.",
-        style_body
-    ))
-
+    story.append(Spacer(1, 4))
     story.append(create_callout_box(
-        "Full Settlement Closure Gate",
-        "Condition: (SettledAmountMinor >= TotalAmountMinor > 0) OR (All Milestones marked PAID).<br/>"
-        "1. When 100% funded, the 'Close Project' button is enabled in the cockpit action bar and completion hero banner.<br/>"
-        "2. Client owner or assigned provider confirms closure in an interactive confirmation modal.<br/>"
-        "3. Endpoint POST /api/projects/:id/close transitions status to 'completed'.<br/>"
-        "4. Project is cleanly archived from the active sidebar list while preserving permanent audit records.",
-        primary_color="#059669", bg_color="#ECFDF5", border_color="#A7F3D0"
+        "2. Proof Before Payout Enforcement",
+        "Milestone funds are physically locked. The 'Approve & Release Payment' button remains strictly disabled "
+        "until the assigned provider has submitted verifiable proof artifacts (live URLs, git commit hashes, UI screenshots, or technical docs). "
+        "Unproven claims cannot trigger financial disbursement under any circumstances.",
+        primary_color="#4338CA", bg_color="#EEF2FF", border_color="#C7D2FE"
     ))
 
-    story.append(PageBreak())
-
     # =========================================================================
-    # SECTION 7: COMPLETE RESTFUL API SPECIFICATIONS
+    # SECTION 5: MULTI-AGENT AI REVIEW COUNCIL ("THE AI JURY")
     # =========================================================================
-    story.append(create_section_header("7", "Comprehensive RESTful API Reference"))
+    story.append(Spacer(1, 8))
+    story.append(create_section_header("5", "Multi-Agent AI Review Council (\"The AI Jury\")"))
     story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        "Clausora features an autonomous 3-agent deliberative review council that inspects submitted evidence prior to client payment release. "
+        "Rather than relying on a single fallible prompt, three specialized AI agents evaluate the submission in parallel:",
+        style_body
+    ))
 
-    api_data = [
-        [Paragraph("<b>HTTP Method & Route</b>", style_th), Paragraph("<b>Auth Scope</b>", style_th), Paragraph("<b>Description & Status Codes</b>", style_th)],
-        [Paragraph("<code>POST /api/auth/register</code>", style_body), Paragraph("Public", style_body), Paragraph("Registers user with role ('client'|'provider'|'admin'). Returns 201.", style_body)],
-        [Paragraph("<code>POST /api/auth/login</code>", style_body), Paragraph("Public", style_body), Paragraph("Authenticates credentials; issues 24-hour signed JWT. Returns 200.", style_body)],
-        [Paragraph("<code>GET /api/projects</code>", style_body), Paragraph("Bearer JWT", style_body), Paragraph("Returns multi-tenant scoped projects list. Returns 200.", style_body)],
-        [Paragraph("<code>POST /api/projects</code>", style_body), Paragraph("Client / Admin", style_body), Paragraph("Creates workspace proposal (status: awaiting_approval). Returns 201.", style_body)],
-        [Paragraph("<code>POST /api/projects/:id/accept</code>", style_body), Paragraph("Opponent / Admin", style_body), Paragraph("Bilateral activation. Creator self-approval blocked (403). Returns 200.", style_body)],
-        [Paragraph("<code>POST /api/projects/:id/close</code>", style_body), Paragraph("Owner / Opponent", style_body), Paragraph("Finalizes project after 100% payment settlement. Returns 200.", style_body)],
-        [Paragraph("<code>POST /api/projects/:id/tasks</code>", style_body), Paragraph("Bearer JWT", style_body), Paragraph("Adds custom deliverable task with auto milestone association. Returns 201.", style_body)],
-        [Paragraph("<code>PATCH /api/projects/:id/tasks/:tid</code>", style_body), Paragraph("Bearer JWT", style_body), Paragraph("Updates task status; dynamically recalculates milestone progress. Returns 200.", style_body)],
-        [Paragraph("<code>POST /api/milestones/:id/evidence</code>", style_body), Paragraph("Provider / Admin", style_body), Paragraph("Submits verifiable proof (URL, repo, screenshot). Returns 201.", style_body)],
-        [Paragraph("<code>POST /api/payments/create-order</code>", style_body), Paragraph("Client / Admin", style_body), Paragraph("Generates PayPal Orders v2 escrow capture order. Returns 200.", style_body)],
-        [Paragraph("<code>POST /api/payments/capture-order</code>", style_body), Paragraph("Client / Admin", style_body), Paragraph("Captures PayPal order and increments settled project balance. Returns 200.", style_body)]
+    jury_data = [
+        [Paragraph("<b>Agent Name</b>", style_th), Paragraph("<b>Specialized Focus</b>", style_th), Paragraph("<b>Audit Scope & Rubric</b>", style_th)],
+        [Paragraph("Architecture Auditor", style_body), Paragraph("System Structure & Contracts", style_body), Paragraph("Validates API contract adherence, schema soundness, modularity, and database design.", style_body)],
+        [Paragraph("Security Verifier", style_body), Paragraph("Defensive Security & Auth", style_body), Paragraph("Inspects input validation, token handling, TLS transport, rate limiting, and role isolation.", style_body)],
+        [Paragraph("QA Test Specialist", style_body), Paragraph("Acceptance Criteria & Test Proof", style_body), Paragraph("Audits test coverage, automated test artifacts, UI rendering proofs, and bug surface area.", style_body)]
     ]
-    api_table = Table(api_data, colWidths=[150, 90, 264])
-    api_table.setStyle(TableStyle([
+    jury_table = Table(jury_data, colWidths=[120, 130, 254])
+    jury_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E1B4B")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
@@ -484,17 +409,142 @@ def generate_pdf(output_path):
         ('LEFTPADDING', (0, 0), (-1, -1), 6),
         ('RIGHTPADDING', (0, 0), (-1, -1), 6),
     ]))
+    story.append(jury_table)
+
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(
+        "<b>Council Consensus Logic:</b> If zero evidence is attached, the Council issues an immediate WARNING and blocks payout recommendation. "
+        "When evidence is present, each agent issues a score (0-100) and rationale. The system computes a weighted consensus verdict: "
+        "<code>APPROVED</code> (score &gt;= 80), <code>REVISE</code> (50-79), or <code>REJECT</code> (&lt; 50).",
+        style_body
+    ))
+
+    # =========================================================================
+    # SECTION 6: SCOPE DRIFT RADAR & AMENDMENTS
+    # =========================================================================
+    story.append(Spacer(1, 8))
+    story.append(create_section_header("6", "Scope Drift Radar & Dynamic Change Orders"))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        "During software execution, client requirements inevitably shift. The Scope Drift Radar evaluates new requests against the "
+        "canonical SHA-256 agreement baseline and categorizes each item into 6 deterministic states:",
+        style_body
+    ))
+    story.append(Paragraph("1. <code>in_scope</code>: Standard elaboration already covered by agreed deliverables (no price change).", style_body))
+    story.append(Paragraph("2. <code>clarification</code>: Minor detail specifying an existing acceptance criterion (no price change).", style_body))
+    story.append(Paragraph("3. <code>likely_scope_change</code>: Net-new capability requiring additional engineering hours and budget increase.", style_body))
+    story.append(Paragraph("4. <code>deadline_change</code>: Delivery timeline acceleration or modification impacting schedule milestones.", style_body))
+    story.append(Paragraph("5. <code>conflict</code>: Direct contradiction with previously frozen contractual terms requiring formal mediation.", style_body))
+    story.append(Paragraph("6. <code>uncertain</code>: Ambiguous request requiring client clarification before work commences.", style_body))
+
+    story.append(PageBreak())
+
+    # =========================================================================
+    # SECTION 7: APP USER GUIDE & STEP-BY-STEP WORKFLOWS
+    # =========================================================================
+    story.append(create_section_header("7", "Comprehensive App User Guide & Step-by-Step Walkthroughs"))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        "Clausora is designed for seamless, human-intuitive collaboration between Clients, Providers, and Administrators. "
+        "Below are the complete operational workflows for each platform persona:",
+        style_body
+    ))
+
+    story.append(Paragraph("<b>Persona Fast-Pass Credentials (Built-in Demo Evaluators):</b>", style_body))
+    creds_data = [
+        [Paragraph("<b>Persona Name</b>", style_th), Paragraph("<b>Role</b>", style_th), Paragraph("<b>Email / Fast-Pass</b>", style_th), Paragraph("<b>Password</b>", style_th), Paragraph("<b>Platform Scope & Authority</b>", style_th)],
+        [Paragraph("Sarah Chen", style_body), Paragraph("<code>client</code>", style_body), Paragraph("client@clausora.dev", style_body), Paragraph("Password123!", style_body), Paragraph("Creates projects, reviews Work DNA, funds escrow, inspects proof, approves payouts.", style_body)],
+        [Paragraph("Alex Rivera", style_body), Paragraph("<code>provider</code>", style_body), Paragraph("provider@clausora.dev", style_body), Paragraph("Password123!", style_body), Paragraph("Accepts proposals, marks deliverables, submits proof artifacts, requests jury reviews.", style_body)],
+        [Paragraph("Marcus Vance", style_body), Paragraph("<code>admin</code>", style_body), Paragraph("admin@clausora.dev", style_body), Paragraph("Password123!", style_body), Paragraph("Full system observability, user roster management, PayPal settlement ledger, health telemetry.", style_body)]
+    ]
+    creds_table = Table(creds_data, colWidths=[75, 55, 110, 75, 189])
+    creds_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E1B4B")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")]),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(creds_table)
+
+    story.append(Spacer(1, 8))
+    story.append(Paragraph("<b>Workflow 1: Client Journey (From Raw Brief to Project Closure)</b>", ParagraphStyle('H3', fontName='Helvetica-Bold', fontSize=8.5, leading=12, textColor=colors.HexColor("#4338CA"))))
+    story.append(Paragraph("1. <b>Create Project Proposal</b>: Navigate to 'New Project'. Enter a raw brief in English or Tamil (or upload an RFP diagram). The Work DNA Engine synthesizes structured milestones, acceptance criteria, and budget allocations.", style_body))
+    story.append(Paragraph("2. <b>Proposal Review & Bilateral Activation</b>: The project is created with status <code>awaiting_approval</code>. You cannot self-activate. Your assigned Provider (Alex Rivera) reviews and accepts the proposal, transitioning it to <code>active</code>.", style_body))
+    story.append(Paragraph("3. <b>Fund Milestone Escrow</b>: Click 'Fund Escrow (PayPal)' on Milestone 1. The interactive PayPal Modal opens. Complete the sandbox payment to lock funds into secure escrow.", style_body))
+    story.append(Paragraph("4. <b>Inspect Proof & Review AI Jury Verdict</b>: When the provider submits deliverables, open the Evidence Hub to inspect the staging URL or screenshot. Trigger the 3-Agent AI Council to view consensus audit scores.", style_body))
+    story.append(Paragraph("5. <b>Release Payment & Close Project</b>: Click 'Approve & Release Payment' to execute server-side PayPal capture. Once all milestones reach 100% full settlement, click 'Close Project' to formally finalize the contract.", style_body))
+
+    story.append(Spacer(1, 6))
+    story.append(Paragraph("<b>Workflow 2: Provider Journey (Acceptance, Execution & Getting Paid)</b>", ParagraphStyle('H3', fontName='Helvetica-Bold', fontSize=8.5, leading=12, textColor=colors.HexColor("#4338CA"))))
+    story.append(Paragraph("1. <b>Accept Project Proposal</b>: Log in as Provider. In your dashboard, locate projects with <code>awaiting_approval</code> status. Review the deliverables and click 'Approve & Activate Project'.", style_body))
+    story.append(Paragraph("2. <b>Execute Deliverables</b>: Update task statuses on the Kanban board (Todo -&gt; In Progress -&gt; Submitted -&gt; Done). Milestone progress dynamically updates.", style_body))
+    story.append(Paragraph("3. <b>Submit Verifiable Work Proof</b>: Under the active milestone, click 'Submit Proof'. Provide the deliverable title, description, and link (GitHub commit, live staging URL, or screenshot).", style_body))
+    story.append(Paragraph("4. <b>Trigger AI Council Review</b>: Click 'Run AI Council Review'. The Architecture, Security, and QA agents audit your submission and provide an advisory verdict for the client.", style_body))
+    story.append(Paragraph("5. <b>Receive PayPal Disbursement</b>: Upon client sign-off, PayPal automatically captures and disburses milestone funds directly into your provider account.", style_body))
+
+    story.append(Spacer(1, 6))
+    story.append(Paragraph("<b>Workflow 3: Admin Journey (System Auditing & User Management)</b>", ParagraphStyle('H3', fontName='Helvetica-Bold', fontSize=8.5, leading=12, textColor=colors.HexColor("#4338CA"))))
+    story.append(Paragraph("1. <b>User Roster Management</b>: Access the Admin Portal. View all registered users across tenants. Edit names, emails, roles, or delete test accounts with immediate synchronization.", style_body))
+    story.append(Paragraph("2. <b>Platform Escrow Ledger</b>: Monitor global escrow deposits, captured payments, active project balances, and total platform volume across PayPal Sandbox accounts.", style_body))
+    story.append(Paragraph("3. <b>System Telemetry & Health</b>: Inspect MongoDB Atlas database health, Express server uptime, and rate-limiting metrics.", style_body))
+
+    story.append(Spacer(1, 6))
+    story.append(Paragraph("<b>Real-World Industry Use Cases:</b>", ParagraphStyle('H3', fontName='Helvetica-Bold', fontSize=8.5, leading=12, textColor=colors.HexColor("#4338CA"))))
+    story.append(Paragraph("• <b>Use Case A: Freelance Web Application Development</b> — A US client hires an offshore engineering contractor. Clausora ingests the Figma link and user story brief, creates 3 escrow milestones (Database setup, Core UI, Production deployment), and guarantees money is disbursed only after git commit verification.", style_body))
+    story.append(Paragraph("• <b>Use Case B: Creative & Design Agency Deliverables</b> — An agency delivers branding packages and marketing websites. The client attempts scope creep by asking for '3 extra landing pages'. The Scope Drift Radar detects out-of-scope tasks and calculates a budget amendment before work starts.", style_body))
+    story.append(Paragraph("• <b>Use Case C: Multilingual Offshore Contracts</b> — A client in Chennai submits a brief containing Tamil technical requirements. Clausora extracts the exact deliverables in standardized English while preserving the native language terms in metadata.", style_body))
+
+    story.append(PageBreak())
+
+    # =========================================================================
+    # SECTION 8: RESTFUL API REFERENCE
+    # =========================================================================
+    story.append(create_section_header("8", "Comprehensive RESTful API Reference"))
+    story.append(Spacer(1, 6))
+
+    api_data = [
+        [Paragraph("<b>HTTP Method & Route</b>", style_th), Paragraph("<b>Auth Scope</b>", style_th), Paragraph("<b>Description & Status Codes</b>", style_th)],
+        [Paragraph("<code>POST /api/auth/register</code>", style_body), Paragraph("Public", style_body), Paragraph("Registers user with role ('client'|'provider'|'admin'). Returns 201.", style_body)],
+        [Paragraph("<code>POST /api/auth/login</code>", style_body), Paragraph("Public", style_body), Paragraph("Authenticates credentials; issues 24-hour signed JWT. Returns 200.", style_body)],
+        [Paragraph("<code>POST /api/auth/forgot-password</code>", style_body), Paragraph("Public", style_body), Paragraph("Generates 6-digit OTP (10m expiry), dispatches via Resend/SMTP with instant race fallback. Returns 200.", style_body)],
+        [Paragraph("<code>POST /api/auth/reset-password</code>", style_body), Paragraph("Public", style_body), Paragraph("Validates OTP, resets password with bcrypt hash, sends confirmation email. Returns 200.", style_body)],
+        [Paragraph("<code>GET /api/projects</code>", style_body), Paragraph("Bearer JWT", style_body), Paragraph("Returns multi-tenant scoped projects list. Returns 200.", style_body)],
+        [Paragraph("<code>POST /api/projects</code>", style_body), Paragraph("Client / Admin", style_body), Paragraph("Creates workspace proposal (status: awaiting_approval). Returns 201.", style_body)],
+        [Paragraph("<code>POST /api/projects/:id/accept</code>", style_body), Paragraph("Opponent / Admin", style_body), Paragraph("Bilateral activation. Creator self-approval blocked (403). Returns 200.", style_body)],
+        [Paragraph("<code>POST /api/projects/:id/close</code>", style_body), Paragraph("Owner / Opponent", style_body), Paragraph("Finalizes project after 100% payment settlement. Returns 200.", style_body)],
+        [Paragraph("<code>POST /api/milestones/:id/evidence</code>", style_body), Paragraph("Provider / Admin", style_body), Paragraph("Submits verifiable proof (URL, repo, screenshot). Returns 201.", style_body)],
+        [Paragraph("<code>POST /api/milestones/:id/council-review</code>", style_body), Paragraph("Bearer JWT", style_body), Paragraph("Runs 3-agent deliberative AI council (Architecture, Security, QA). Returns 200.", style_body)],
+        [Paragraph("<code>POST /api/payments/create-order</code>", style_body), Paragraph("Client / Admin", style_body), Paragraph("Generates PayPal Orders v2 escrow capture order. Returns 200.", style_body)],
+        [Paragraph("<code>POST /api/payments/capture-order</code>", style_body), Paragraph("Client / Admin", style_body), Paragraph("Captures PayPal order and increments settled project balance. Returns 200.", style_body)]
+    ]
+    api_table = Table(api_data, colWidths=[150, 85, 269])
+    api_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E1B4B")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")]),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+    ]))
     story.append(api_table)
 
     # =========================================================================
-    # SECTION 8: QA & TEST VERIFICATION LEDGER
+    # SECTION 9: QA & TEST VERIFICATION LEDGER
     # =========================================================================
-    story.append(Spacer(1, 10))
-    story.append(create_section_header("8", "Quality Assurance & Automated Test Ledger"))
+    story.append(Spacer(1, 8))
+    story.append(create_section_header("9", "Quality Assurance & Automated Test Ledger"))
     story.append(Spacer(1, 6))
     story.append(Paragraph(
         "The Clausora codebase contains 50 automated native unit and integration test suites covering security, "
-        "Clausora AI multi-perspective intelligence, OTP password recovery, bilateral acceptance rules, and PayPal capture:",
+        "Clausora AI intelligence, OTP password recovery, bilateral acceptance rules, and PayPal capture:",
         style_body
     ))
 
@@ -502,7 +552,7 @@ def generate_pdf(output_path):
         [Paragraph("<b>Test Suite Name</b>", style_th), Paragraph("<b>Test Cases</b>", style_th), Paragraph("<b>Outcome Status</b>", style_th), Paragraph("<b>Execution Scope</b>", style_th)],
         [Paragraph("Multi-Agent Review Council & Clausora AI", style_body), Paragraph("12 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("3-agent consensus audit, multi-perspective advisory, project parameters.", style_body)],
         [Paragraph("Security, Auth & Role Isolation", style_body), Paragraph("4 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("JWT 24h expiration, registration roles, multi-tenant isolation.", style_body)],
-        [Paragraph("Password Recovery, OTP & Email System", style_body), Paragraph("5 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("6-digit OTP generation, 10m expiry, bcrypt hashing, audit dispatch.", style_body)],
+        [Paragraph("Password Recovery, OTP & Email System", style_body), Paragraph("5 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("6-digit OTP generation, 10m expiry, bcrypt hashing, Resend/SMTP audit dispatch.", style_body)],
         [Paragraph("AI Work DNA Blueprint Synthesis", style_body), Paragraph("1 Test", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("Dynamic task description parsing into verifiable deliverables.", style_body)],
         [Paragraph("API Server Health & Mounting", style_body), Paragraph("2 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("Express router registration, route availability verification.", style_body)],
         [Paragraph("Project Permissions & Bilateral Acceptance", style_body), Paragraph("12 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("Bilateral acceptance gates, self-approval blocking, closure protocol.", style_body)],
@@ -511,25 +561,26 @@ def generate_pdf(output_path):
         [Paragraph("Admin User Management & Audit", style_body), Paragraph("2 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("User role editing, account deletion, memory synchronization.", style_body)],
         [Paragraph("Advanced Work DNA Master Spec", style_body), Paragraph("7 Tests", style_body), Paragraph("<b>PASS</b> (100%)", style_body), Paragraph("Tamil script extraction, budget safety gates, 9-dim quality scores.", style_body)]
     ]
-    test_table = Table(test_data, colWidths=[150, 60, 80, 214])
+    test_table = Table(test_data, colWidths=[150, 60, 75, 219])
     test_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E1B4B")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")]),
-        ('TOPPADDING', (0, 0), (-1, -1), 3.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
     ]))
     story.append(test_table)
 
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 10))
     story.append(Paragraph(
         "<b>Architectural Sign-off:</b> Clausora 1.0.0 is verified production-ready. "
-        "All bilateral safety gates, evidence requirements, Hugging Face AI pipeline models, PayPal capture endpoints, "
-        "and project closure state transitions operate deterministically across desktop and mobile devices.",
+        "Created and engineered by <b>Hari Tharshini T</b>. All bilateral safety gates, evidence requirements, "
+        "AI intelligence council models, PayPal capture endpoints, Resend email pipelines, and project closure state transitions "
+        "operate deterministically across all deployment environments.",
         style_body
     ))
 
@@ -540,13 +591,10 @@ def generate_pdf(output_path):
 if __name__ == '__main__':
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     docs_pdf = os.path.join(base_dir, 'docs', 'Clausora_Documentation.pdf')
-    doc_pdf = os.path.join(base_dir, 'doc', 'Clausora_Documentation.pdf')
     public_pdf = os.path.join(base_dir, 'apps', 'web', 'public', 'Clausora_Documentation.pdf')
 
     os.makedirs(os.path.dirname(docs_pdf), exist_ok=True)
-    os.makedirs(os.path.dirname(doc_pdf), exist_ok=True)
     os.makedirs(os.path.dirname(public_pdf), exist_ok=True)
 
     generate_pdf(docs_pdf)
-    generate_pdf(doc_pdf)
     generate_pdf(public_pdf)
