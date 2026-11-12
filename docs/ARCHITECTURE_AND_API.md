@@ -1,8 +1,9 @@
 # <img src="logo.png" alt="Clausora Logo" width="38" height="38" style="vertical-align: middle; margin-right: 10px;" /> Clausora — System Architecture & Complete API Reference
 
 **Document Version:** 1.0.0 (Production Release)  
+**Lead Architect & Author:** **Hari Tharshini T** (<haritharshinit@gmail.com>)  
 **System Architecture:** Monorepo with Express TypeScript Backend, Vite React Frontend, and Shared Domain Contracts  
-**Key Integrations:** Hugging Face AI (`Qwen/Qwen2.5-VL-7B-Instruct`), PayPal Orders v2 Sandbox Escrow, MongoDB Atlas
+**Key Integrations:** Google Gemini 1.5 Pro (Flagship Higher Model) & Hugging Face AI (`Qwen/Qwen2.5-VL-7B-Instruct`), PayPal Orders v2 Sandbox Escrow, MongoDB Atlas, Resend HTTPS API
 
 ---
 
@@ -19,7 +20,7 @@ clausora/
 │   │   │   ├── routes/       # Auth, Project, Milestone, Payment, Blueprint, Scope Drift, Audit
 │   │   │   ├── services/     # PayPal Sandbox Client, Hugging Face AI Synthesis, Notifications
 │   │   │   └── middleware/   # JWT Authentication & RBAC Authorization Gateways
-│   │   └── tests/            # Automated Node.js Native Test Suites (33 Comprehensive Tests)
+│   │   └── tests/            # Automated Node.js Native Test Suites (50 Comprehensive Tests)
 │   └── web/             # Vite + React 18 Single Page Application (SPA)
 │       └── src/
 │           ├── components/   # Layout, Workflow Visualizer, Evidence Graph, PayPal Modal

@@ -1,9 +1,9 @@
 # <img src="logo.png" alt="Clausora Logo" width="38" height="38" style="vertical-align: middle; margin-right: 10px;" /> Clausora — Comprehensive Feature & Functional Specification
 
 **Document Version:** 1.0.0 (Production Release)  
-**Lead Architect & Author:** **Hari Tharshini T** (<haritharshinibscit@gmail.com>)  
+**Lead Architect & Author:** **Hari Tharshini T** (<haritharshinit@gmail.com>)  
 **System Classification:** Technical Architecture & Feature Specification  
-**Production Platforms:** Frontend on Vercel | Backend on Render (`https://clausora.onrender.com`) | Database on MongoDB Atlas | Email via Resend HTTPS | Escrow via PayPal Sandbox | AI via Google Gemini 1.5 Flash & Hugging Face `Qwen/Qwen2.5-VL-7B-Instruct`
+**Production Platforms:** Frontend on Vercel | Backend on Render (`https://clausora.onrender.com`) | Database on MongoDB Atlas | Email via Resend HTTPS | Escrow via PayPal Sandbox | AI via Google Gemini 1.5 Pro (Flagship Higher Model) & Hugging Face `Qwen/Qwen2.5-VL-7B-Instruct`
 
 ---
 
@@ -12,7 +12,7 @@
 Clausora bridges the structural trust deficit in high-value freelance and enterprise software delivery contracts. Standard freelance platforms rely on subjective milestone dispute processes and unverified escrow disbursements, frequently resulting in scope drift, delayed deliverables, and payment friction.
 
 Clausora enforces a **deterministic execution model**:
-1. **Multimodal AI Work DNA Synthesis**: Powered by dual engines (Google Gemini 1.5 Flash & Hugging Face `Qwen/Qwen2.5-VL-7B-Instruct`), ingesting raw client briefs, architectural wireframes, and RFP documents into structured workstreams, verifiable tasks, and objective acceptance criteria.
+1. **Multimodal AI Work DNA Synthesis**: Powered by dual engines (Google Gemini 1.5 Pro Higher Model & Hugging Face `Qwen/Qwen2.5-VL-7B-Instruct`), ingesting raw client briefs, architectural wireframes, and RFP documents into structured workstreams, verifiable tasks, and objective acceptance criteria.
 2. **Strict Bilateral Counterpart Governance**: Eliminates unilateral project activation. Creators cannot approve their own proposals; assigned counterparts must review and activate agreements before contracts become active.
 3. **Verifiable Proof Before Payment**: Milestone escrow funds remain cryptographically and operationally locked until assigned providers submit verifiable work proofs (URLs, screenshots, git repositories) and clients inspect them.
 4. **Multi-Agent AI Review Council ("The AI Jury")**: An autonomous 3-agent deliberative panel (Architecture Auditor, Security Verifier, QA Test Specialist) evaluating deliverables in parallel and computing consensus scores.
@@ -45,7 +45,7 @@ Clausora enforces a **deterministic execution model**:
 
 ### 3.1 FEAT-01: Multimodal AI Work DNA Blueprint Synthesis
 - **Endpoint**: `POST /api/blueprint/generate`
-- **Foundation Models**: Google Gemini 1.5 Flash & Hugging Face `Qwen/Qwen2.5-VL-7B-Instruct`
+- **Foundation Models**: Google Gemini 1.5 Pro (Flagship Higher Model, 2M Context) & Hugging Face `Qwen/Qwen2.5-VL-7B-Instruct`
 - **Capabilities**:
   - Ingests text briefs, wireframes, architecture diagrams, and scope documents.
   - Categorizes requirements into discrete types: `functional`, `technical`, `security`, `ui_ux`, `compliance`, and `performance`.

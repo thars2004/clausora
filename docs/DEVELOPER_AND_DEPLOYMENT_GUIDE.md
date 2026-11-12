@@ -1,7 +1,7 @@
 # <img src="logo.png" alt="Clausora Logo" width="38" height="38" style="vertical-align: middle; margin-right: 10px;" /> Clausora — Developer Setup & Cloud Deployment Guide
 
 **Document Version:** 1.0.0 (Production Release)  
-**Lead Architect & Author:** **Hari Tharshini T** (<haritharshinibscit@gmail.com>)  
+**Lead Architect & Author:** **Hari Tharshini T** (<haritharshinit@gmail.com>)  
 **System Requirements:** Node.js v18+, npm v9+, Python 3.10+ (for documentation generation)
 
 ---
@@ -43,8 +43,9 @@ PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id
 PAYPAL_CLIENT_SECRET=your_paypal_sandbox_secret
 PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
 
-# AI Models (Google Gemini & Hugging Face)
+# AI Models (Google Gemini Higher Model & Hugging Face)
 GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-1.5-pro
 HF_TOKEN=hf_your_token_here
 HF_MODEL=Qwen/Qwen2.5-VL-7B-Instruct
 ```

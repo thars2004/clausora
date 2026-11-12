@@ -5,7 +5,7 @@
 
 <p align="center">
   <b>Official Technical Documentation & Engineering Specifications</b><br>
-  <i>Author & Lead Architect: <b>Hari Tharshini T</b> (<a href="mailto:haritharshinibscit@gmail.com">haritharshinibscit@gmail.com</a>)</i>
+  <i>Author & Lead Architect: <b>Hari Tharshini T</b> (<a href="mailto:haritharshinit@gmail.com">haritharshinit@gmail.com</a>)</i>
 </p>
 
 ---
@@ -34,7 +34,7 @@ Welcome to the official technical documentation suite for **Clausora**, the ente
 │ ⚙️ Render Web Service (Node.js 20 LTS, Express, TypeScript)                │
 │    ├── 🗄️ MongoDB Atlas (M0 Multi-Tenant Replica Set Cluster)             │
 │    ├── 📧 Resend HTTPS REST API (Port 443 Transactional OTP Delivery)      │
-│    ├── 🧠 Google Gemini 1.5 Flash + Hugging Face Qwen2.5-VL-7B             │
+│    ├── 🧠 Google Gemini 1.5 Pro (Flagship Higher Model) + Qwen2.5-VL-7B    │
 │    └── 💳 PayPal Developer Orders v2 REST API (Sandbox Escrow)            │
 └────────────────────────────────────────────────────────────────────────────┘
 ```

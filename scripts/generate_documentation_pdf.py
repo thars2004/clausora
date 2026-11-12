@@ -5,7 +5,7 @@ Generates a publication-grade, human-authored architectural document in PDF form
 featuring prominent headers, deployment platform architecture (Vercel, Render, MongoDB Atlas, Resend, PayPal),
 AI Work DNA engine, multi-agent review council, and step-by-step user workflows.
 
-Lead Architect & Author: Hari Tharshini T (haritharshinibscit@gmail.com)
+Lead Architect & Author: Hari Tharshini T (haritharshinit@gmail.com)
 """
 
 import os
@@ -230,14 +230,14 @@ def generate_pdf(output_path):
     story.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor("#4338CA"), spaceAfter=12))
 
     meta_data = [
-        [Paragraph("<b>Lead Architect & Author</b>", style_body), Paragraph("<b>Hari Tharshini T</b> &lt;haritharshinibscit@gmail.com&gt;", style_body)],
+        [Paragraph("<b>Lead Architect & Author</b>", style_body), Paragraph("<b>Hari Tharshini T</b> &lt;haritharshinit@gmail.com&gt;", style_body)],
         [Paragraph("<b>Document Classification</b>", style_body), Paragraph("Official Engineering Specification & Comprehensive App User Guide", style_body)],
         [Paragraph("<b>System Version</b>", style_body), Paragraph("1.0.0-GA (Production Verified & Cloud Deployed)", style_body)],
         [Paragraph("<b>Frontend Platform</b>", style_body), Paragraph("<b>Vercel Edge SPA</b> (React 19, Vite, Tailwind CSS, Reverse Proxy)", style_body)],
         [Paragraph("<b>Backend Platform</b>", style_body), Paragraph("<b>Render Cloud Web Service</b> (Node.js 20 LTS, Express, TypeScript)", style_body)],
         [Paragraph("<b>Database Platform</b>", style_body), Paragraph("<b>MongoDB Atlas Cloud</b> (Multi-tenant M0 Cluster + In-Memory Fallback)", style_body)],
         [Paragraph("<b>Email Platform</b>", style_body), Paragraph("<b>Resend HTTPS REST API (Port 443)</b> + Gmail SMTP Fallback", style_body)],
-        [Paragraph("<b>AI Foundation Models</b>", style_body), Paragraph("Google Gemini 1.5 Flash & Hugging Face Qwen/Qwen2.5-VL-7B-Instruct", style_body)],
+        [Paragraph("<b>AI Foundation Models</b>", style_body), Paragraph("<b>Google Gemini 1.5 Pro (Higher Model)</b> &amp; Hugging Face Qwen2.5-VL", style_body)],
         [Paragraph("<b>Escrow Infrastructure</b>", style_body), Paragraph("PayPal Developer Orders v2 REST API (Sandbox Capture & Split Payouts)", style_body)],
         [Paragraph("<b>Verification Status</b>", style_body), Paragraph("100% Passing — All 50 Automated Native Test Suites Verified Green", style_body)]
     ]
@@ -283,7 +283,7 @@ def generate_pdf(output_path):
         [Paragraph("Backend API", style_body), Paragraph("<b>Render</b> (Web Service)", style_body), Paragraph("Node.js 20 LTS, Express, TypeScript", style_body), Paragraph("REST API gateway, JWT auth, bilateral approval gates, rate limiter with trust proxy.", style_body)],
         [Paragraph("Cloud Database", style_body), Paragraph("<b>MongoDB Atlas</b>", style_body), Paragraph("M0 Cloud Cluster, Mongoose ODM", style_body), Paragraph("Multi-tenant collections, ACID project preservation, zero-downtime memory cache fallback.", style_body)],
         [Paragraph("Transactional Email", style_body), Paragraph("<b>Resend & SMTP</b>", style_body), Paragraph("Resend HTTPS API (Port 443), Nodemailer", style_body), Paragraph("Instant 6-digit recovery OTP codes, firewall-immune HTTPS delivery, 3.5s race timeout.", style_body)],
-        [Paragraph("AI Intelligence", style_body), Paragraph("<b>Google & Hugging Face</b>", style_body), Paragraph("Gemini 1.5 Flash + Qwen2.5-VL-7B", style_body), Paragraph("Multilingual parsing (Tamil/English), 9-dim quality radar, 3-agent AI Review Council.", style_body)],
+        [Paragraph("AI Intelligence", style_body), Paragraph("<b>Google &amp; Hugging Face</b>", style_body), Paragraph("Gemini 1.5 Pro (Higher Model) + Qwen2.5-VL", style_body), Paragraph("2M token context, multimodal vision, Tamil/multilingual token extraction, 3-agent AI Jury.", style_body)],
         [Paragraph("Escrow & Payments", style_body), Paragraph("<b>PayPal Developer</b>", style_body), Paragraph("Orders v2 REST API (Sandbox)", style_body), Paragraph("Cryptographic escrow order creation, instant server-side capture, split milestone payouts.", style_body)],
         [Paragraph("Shared Core", style_body), Paragraph("Universal Monorepo", style_body), Paragraph("@clausora/shared, Zod, SHA-256", style_body), Paragraph("Universal contracts, canonical agreement hashing, mathematical milestone progress logic.", style_body)]
     ]
@@ -308,7 +308,8 @@ def generate_pdf(output_path):
     story.append(create_section_header("2", "AI Work DNA Engine & Multimodal Foundation Models"))
     story.append(Spacer(1, 6))
     story.append(Paragraph(
-        "Clausora utilizes dual enterprise AI engines: <b>Google Gemini 1.5 Flash</b> and Hugging Face's premier vision-language foundation model, "
+        "Clausora utilizes dual enterprise AI engines: Google's flagship higher-tier reasoning model, <b>Google Gemini 1.5 Pro</b> "
+        "(<code>gemini-1.5-pro</code> with 2,000,000 token context window), coupled with Hugging Face's premier vision-language foundation model, "
         "<b>Qwen/Qwen2.5-VL-7B-Instruct</b> via the official <code>@huggingface/inference</code> SDK. Key intelligence capabilities:",
         style_body
     ))

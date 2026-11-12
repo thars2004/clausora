@@ -44,7 +44,7 @@ export class HuggingFaceClient {
   }
 
   getModelName(): string {
-    if (env.GEMINI_API_KEY) return env.GEMINI_MODEL || 'gemini-1.5-flash';
+    if (env.GEMINI_API_KEY) return env.GEMINI_MODEL || 'gemini-1.5-pro';
     return this.model;
   }
 
@@ -56,7 +56,7 @@ export class HuggingFaceClient {
 
     if (env.GEMINI_API_KEY) {
       try {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL || 'gemini-1.5-flash'}:generateContent?key=${env.GEMINI_API_KEY}`;
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL || 'gemini-1.5-pro'}:generateContent?key=${env.GEMINI_API_KEY}`;
         const res = await axios.post(
           geminiUrl,
           {
@@ -1059,7 +1059,7 @@ Input: ${JSON.stringify({ title: input.projectTitle, summary: input.projectSumma
     let rawJson = '';
 
     if (env.GEMINI_API_KEY) {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL || 'gemini-1.5-flash'}:generateContent?key=${env.GEMINI_API_KEY}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL || 'gemini-1.5-pro'}:generateContent?key=${env.GEMINI_API_KEY}`;
       const res = await axios.post(
         geminiUrl,
         {

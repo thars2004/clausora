@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <b>Lead Architect & Author:</b> <b>Hari Tharshini T</b> (<a href="mailto:haritharshinibscit@gmail.com">haritharshinibscit@gmail.com</a>)
+  <b>Lead Architect & Author:</b> <b>Hari Tharshini T</b> (<a href="mailto:haritharshinit@gmail.com">haritharshinit@gmail.com</a>)
 </p>
 
 <p align="center">
@@ -18,7 +18,8 @@
   <a href="https://www.mongodb.com/atlas"><img src="https://img.shields.io/badge/Database-MongoDB%20Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB Atlas"></a>
   <a href="https://resend.com"><img src="https://img.shields.io/badge/Email-Resend%20HTTPS%20API-000000?style=for-the-badge&logo=resend&logoColor=white" alt="Resend"></a>
   <a href="https://developer.paypal.com"><img src="https://img.shields.io/badge/Escrow-PayPal%20Orders%20v2-0070BA?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Sandbox"></a>
-  <a href="https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct"><img src="https://img.shields.io/badge/AI-Gemini%20%2B%20Qwen2.5--VL-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="AI Models"></a>
+  <a href="https://ai.google.dev/"><img src="https://img.shields.io/badge/AI-Gemini%201.5%20Pro%20(Higher%20Model)-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Gemini 1.5 Pro"></a>
+  <a href="https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct"><img src="https://img.shields.io/badge/AI-Qwen2.5--VL--7B--Instruct-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" alt="Hugging Face"></a>
 </p>
 
 ---
@@ -65,7 +66,7 @@ Clausora is deployed across production cloud infrastructure with high availabili
 | **Backend REST API** | **Render** | Node.js 20 LTS, Express, TypeScript, Zod | `https://clausora.onrender.com`<br>Reverse proxy trust, dynamic rate limiting, secure cookies |
 | **Cloud Database** | **MongoDB Atlas** | MongoDB 7.0 (M0 Replica Set Cloud Cluster) | Multi-tenant user, project, milestone collections with automatic in-memory cache sync |
 | **Transactional Email** | **Resend & SMTP** | Resend HTTPS REST API (Port 443) + Nodemailer | Instant 6-digit OTP delivery immune to cloud firewall port 587/465 blocks; 3.5s race timeout |
-| **Multimodal AI** | **Google & Hugging Face** | Gemini 1.5 Flash + Qwen2.5-VL-7B-Instruct | Tamil & multilingual token parsing, 9-dim quality radar, AI Review Council |
+| **Multimodal AI** | **Google & Hugging Face** | Gemini 1.5 Pro (Flagship Higher Model) + Qwen2.5-VL-7B | 2M token context window, deep multimodal vision reasoning, Tamil & multilingual token parsing, 9-dim quality radar, 3-Agent AI Review Council |
 | **Escrow & Payments** | **PayPal Developer** | PayPal Orders v2 REST API (Sandbox) | Instant server-side capture, split milestone payouts, settled ledger tracking |
 | **Universal Monorepo** | **npm Workspaces** | `@clausora/shared`, `@clausora/api`, `@clausora/web` | Unified TypeScript type contracts, shared Zod validators, SHA-256 canonical hashing |
 
@@ -73,9 +74,9 @@ Clausora is deployed across production cloud infrastructure with high availabili
 
 ## ⚡ Core Platform Functionalities
 
-### 1. Multimodal AI Work DNA Generator
+### 1. Multimodal AI Work DNA Generator (Gemini 1.5 Pro & Qwen2.5-VL)
 - Ingests freeform client briefs, technical RFPs, UI wireframes, architecture diagrams, or REA traces.
-- Powered by dual engines: **Google Gemini 1.5 Flash** and **Hugging Face Qwen2.5-VL-7B-Instruct**.
+- Powered by Google's flagship higher-tier reasoning model, **Google Gemini 1.5 Pro** (`gemini-1.5-pro` with 2,000,000 token context window), coupled with Hugging Face's premier vision-language model, **Qwen/Qwen2.5-VL-7B-Instruct**.
 - Generates structured workstreams, modular deliverables, and verifiable acceptance criteria.
 - **Multilingual & Tamil Token Support**: Natively extracts deliverables from Tamil script (`[\u0B80-\u0BFF]`), Hindi, Spanish, French, German, Arabic, and Japanese.
 - **Financial & Timeline Conservatism**: Never hallucinates unconfirmed budgets or speculative deadlines.
@@ -351,8 +352,9 @@ PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id
 PAYPAL_CLIENT_SECRET=your_paypal_sandbox_secret
 PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
 
-# AI Models (Google Gemini & Hugging Face)
+# AI Models (Google Gemini Higher Model & Hugging Face)
 GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-1.5-pro
 HF_TOKEN=hf_your_huggingface_token_here
 HF_MODEL=Qwen/Qwen2.5-VL-7B-Instruct
 ```
@@ -400,7 +402,7 @@ TOTAL: 50 Passing Tests | 10 Suites | 0 Failures | 100% Green
 
 **Hari Tharshini T**  
 - **Role:** Creator & Lead System Architect  
-- **Email:** [haritharshinibscit@gmail.com](mailto:haritharshinibscit@gmail.com)  
+- **Email:** [haritharshinit@gmail.com](mailto:haritharshinit@gmail.com)  
 - **Project:** Clausora — AI Work DNA, Multi-Agent Review Council & Deliverable-Verified PayPal Escrow
 
 ---
